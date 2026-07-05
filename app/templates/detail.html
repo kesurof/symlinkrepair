@@ -2,9 +2,10 @@
 {% block title %}Détail — SymlinkRepair{% endblock %}
 {% block content %}
 <div class="max-w-3xl mx-auto">
-    <a href="/results" class="text-blue-600 text-sm hover:underline mb-4 inline-block">&larr; Retour aux résultats</a>
+    <a href="/results{% if request.query_params.get('source') %}?source={{ request.query_params.source }}{% endif %}"
+       class="text-blue-600 text-sm hover:underline mb-4 inline-block">&larr; Retour aux résultats</a>
 
-    <div class="bg-white rounded-lg shadow-sm border p-6">
+    <div class="bg-white rounded-lg shadow-sm border p-6" x-data="{ processStep: 'initial', processMsg: '' }">
         <div class="flex items-center justify-between mb-4">
             <h2 class="text-lg font-semibold text-gray-800">{{ item.media_title or 'Sans titre' }}</h2>
             <span class="text-xs font-medium px-2 py-0.5 rounded
@@ -22,6 +23,12 @@
             <div>
                 <dt class="text-gray-500">Saison</dt>
                 <dd class="font-medium">{{ item.season }}{% if item.episode %} — Épisode {{ item.episode }}{% endif %}</dd>
+            </div>
+            {% endif %}
+            {% if item.file_id %}
+            <div>
+                <dt class="text-gray-500">File ID</dt>
+                <dd class="font-mono text-xs">{{ item.file_id }}</dd>
             </div>
             {% endif %}
             <div class="md:col-span-2">
@@ -43,7 +50,7 @@
                 <dd><span class="text-xs px-2 py-0.5 rounded
                     {% if item.status == 'detected' %}bg-yellow-100 text-yellow-700
                     {% elif item.status == 'ignored' %}bg-gray-100 text-gray-600
-                    {% elif item.status == 'fixed' %}bg-green-100 text-green-700
+                    {% elif item.status == 'fixed' or item.status == 'processed' %}bg-green-100 text-green-700
                     {% else %}bg-red-100 text-red-700{% endif %}">
                     {{ item.status }}
                 </span></dd>
@@ -62,7 +69,32 @@
             {% endif %}
         </dl>
 
-        <div class="mt-6 flex gap-2">
+        <div class="mt-6 flex flex-wrap gap-2">
+            {% if item.status == 'detected' or item.status == 'recheck_needed' %}
+            <template x-if="processStep === 'initial'">
+                <button @click="processStep = 'confirm'"
+                        class="bg-red-500 text-white px-3 py-1.5 rounded text-sm hover:bg-red-600">
+                    Traiter (DELETE API)
+                </button>
+            </template>
+            <template x-if="processStep === 'confirm'">
+                <div class="flex items-center gap-2 w-full">
+                    <span class="text-sm text-red-600 font-medium">Confirmer la suppression ?</span>
+                    <button @click="processStep = 'initial'" class="bg-gray-200 px-3 py-1.5 rounded text-sm">Annuler</button>
+                    <button hx-post="/api/results/{{ item.id }}/process"
+                            hx-target="this"
+                            hx-swap="outerHTML"
+                            class="bg-red-600 text-white px-3 py-1.5 rounded text-sm">
+                        Confirmer
+                    </button>
+                </div>
+            </template>
+            <button hx-post="/api/results/{{ item.id }}/fix"
+                    hx-target="closest div"
+                    class="bg-green-100 text-green-700 px-3 py-1.5 rounded text-sm hover:bg-green-200">
+                Marquer corrigé
+            </button>
+            {% endif %}
             <button hx-post="/api/results/{{ item.id }}/ignore"
                     hx-target="closest div"
                     class="bg-gray-200 text-gray-700 px-3 py-1.5 rounded text-sm hover:bg-gray-300">
@@ -74,6 +106,23 @@
                 Revérifier
             </button>
         </div>
+
+        <div x-text="processMsg" class="mt-2 text-sm"></div>
     </div>
 </div>
+
+<script>
+document.body.addEventListener('htmx:afterRequest', function(evt) {
+    if (evt.detail.path && evt.detail.path.includes('/process')) {
+        try {
+            const data = JSON.parse(evt.detail.xhr.responseText);
+            if (data.ok) {
+                window.location.reload();
+            } else {
+                alert('Erreur: ' + (data.error || 'inconnue'));
+            }
+        } catch(e) {}
+    }
+});
+</script>
 {% endblock %}

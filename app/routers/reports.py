@@ -25,7 +25,7 @@ async def stats(db: Connection = Depends(get_db)):
     total_results = await db.execute("SELECT COUNT(*) FROM results")
     broken_count = await db.execute("SELECT COUNT(*) FROM results WHERE status = 'detected'")
     fixed_count = await db.execute(
-        "SELECT COUNT(*) FROM results WHERE action IN ('fixed', 'processed')"
+        "SELECT COUNT(*) FROM results WHERE status IN ('fixed', 'processed', 'ignored')"
     )
 
     return {

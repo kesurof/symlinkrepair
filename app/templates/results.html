@@ -3,6 +3,28 @@
 {% block content %}
 <h2 class="text-xl font-semibold text-gray-800 mb-4">Éléments détectés</h2>
 
+<div class="bg-white rounded-lg shadow-sm border p-3 mb-4" x-data="{ source: '{{ active_source }}', status: '{{ active_status }}', q: '{{ active_q }}' }">
+    <div class="flex flex-wrap gap-2">
+        <select x-model="source" @change="window.location = '/results?source=' + source + '&status=' + status + '&q=' + q"
+                class="border rounded px-2 py-1 text-sm">
+            <option value="">Toutes sources</option>
+            {% for s in sources %}
+            <option value="{{ s }}" {% if s == active_source %}selected{% endif %}>{{ s }}</option>
+            {% endfor %}
+        </select>
+        <select x-model="status" @change="window.location = '/results?source=' + source + '&status=' + status + '&q=' + q"
+                class="border rounded px-2 py-1 text-sm">
+            <option value="">Tous statuts</option>
+            {% for st in statuses %}
+            <option value="{{ st }}" {% if st == active_status %}selected{% endif %}>{{ st }}</option>
+            {% endfor %}
+        </select>
+        <input type="text" x-model="q" placeholder="Rechercher..."
+               class="border rounded px-2 py-1 text-sm flex-1 min-w-[200px]"
+               @keydown.enter="window.location = '/results?source=' + source + '&status=' + status + '&q=' + q">
+    </div>
+</div>
+
 {% if items %}
 <div class="hidden md:block overflow-x-auto">
     <table class="w-full text-sm bg-white rounded-lg shadow-sm border">
@@ -31,7 +53,7 @@
                     <span class="text-xs px-2 py-0.5 rounded
                         {% if item.status == 'detected' %}bg-yellow-100 text-yellow-700
                         {% elif item.status == 'ignored' %}bg-gray-100 text-gray-600
-                        {% elif item.status == 'fixed' %}bg-green-100 text-green-700
+                        {% elif item.status == 'fixed' or item.status == 'processed' %}bg-green-100 text-green-700
                         {% else %}bg-red-100 text-red-700{% endif %}">
                         {{ item.status }}
                     </span>
@@ -55,7 +77,7 @@
             <span class="text-xs px-2 py-0.5 rounded
                 {% if item.status == 'detected' %}bg-yellow-100 text-yellow-700
                 {% elif item.status == 'ignored' %}bg-gray-100 text-gray-600
-                {% elif item.status == 'fixed' %}bg-green-100 text-green-700
+                {% elif item.status == 'fixed' or item.status == 'processed' %}bg-green-100 text-green-700
                 {% else %}bg-red-100 text-red-700{% endif %}">
                 {{ item.status }}
             </span>
