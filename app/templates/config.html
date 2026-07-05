@@ -138,6 +138,35 @@
         </section>
 
         <section class="bg-white rounded-lg shadow-sm border p-4">
+            <h3 class="font-medium text-gray-700 mb-3">Scans automatiques</h3>
+            <div class="space-y-4">
+                <div>
+                    <label class="flex items-center gap-2">
+                        <input type="checkbox" x-model="cfg.scheduler.radarr_enabled" class="rounded">
+                        <span class="text-sm font-medium">Radarr</span>
+                    </label>
+                    <div x-show="cfg.scheduler.radarr_enabled" class="mt-2 ml-6">
+                        <label class="block text-sm text-gray-600">Intervalle (heures)</label>
+                        <input type="number" x-model="cfg.scheduler.radarr_interval_hours" min="1" max="168"
+                               class="w-24 border rounded px-2 py-1.5 text-sm">
+                    </div>
+                </div>
+                <div>
+                    <label class="flex items-center gap-2">
+                        <input type="checkbox" x-model="cfg.scheduler.sonarr_enabled" class="rounded">
+                        <span class="text-sm font-medium">Sonarr</span>
+                    </label>
+                    <div x-show="cfg.scheduler.sonarr_enabled" class="mt-2 ml-6">
+                        <label class="block text-sm text-gray-600">Intervalle (heures)</label>
+                        <input type="number" x-model="cfg.scheduler.sonarr_interval_hours" min="1" max="168"
+                               class="w-24 border rounded px-2 py-1.5 text-sm">
+                    </div>
+                </div>
+                <p class="text-xs text-gray-400">Les scans sont lancés en mode simulation. Les résultats sont visibles sur la page Résultats.</p>
+            </div>
+        </section>
+
+        <section class="bg-white rounded-lg shadow-sm border p-4">
             <h3 class="font-medium text-gray-700 mb-3">Valeurs par défaut</h3>
             <div class="space-y-3">
                 <label class="flex items-center gap-2">
@@ -201,7 +230,8 @@ function configApp() {
         cfg: { radarr: { url: '', api_key: '', container: 'radarr', library_roots: [], target_prefixes: [] },
                sonarr: { url: '', api_key: '', container: 'sonarr', library_roots: [], target_prefixes: [] },
                discord: { enabled: false, webhook: '' },
-               defaults: { limit: 50, rescan: true, search: true, keep_symlinks: false } },
+               defaults: { limit: 50, rescan: true, search: true, keep_symlinks: false },
+               scheduler: { radarr_enabled: false, radarr_interval_hours: 3, sonarr_enabled: false, sonarr_interval_hours: 3 } },
         showRadarrKey: false,
         showSonarrKey: false,
         showWebhook: false,

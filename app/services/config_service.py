@@ -28,7 +28,19 @@ def load_config() -> AppConfig:
 
 
 def save_config(cfg: AppConfig):
-    _save_raw(cfg.model_dump())
+    stored = _load_raw()
+    raw = cfg.model_dump()
+
+    for section in ("radarr", "sonarr"):
+        val = raw.get(section, {}).get("api_key", "")
+        if val and ("..." in val or val == "********"):
+            raw[section]["api_key"] = stored.get(section, {}).get("api_key", "")
+
+    webhook = raw.get("discord", {}).get("webhook", "")
+    if webhook and ("..." in webhook or webhook == "********"):
+        raw["discord"]["webhook"] = stored.get("discord", {}).get("webhook", "")
+
+    _save_raw(raw)
 
 
 def mask_secret(value: str) -> str:

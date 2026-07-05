@@ -7,8 +7,8 @@ TEMPLATES_DIR = Path(__file__).resolve().parent / "templates"
 
 jinja_env = jinja2.Environment(
     loader=jinja2.FileSystemLoader(TEMPLATES_DIR),
-    cache_size=0,
-    auto_reload=True,
+    cache_size=50,
+    auto_reload=False,
 )
 
 templates = Jinja2Templates(env=jinja_env)

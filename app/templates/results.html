@@ -3,16 +3,16 @@
 {% block content %}
 <h2 class="text-xl font-semibold text-gray-800 mb-4">Éléments détectés</h2>
 
-<div class="bg-white rounded-lg shadow-sm border p-3 mb-4" x-data="{ source: '{{ active_source }}', status: '{{ active_status }}', q: '{{ active_q }}' }">
+<div class="bg-white rounded-lg shadow-sm border p-3 mb-4" x-data="{ src: '{{ active_source|e }}', st: '{{ active_status|e }}', q: '{{ active_q|e }}' }">
     <div class="flex flex-wrap gap-2">
-        <select x-model="source" @change="window.location = '/results?source=' + source + '&status=' + status + '&q=' + q"
+        <select x-model="src" @change="window.location = '/results?source=' + encodeURIComponent(src) + '&status=' + encodeURIComponent(st) + '&q=' + encodeURIComponent(q)"
                 class="border rounded px-2 py-1 text-sm">
             <option value="">Toutes sources</option>
             {% for s in sources %}
             <option value="{{ s }}" {% if s == active_source %}selected{% endif %}>{{ s }}</option>
             {% endfor %}
         </select>
-        <select x-model="status" @change="window.location = '/results?source=' + source + '&status=' + status + '&q=' + q"
+        <select x-model="st" @change="window.location = '/results?source=' + encodeURIComponent(src) + '&status=' + encodeURIComponent(st) + '&q=' + encodeURIComponent(q)"
                 class="border rounded px-2 py-1 text-sm">
             <option value="">Tous statuts</option>
             {% for st in statuses %}
@@ -21,7 +21,7 @@
         </select>
         <input type="text" x-model="q" placeholder="Rechercher..."
                class="border rounded px-2 py-1 text-sm flex-1 min-w-[200px]"
-               @keydown.enter="window.location = '/results?source=' + source + '&status=' + status + '&q=' + q">
+               @keydown.enter="window.location = '/results?source=' + encodeURIComponent(src) + '&status=' + encodeURIComponent(st) + '&q=' + encodeURIComponent(q)">
     </div>
 </div>
 

@@ -19,7 +19,7 @@ async def get_db():
 
 async def init_db():
     DATABASE_PATH.parent.mkdir(parents=True, exist_ok=True)
-    async with aiosqlite.connect(str(DATABASE_PATH)) as db:
+    async with aiosqlite.connect(str(DATABASE_PATH), timeout=30) as db:
         await db.executescript("""
             CREATE TABLE IF NOT EXISTS scans (
                 id          INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -46,6 +46,8 @@ async def init_db():
                 season          INTEGER,
                 episode         INTEGER,
                 file_id         INTEGER,
+                movie_id        INTEGER,
+                series_id       INTEGER,
                 tags            TEXT,
                 detection       TEXT NOT NULL DEFAULT 'broken_symlink',
                 status          TEXT NOT NULL DEFAULT 'detected',
@@ -59,4 +61,11 @@ async def init_db():
             CREATE INDEX IF NOT EXISTS idx_results_status ON results(status);
             CREATE INDEX IF NOT EXISTS idx_scans_created ON scans(created_at);
         """)
+
+        for col in ("movie_id", "series_id"):
+            try:
+                await db.execute(f"ALTER TABLE results ADD COLUMN {col} INTEGER")
+            except Exception:
+                pass
+
         await db.commit()

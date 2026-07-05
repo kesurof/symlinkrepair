@@ -2,7 +2,7 @@
 {% block title %}Détail — SymlinkRepair{% endblock %}
 {% block content %}
 <div class="max-w-3xl mx-auto">
-    <a href="/results{% if request.query_params.get('source') %}?source={{ request.query_params.source }}{% endif %}"
+    <a href="/results"
        class="text-blue-600 text-sm hover:underline mb-4 inline-block">&larr; Retour aux résultats</a>
 
     <div class="bg-white rounded-lg shadow-sm border p-6" x-data="{ processStep: 'initial', processMsg: '' }">
@@ -71,37 +71,46 @@
 
         <div class="mt-6 flex flex-wrap gap-2">
             {% if item.status == 'detected' or item.status == 'recheck_needed' %}
-            <template x-if="processStep === 'initial'">
+            <div x-show="processStep === 'initial'" x-cloak>
                 <button @click="processStep = 'confirm'"
                         class="bg-red-500 text-white px-3 py-1.5 rounded text-sm hover:bg-red-600">
                     Traiter (DELETE API)
                 </button>
-            </template>
-            <template x-if="processStep === 'confirm'">
-                <div class="flex items-center gap-2 w-full">
-                    <span class="text-sm text-red-600 font-medium">Confirmer la suppression ?</span>
-                    <button @click="processStep = 'initial'" class="bg-gray-200 px-3 py-1.5 rounded text-sm">Annuler</button>
-                    <button hx-post="/api/results/{{ item.id }}/process"
-                            hx-target="this"
-                            hx-swap="outerHTML"
-                            class="bg-red-600 text-white px-3 py-1.5 rounded text-sm">
-                        Confirmer
-                    </button>
-                </div>
-            </template>
+            </div>
+            <div x-show="processStep === 'confirm'" x-cloak class="flex items-center gap-2 w-full">
+                <span class="text-sm text-red-600 font-medium">Confirmer la suppression ?</span>
+                <button @click="processStep = 'initial'" class="bg-gray-200 px-3 py-1.5 rounded text-sm">Annuler</button>
+                <button hx-post="/api/results/{{ item.id }}/process"
+                        hx-target="closest .bg-white"
+                        hx-swap="innerHTML"
+                        class="bg-red-600 text-white px-3 py-1.5 rounded text-sm">
+                    Confirmer
+                </button>
+                {% if item.source == 'sonarr' and item.season %}
+                <button hx-post="/api/results/{{ item.id }}/process?delete_season=true"
+                        hx-target="closest .bg-white"
+                        hx-swap="innerHTML"
+                        class="bg-orange-600 text-white px-3 py-1.5 rounded text-sm">
+                    Toute la saison
+                </button>
+                {% endif %}
+            </div>
             <button hx-post="/api/results/{{ item.id }}/fix"
-                    hx-target="closest div"
+                    hx-target="closest .bg-white"
+                    hx-swap="innerHTML"
                     class="bg-green-100 text-green-700 px-3 py-1.5 rounded text-sm hover:bg-green-200">
                 Marquer corrigé
             </button>
             {% endif %}
             <button hx-post="/api/results/{{ item.id }}/ignore"
-                    hx-target="closest div"
+                    hx-target="closest .bg-white"
+                    hx-swap="innerHTML"
                     class="bg-gray-200 text-gray-700 px-3 py-1.5 rounded text-sm hover:bg-gray-300">
                 Ignorer
             </button>
             <button hx-post="/api/results/{{ item.id }}/recheck"
-                    hx-target="closest div"
+                    hx-target="closest .bg-white"
+                    hx-swap="innerHTML"
                     class="bg-blue-100 text-blue-700 px-3 py-1.5 rounded text-sm hover:bg-blue-200">
                 Revérifier
             </button>
@@ -112,16 +121,22 @@
 </div>
 
 <script>
-document.body.addEventListener('htmx:afterRequest', function(evt) {
-    if (evt.detail.path && evt.detail.path.includes('/process')) {
-        try {
-            const data = JSON.parse(evt.detail.xhr.responseText);
-            if (data.ok) {
-                window.location.reload();
-            } else {
-                alert('Erreur: ' + (data.error || 'inconnue'));
-            }
-        } catch(e) {}
+document.body.addEventListener('htmx:beforeSwap', function(evt) {
+    if (evt.detail.pathInfo && evt.detail.pathInfo.requestPath && evt.detail.pathInfo.requestPath.includes('/api/results/')) {
+        const data = evt.detail.serverResponse;
+        if (typeof data === 'string') {
+            try {
+                const parsed = JSON.parse(data);
+                if (parsed.ok !== undefined) {
+                    evt.detail.shouldSwap = false;
+                    if (parsed.ok) {
+                        window.location.reload();
+                    } else {
+                        alert('Erreur: ' + (parsed.error || 'inconnue'));
+                    }
+                }
+            } catch(e) {}
+        }
     }
 });
 </script>

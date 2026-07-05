@@ -4,6 +4,8 @@ from fastapi.responses import HTMLResponse, JSONResponse
 
 from app.database import get_db
 from app.services import scanner
+from app.services.config_service import load_config
+from app.services.discord import notify_scan
 from app.templates import templates
 
 router = APIRouter()
@@ -15,11 +17,13 @@ async def scan_page(request: Request):
 
 
 @router.post("/api/scan/{source}")
-async def trigger_scan(source: str, mode: str = "simulate", db: Connection = Depends(get_db)):
+async def trigger_scan(
+    source: str, mode: str = "simulate", limit: int = 0, db: Connection = Depends(get_db)
+):
     if source not in ("radarr", "sonarr"):
         return JSONResponse({"error": "source invalide"}, status_code=400)
 
-    result = await scanner.start_scan(source, mode)
+    result = await scanner.start_scan(source, mode, limit)
     if result["status"] == "error":
         return JSONResponse(result, status_code=409)
 
@@ -43,8 +47,9 @@ async def trigger_scan(source: str, mode: str = "simulate", db: Connection = Dep
     for target in result.get("targets", []):
         await db.execute(
             "INSERT INTO results (scan_id, source, symlink_path, target_path,"
-            " media_type, media_title, season, episode, file_id, tags, detection, status)"
-            " VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+            " media_type, media_title, season, episode, file_id, movie_id, series_id,"
+            " tags, detection, status)"
+            " VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
             (
                 scan_id,
                 target.get("source", source),
@@ -55,12 +60,17 @@ async def trigger_scan(source: str, mode: str = "simulate", db: Connection = Dep
                 target.get("season"),
                 target.get("episode"),
                 target.get("file_id"),
+                target.get("movie_id"),
+                target.get("series_id"),
                 target.get("tags"),
                 target.get("detection", "broken_symlink"),
                 target.get("status", "detected"),
             ),
         )
     await db.commit()
+
+    config = load_config()
+    await notify_scan(config, source, result)
 
     return {
         "ok": True,

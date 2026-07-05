@@ -29,9 +29,17 @@ class DefaultsConfig(BaseModel):
     keep_symlinks: bool = False
 
 
+class SchedulerConfig(BaseModel):
+    radarr_enabled: bool = False
+    radarr_interval_hours: int = 3
+    sonarr_enabled: bool = False
+    sonarr_interval_hours: int = 3
+
+
 class AppConfig(BaseModel):
     radarr: RadarrConfig = RadarrConfig()
     sonarr: SonarrConfig = SonarrConfig()
     discord: DiscordConfig = DiscordConfig()
     defaults: DefaultsConfig = DefaultsConfig()
+    scheduler: SchedulerConfig = SchedulerConfig()
     browse_roots: list[str] = ["/home", "/mnt", "/data"]

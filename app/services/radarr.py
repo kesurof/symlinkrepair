@@ -27,8 +27,10 @@ async def test_connection(url: str, api_key: str) -> dict:
 
 
 def copy_database(container: str) -> str | None:
+    tmp = None
     try:
         tmp = tempfile.NamedTemporaryFile(suffix=".db", delete=False)
+        tmp.close()
         subprocess.run(
             ["docker", "cp", f"{container}:/config/radarr.db", tmp.name],
             capture_output=True,
@@ -37,6 +39,8 @@ def copy_database(container: str) -> str | None:
         return tmp.name
     except Exception as e:
         logger.error("Failed to copy Radarr DB: %s", e)
+        if tmp and Path(tmp.name).exists():
+            Path(tmp.name).unlink(missing_ok=True)
         return None
 
 
@@ -64,6 +68,11 @@ def load_movie_records(db_path: str) -> dict[str, dict]:
         conn.close()
     except Exception as e:
         logger.error("Failed to load Radarr records: %s", e)
+    finally:
+        try:
+            Path(db_path).unlink(missing_ok=True)
+        except Exception:
+            pass
     return records_by_path
 
 

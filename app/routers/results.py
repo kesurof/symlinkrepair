@@ -3,7 +3,9 @@ from fastapi import APIRouter, Depends, Request
 from fastapi.responses import HTMLResponse, JSONResponse
 
 from app.database import get_db
-from app.services.cleanup import process_result
+from app.services.cleanup import process_result, process_result_season
+from app.services.config_service import load_config
+from app.services.discord import notify_cleanup
 from app.templates import templates
 
 router = APIRouter()
@@ -101,21 +103,30 @@ async def fix_result(result_id: int, db: Connection = Depends(get_db)):
 
 
 @router.post("/api/results/{result_id}/process")
-async def process_single_result(result_id: int, db: Connection = Depends(get_db)):
+async def process_single_result(
+    result_id: int, delete_season: bool = False, db: Connection = Depends(get_db)
+):
     cursor = await db.execute("SELECT * FROM results WHERE id = ?", (result_id,))
     row = await cursor.fetchone()
     if not row:
         return JSONResponse({"ok": False, "error": "Résultat introuvable"}, status_code=404)
 
     result = dict(row)
-    outcome = await process_result(result)
 
-    if outcome["ok"]:
-        await db.execute(
-            "UPDATE results SET status = 'processed', action = 'api_delete',"
-            " action_date = datetime('now') WHERE id = ?",
-            (result_id,),
-        )
-        await db.commit()
+    if delete_season and result.get("source") == "sonarr":
+        outcome = await process_result_season(result, db)
+    else:
+        outcome = await process_result(result)
+
+        if outcome["ok"]:
+            await db.execute(
+                "UPDATE results SET status = 'processed', action = 'api_delete',"
+                " action_date = datetime('now') WHERE id = ?",
+                (result_id,),
+            )
+            await db.commit()
+
+    config = load_config()
+    await notify_cleanup(config, result, outcome.get("actions", {}))
 
     return outcome

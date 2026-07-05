@@ -40,7 +40,9 @@ def inspect_symlink(path: str, prefixes: list[str]) -> dict:
     }
 
 
-def scan_library_roots(roots: list[str], prefixes: list[str]) -> tuple[list[dict], int, int, int]:
+def scan_library_roots(
+    roots: list[str], prefixes: list[str], limit: int = 0
+) -> tuple[list[dict], int, int, int]:
     total = 0
     matching = 0
     broken = 0
@@ -55,5 +57,7 @@ def scan_library_roots(roots: list[str], prefixes: list[str]) -> tuple[list[dict
                 if info["broken"]:
                     broken += 1
                     results.append(info)
+                    if limit and len(results) >= limit:
+                        return results, total, matching, broken
 
     return results, total, matching, broken

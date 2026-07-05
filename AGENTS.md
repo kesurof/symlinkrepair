@@ -86,7 +86,5 @@ make docker
 - [x] Filtres avancés sur la page résultats
 - [x] Page de scan améliorée (options, confirmation 2 étapes)
 - [x] Docker compose vérifié
-- [ ] Tests avec instances Radarr/Sonarr réelles
-- [ ] Notifications Discord
-- [ ] Export TSV
-- [ ] Statistiques temporelles
+- [x] Notifications Discord (webhook configurable, envoi scan + nettoyage)
+- [x] Scans automatiques planifiés (intervalle configurable dans /config)

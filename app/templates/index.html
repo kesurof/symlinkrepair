@@ -1,10 +1,7 @@
 {% extends "base.html" %}
 {% block title %}Dashboard — SymlinkRepair{% endblock %}
 {% block content %}
-<div hx-get="/api/stats" hx-trigger="load" hx-target="#stats">
-    <div class="text-center py-12 text-gray-400">Chargement...</div>
-</div>
-<div id="stats"></div>
+<div id="loading" class="text-center py-12 text-gray-400">Chargement...</div>
 
 <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
     <div class="bg-white rounded-lg shadow-sm border p-4 text-center">
@@ -32,16 +29,16 @@
 </div>
 
 <script>
-document.body.addEventListener('htmx:afterSwap', function(evt) {
-    if (evt.detail.target.id === 'stats') {
-        try {
-            const data = JSON.parse(evt.detail.target.innerText);
-            document.getElementById('stat-total').innerText = data.total_scans ?? '—';
-            document.getElementById('stat-broken').innerText = data.broken ?? '—';
-            document.getElementById('stat-fixed').innerText = data.fixed ?? '—';
-            document.getElementById('stat-results').innerText = data.total_results ?? '—';
-        } catch(e) {}
-    }
-});
+(async function() {
+    try {
+        const resp = await fetch('/api/stats');
+        const data = await resp.json();
+        document.getElementById('stat-total').innerText = data.total_scans ?? '—';
+        document.getElementById('stat-broken').innerText = data.broken ?? '—';
+        document.getElementById('stat-fixed').innerText = data.fixed ?? '—';
+        document.getElementById('stat-results').innerText = data.total_results ?? '—';
+    } catch(e) {}
+    document.getElementById('loading').style.display = 'none';
+})();
 </script>
 {% endblock %}

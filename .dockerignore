@@ -1,0 +1,12 @@
+__pycache__
+.git
+.pytest_cache
+.ruff_cache
+data
+*.pyc
+.env
+.venv
+AGENTS.md
+docs
+Makefile
+.pre-commit-config.yaml
