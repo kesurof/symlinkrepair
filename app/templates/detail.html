@@ -1,0 +1,79 @@
+{% extends "base.html" %}
+{% block title %}Détail — SymlinkRepair{% endblock %}
+{% block content %}
+<div class="max-w-3xl mx-auto">
+    <a href="/results" class="text-blue-600 text-sm hover:underline mb-4 inline-block">&larr; Retour aux résultats</a>
+
+    <div class="bg-white rounded-lg shadow-sm border p-6">
+        <div class="flex items-center justify-between mb-4">
+            <h2 class="text-lg font-semibold text-gray-800">{{ item.media_title or 'Sans titre' }}</h2>
+            <span class="text-xs font-medium px-2 py-0.5 rounded
+                {% if item.source == 'radarr' %}bg-blue-100 text-blue-700{% else %}bg-green-100 text-green-700{% endif %}">
+                {{ item.source }}
+            </span>
+        </div>
+
+        <dl class="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
+            <div>
+                <dt class="text-gray-500">Type</dt>
+                <dd class="font-medium">{{ item.media_type or '—' }}</dd>
+            </div>
+            {% if item.season %}
+            <div>
+                <dt class="text-gray-500">Saison</dt>
+                <dd class="font-medium">{{ item.season }}{% if item.episode %} — Épisode {{ item.episode }}{% endif %}</dd>
+            </div>
+            {% endif %}
+            <div class="md:col-span-2">
+                <dt class="text-gray-500">Symlink</dt>
+                <dd class="font-mono text-xs break-all bg-gray-50 px-2 py-1 rounded mt-1">{{ item.symlink_path }}</dd>
+            </div>
+            {% if item.target_path %}
+            <div class="md:col-span-2">
+                <dt class="text-gray-500">Cible</dt>
+                <dd class="font-mono text-xs break-all bg-gray-50 px-2 py-1 rounded mt-1">{{ item.target_path }}</dd>
+            </div>
+            {% endif %}
+            <div>
+                <dt class="text-gray-500">Détection</dt>
+                <dd class="font-medium">{{ item.detection }}</dd>
+            </div>
+            <div>
+                <dt class="text-gray-500">Statut</dt>
+                <dd><span class="text-xs px-2 py-0.5 rounded
+                    {% if item.status == 'detected' %}bg-yellow-100 text-yellow-700
+                    {% elif item.status == 'ignored' %}bg-gray-100 text-gray-600
+                    {% elif item.status == 'fixed' %}bg-green-100 text-green-700
+                    {% else %}bg-red-100 text-red-700{% endif %}">
+                    {{ item.status }}
+                </span></dd>
+            </div>
+            {% if item.action %}
+            <div>
+                <dt class="text-gray-500">Action</dt>
+                <dd class="font-medium">{{ item.action }}</dd>
+            </div>
+            {% endif %}
+            {% if item.action_date %}
+            <div>
+                <dt class="text-gray-500">Date d'action</dt>
+                <dd class="font-medium">{{ item.action_date }}</dd>
+            </div>
+            {% endif %}
+        </dl>
+
+        <div class="mt-6 flex gap-2">
+            <button hx-post="/api/results/{{ item.id }}/ignore"
+                    hx-target="closest div"
+                    class="bg-gray-200 text-gray-700 px-3 py-1.5 rounded text-sm hover:bg-gray-300">
+                Ignorer
+            </button>
+            <button hx-post="/api/results/{{ item.id }}/recheck"
+                    hx-target="closest div"
+                    class="bg-blue-100 text-blue-700 px-3 py-1.5 rounded text-sm hover:bg-blue-200">
+                Revérifier
+            </button>
+        </div>
+    </div>
+</div>
+{% endblock %}

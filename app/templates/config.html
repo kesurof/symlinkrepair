@@ -1,0 +1,291 @@
+{% extends "base.html" %}
+{% block title %}Paramètres — SymlinkRepair{% endblock %}
+{% block content %}
+<div x-data="configApp()" x-init="loadConfig()" class="max-w-3xl mx-auto">
+    <h2 class="text-xl font-semibold text-gray-800 mb-6">Paramètres</h2>
+
+    <div class="space-y-6">
+        <section class="bg-white rounded-lg shadow-sm border p-4">
+            <h3 class="font-medium text-gray-700 mb-3">Radarr</h3>
+            <div class="grid gap-3">
+                <div>
+                    <label class="block text-sm text-gray-600">URL</label>
+                    <input type="url" x-model="cfg.radarr.url" placeholder="http://radarr:7878"
+                           class="w-full border rounded px-2 py-1.5 text-sm">
+                </div>
+                <div>
+                    <label class="block text-sm text-gray-600">Clé API</label>
+                    <div class="flex gap-2">
+                        <input :type="showRadarrKey ? 'text' : 'password'" x-model="cfg.radarr.api_key"
+                               class="flex-1 border rounded px-2 py-1.5 text-sm font-mono">
+                        <button @click="showRadarrKey = !showRadarrKey" class="text-xs text-gray-500 hover:text-gray-700 shrink-0">
+                            <span x-text="showRadarrKey ? 'Masquer' : 'Afficher'"></span>
+                        </button>
+                    </div>
+                </div>
+                <div>
+                    <label class="block text-sm text-gray-600">Conteneur Docker</label>
+                    <input type="text" x-model="cfg.radarr.container" placeholder="radarr"
+                           class="w-full border rounded px-2 py-1.5 text-sm">
+                </div>
+                <div>
+                    <label class="block text-sm text-gray-600">Bibliothèques</label>
+                    <template x-for="(root, i) in cfg.radarr.library_roots" :key="'rl'+i">
+                        <div class="flex items-center gap-2 mt-1">
+                            <span class="text-sm font-mono flex-1 bg-gray-50 px-2 py-1 rounded" x-text="root"></span>
+                            <button @click="cfg.radarr.library_roots.splice(i, 1)" class="text-red-400 text-xs">✕</button>
+                        </div>
+                    </template>
+                    <button @click="openBrowser('radarr', 'library_roots')" class="text-blue-600 text-sm mt-1 hover:underline">
+                        + Ajouter un dossier
+                    </button>
+                </div>
+                <div>
+                    <label class="block text-sm text-gray-600">Préfixes surveillés (rclone/mergerfs)</label>
+                    <template x-for="(p, i) in cfg.radarr.target_prefixes" :key="'rp'+i">
+                        <div class="flex items-center gap-2 mt-1">
+                            <span class="text-sm font-mono flex-1 bg-gray-50 px-2 py-1 rounded" x-text="p"></span>
+                            <button @click="cfg.radarr.target_prefixes.splice(i, 1)" class="text-red-400 text-xs">✕</button>
+                        </div>
+                    </template>
+                    <button @click="openBrowser('radarr', 'target_prefixes')" class="text-blue-600 text-sm mt-1 hover:underline">
+                        + Ajouter un point de montage
+                    </button>
+                </div>
+                <div class="pt-2">
+                    <button @click="testRadarr()" class="bg-gray-100 border rounded px-3 py-1 text-sm hover:bg-gray-200">
+                        Tester la connexion Radarr
+                    </button>
+                    <span x-show="radarrTest" class="ml-2 text-sm" x-text="radarrTest" :class="radarrOk ? 'text-green-600' : 'text-red-600'"></span>
+                </div>
+            </div>
+        </section>
+
+        <section class="bg-white rounded-lg shadow-sm border p-4">
+            <h3 class="font-medium text-gray-700 mb-3">Sonarr</h3>
+            <div class="grid gap-3">
+                <div>
+                    <label class="block text-sm text-gray-600">URL</label>
+                    <input type="url" x-model="cfg.sonarr.url" placeholder="http://sonarr:8989"
+                           class="w-full border rounded px-2 py-1.5 text-sm">
+                </div>
+                <div>
+                    <label class="block text-sm text-gray-600">Clé API</label>
+                    <div class="flex gap-2">
+                        <input :type="showSonarrKey ? 'text' : 'password'" x-model="cfg.sonarr.api_key"
+                               class="flex-1 border rounded px-2 py-1.5 text-sm font-mono">
+                        <button @click="showSonarrKey = !showSonarrKey" class="text-xs text-gray-500 hover:text-gray-700 shrink-0">
+                            <span x-text="showSonarrKey ? 'Masquer' : 'Afficher'"></span>
+                        </button>
+                    </div>
+                </div>
+                <div>
+                    <label class="block text-sm text-gray-600">Conteneur Docker</label>
+                    <input type="text" x-model="cfg.sonarr.container" placeholder="sonarr"
+                           class="w-full border rounded px-2 py-1.5 text-sm">
+                </div>
+                <div>
+                    <label class="block text-sm text-gray-600">Bibliothèques</label>
+                    <template x-for="(root, i) in cfg.sonarr.library_roots" :key="'sl'+i">
+                        <div class="flex items-center gap-2 mt-1">
+                            <span class="text-sm font-mono flex-1 bg-gray-50 px-2 py-1 rounded" x-text="root"></span>
+                            <button @click="cfg.sonarr.library_roots.splice(i, 1)" class="text-red-400 text-xs">✕</button>
+                        </div>
+                    </template>
+                    <button @click="openBrowser('sonarr', 'library_roots')" class="text-blue-600 text-sm mt-1 hover:underline">
+                        + Ajouter un dossier
+                    </button>
+                </div>
+                <div>
+                    <label class="block text-sm text-gray-600">Préfixes surveillés (rclone/mergerfs)</label>
+                    <template x-for="(p, i) in cfg.sonarr.target_prefixes" :key="'sp'+i">
+                        <div class="flex items-center gap-2 mt-1">
+                            <span class="text-sm font-mono flex-1 bg-gray-50 px-2 py-1 rounded" x-text="p"></span>
+                            <button @click="cfg.sonarr.target_prefixes.splice(i, 1)" class="text-red-400 text-xs">✕</button>
+                        </div>
+                    </template>
+                    <button @click="openBrowser('sonarr', 'target_prefixes')" class="text-blue-600 text-sm mt-1 hover:underline">
+                        + Ajouter un point de montage
+                    </button>
+                </div>
+                <div class="pt-2">
+                    <button @click="testSonarr()" class="bg-gray-100 border rounded px-3 py-1 text-sm hover:bg-gray-200">
+                        Tester la connexion Sonarr
+                    </button>
+                    <span x-show="sonarrTest" class="ml-2 text-sm" x-text="sonarrTest" :class="sonarrOk ? 'text-green-600' : 'text-red-600'"></span>
+                </div>
+            </div>
+        </section>
+
+        <section class="bg-white rounded-lg shadow-sm border p-4">
+            <h3 class="font-medium text-gray-700 mb-3">Discord</h3>
+            <div class="space-y-3">
+                <label class="flex items-center gap-2">
+                    <input type="checkbox" x-model="cfg.discord.enabled" class="rounded">
+                    <span class="text-sm">Notifications Discord activées</span>
+                </label>
+                <div x-show="cfg.discord.enabled">
+                    <label class="block text-sm text-gray-600">Webhook URL</label>
+                    <div class="flex gap-2">
+                        <input :type="showWebhook ? 'text' : 'password'" x-model="cfg.discord.webhook"
+                               class="flex-1 border rounded px-2 py-1.5 text-sm font-mono">
+                        <button @click="showWebhook = !showWebhook" class="text-xs text-gray-500 hover:text-gray-700">
+                            <span x-text="showWebhook ? 'Masquer' : 'Afficher'"></span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section class="bg-white rounded-lg shadow-sm border p-4">
+            <h3 class="font-medium text-gray-700 mb-3">Valeurs par défaut</h3>
+            <div class="space-y-3">
+                <label class="flex items-center gap-2">
+                    <input type="checkbox" x-model="cfg.defaults.rescan" class="rounded">
+                    <span class="text-sm">Refresh après traitement</span>
+                </label>
+                <label class="flex items-center gap-2">
+                    <input type="checkbox" x-model="cfg.defaults.search" class="rounded">
+                    <span class="text-sm">Recherche automatique après nettoyage</span>
+                </label>
+                <label class="flex items-center gap-2">
+                    <input type="checkbox" x-model="cfg.defaults.keep_symlinks" class="rounded">
+                    <span class="text-sm">Conserver les symlinks locaux</span>
+                </label>
+                <div>
+                    <label class="block text-sm text-gray-600">Limite fichiers par scan</label>
+                    <input type="number" x-model="cfg.defaults.limit" min="1" max="500"
+                           class="w-24 border rounded px-2 py-1.5 text-sm">
+                </div>
+            </div>
+        </section>
+
+        <div class="flex gap-3">
+            <button @click="saveConfig()" class="bg-blue-600 text-white px-4 py-2 rounded text-sm hover:bg-blue-700">
+                💾 Enregistrer
+            </button>
+            <span x-show="saved" class="text-sm text-green-600 self-center">✓ Enregistré</span>
+        </div>
+    </div>
+
+    <dialog x-ref="browserModal" class="rounded-lg shadow-xl border p-4 w-full max-w-lg">
+        <div class="flex items-center justify-between mb-3">
+            <span class="text-sm font-medium text-gray-700">Explorateur</span>
+            <button @click="$refs.browserModal.close()" class="text-gray-400 hover:text-gray-600 text-lg leading-none">&times;</button>
+        </div>
+        <div class="text-sm font-mono text-gray-500 mb-2" x-text="browserPath"></div>
+        <div class="border rounded overflow-hidden max-h-60 overflow-y-auto">
+            <template x-for="dir in browserDirs" :key="dir.path">
+                <div class="flex items-center px-3 py-2 hover:bg-gray-50 cursor-pointer border-b last:border-b-0 text-sm"
+                     @click="navigateDir(dir.path)">
+                    <svg class="w-4 h-4 text-amber-500 mr-2 shrink-0">📁</svg>
+                    <span class="flex-1 truncate" x-text="dir.name"></span>
+                    <button class="text-xs text-blue-600 hover:underline shrink-0 ml-2"
+                            @click.stop="selectDir(dir.path)">
+                        Sélectionner
+                    </button>
+                </div>
+            </template>
+        </div>
+        <button x-show="browserCanGoUp" @click="navigateDir(browserParent)"
+                class="text-sm text-gray-500 hover:text-gray-700 mt-2">
+            ↑ Dossier parent
+        </button>
+    </dialog>
+</div>
+
+<script>
+function configApp() {
+    return {
+        cfg: { radarr: { url: '', api_key: '', container: 'radarr', library_roots: [], target_prefixes: [] },
+               sonarr: { url: '', api_key: '', container: 'sonarr', library_roots: [], target_prefixes: [] },
+               discord: { enabled: false, webhook: '' },
+               defaults: { limit: 50, rescan: true, search: true, keep_symlinks: false } },
+        showRadarrKey: false,
+        showSonarrKey: false,
+        showWebhook: false,
+        radarrTest: '',
+        radarrOk: false,
+        sonarrTest: '',
+        sonarrOk: false,
+        saved: false,
+        browserField: null,
+        browserSource: null,
+        browserPath: '/mnt',
+        browserDirs: [],
+        browserParent: '',
+        browserCanGoUp: false,
+
+        async loadConfig() {
+            const resp = await fetch('/api/config');
+            const data = await resp.json();
+            Object.assign(this.cfg, data);
+        },
+
+        async saveConfig() {
+            const resp = await fetch('/api/config', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify(this.cfg)
+            });
+            if (resp.ok) {
+                this.saved = true;
+                setTimeout(() => this.saved = false, 2000);
+            }
+        },
+
+        async testRadarr() {
+            const resp = await fetch('/api/config/test-radarr', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({url: this.cfg.radarr.url, api_key: this.cfg.radarr.api_key})
+            });
+            const data = await resp.json();
+            this.radarrOk = data.ok;
+            this.radarrTest = data.ok ? `✓ Connecté (v${data.version})` : `✗ ${data.error}`;
+        },
+
+        async testSonarr() {
+            const resp = await fetch('/api/config/test-sonarr', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({url: this.cfg.sonarr.url, api_key: this.cfg.sonarr.api_key})
+            });
+            const data = await resp.json();
+            this.sonarrOk = data.ok;
+            this.sonarrTest = data.ok ? `✓ Connecté (v${data.version})` : `✗ ${data.error}`;
+        },
+
+        openBrowser(source, field) {
+            this.browserSource = source;
+            this.browserField = field;
+            this.browserPath = '/mnt';
+            this.loadBrowser('/mnt');
+            this.$refs.browserModal.showModal();
+        },
+
+        async loadBrowser(path) {
+            const resp = await fetch(`/api/browse?path=${encodeURIComponent(path)}`);
+            if (!resp.ok) return;
+            const data = await resp.json();
+            this.browserPath = data.current;
+            this.browserDirs = data.directories;
+            this.browserParent = data.parent;
+            this.browserCanGoUp = data.can_go_up;
+        },
+
+        navigateDir(path) {
+            this.loadBrowser(path);
+        },
+
+        selectDir(path) {
+            const arr = this.cfg[this.browserSource][this.browserField];
+            if (!arr.includes(path)) {
+                arr.push(path);
+            }
+            this.$refs.browserModal.close();
+        }
+    }
+}
+</script>
+{% endblock %}

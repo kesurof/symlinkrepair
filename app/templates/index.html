@@ -1,22 +1,47 @@
-<!DOCTYPE html>
-<html lang="fr" x-data="{ page: 'home' }">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SymlinkRepair</title>
-    <script src="https://unpkg.com/htmx.org@2.0.4"></script>
-    <script src="https://unpkg.com/alpinejs@3.14.8" defer></script>
-    <script src="https://cdn.tailwindcss.com"></script>
-</head>
-<body class="bg-gray-50 min-h-screen">
-    <header class="bg-white shadow-sm border-b">
-        <div class="max-w-4xl mx-auto px-4 py-4 flex items-center justify-between">
-            <h1 class="text-xl font-semibold text-gray-800">SymlinkRepair</h1>
-            <span class="text-sm text-gray-400" x-text="page"></span>
-        </div>
-    </header>
-    <main class="max-w-4xl mx-auto px-4 py-6">
-        <p class="text-gray-500 text-center py-12">Application prête.</p>
-    </main>
-</body>
-</html>
+{% extends "base.html" %}
+{% block title %}Dashboard — SymlinkRepair{% endblock %}
+{% block content %}
+<div hx-get="/api/stats" hx-trigger="load" hx-target="#stats">
+    <div class="text-center py-12 text-gray-400">Chargement...</div>
+</div>
+<div id="stats"></div>
+
+<div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+    <div class="bg-white rounded-lg shadow-sm border p-4 text-center">
+        <div class="text-2xl font-bold text-gray-800" id="stat-total">—</div>
+        <div class="text-xs text-gray-500 mt-1">Scans</div>
+    </div>
+    <div class="bg-white rounded-lg shadow-sm border p-4 text-center">
+        <div class="text-2xl font-bold text-amber-600" id="stat-broken">—</div>
+        <div class="text-xs text-gray-500 mt-1">Cassés</div>
+    </div>
+    <div class="bg-white rounded-lg shadow-sm border p-4 text-center">
+        <div class="text-2xl font-bold text-green-600" id="stat-fixed">—</div>
+        <div class="text-xs text-gray-500 mt-1">Corrigés</div>
+    </div>
+    <div class="bg-white rounded-lg shadow-sm border p-4 text-center">
+        <div class="text-2xl font-bold text-gray-800" id="stat-results">—</div>
+        <div class="text-xs text-gray-500 mt-1">Résultats</div>
+    </div>
+</div>
+
+<div class="bg-white rounded-lg shadow-sm border p-6 text-center text-gray-400">
+    <p class="mb-2">Bienvenue sur SymlinkRepair</p>
+    <p class="text-sm">Configurez vos serveurs dans <a href="/config" class="text-blue-600 hover:underline">Paramètres</a>,
+    puis lancez un scan depuis la page <a href="/scan" class="text-blue-600 hover:underline">Scan</a>.</p>
+</div>
+
+<script>
+document.body.addEventListener('htmx:afterSwap', function(evt) {
+    if (evt.detail.target.id === 'stats') {
+        try {
+            const data = JSON.parse(evt.detail.target.innerText);
+            document.getElementById('stat-total').innerText = data.total_scans ?? '—';
+            document.getElementById('stat-broken').innerText = data.broken ?? '—';
+            document.getElementById('stat-fixed').innerText = data.fixed ?? '—';
+            document.getElementById('stat-results').innerText = data.total_results ?? '—';
+        } catch(e) {}
+    }
+});
+</script>
+{% endblock %}

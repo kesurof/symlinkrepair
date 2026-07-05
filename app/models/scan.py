@@ -3,9 +3,14 @@ from pydantic import BaseModel
 
 class Scan(BaseModel):
     id: int | None = None
-    path: str
-    status: str = "pending"
-    broken_count: int = 0
+    source: str
+    mode: str = "simulate"
+    status: str = "running"
+    total: int = 0
+    broken: int = 0
+    processed: int = 0
+    summary: str | None = None
+    report_file: str | None = None
     created_at: str | None = None
     completed_at: str | None = None
 
@@ -13,7 +18,17 @@ class Scan(BaseModel):
 class Result(BaseModel):
     id: int | None = None
     scan_id: int
+    source: str
     symlink_path: str
     target_path: str | None = None
-    status: str = "broken"
+    media_type: str | None = None
+    media_title: str | None = None
+    season: int | None = None
+    episode: int | None = None
+    file_id: int | None = None
+    tags: str | None = None
+    detection: str = "broken_symlink"
+    status: str = "detected"
     action: str | None = None
+    action_date: str | None = None
+    notes: str | None = None

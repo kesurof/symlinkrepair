@@ -1,16 +1,7 @@
-from pathlib import Path
-
-import jinja2
 from fastapi import Request
 from fastapi.responses import JSONResponse
-from fastapi.templating import Jinja2Templates
 
-jinja_env = jinja2.Environment(
-    loader=jinja2.FileSystemLoader(Path(__file__).resolve().parent / "templates"),
-    cache_size=0,
-    auto_reload=True,
-)
-templates = Jinja2Templates(env=jinja_env)
+from app.templates import templates
 
 
 async def not_found_handler(request: Request, exc):

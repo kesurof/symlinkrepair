@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="fr" x-data="{ mobileMenu: false }">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}SymlinkRepair{% endblock %}</title>
+    <script src="https://unpkg.com/htmx.org@2.0.4"></script>
+    <script src="https://unpkg.com/alpinejs@3.14.8" defer></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-50 min-h-screen">
+    <nav class="bg-white shadow-sm border-b">
+        <div class="max-w-6xl mx-auto px-4">
+            <div class="flex items-center justify-between h-14">
+                <a href="/" class="text-lg font-semibold text-gray-800">SymlinkRepair</a>
+                <button @click="mobileMenu = !mobileMenu" class="md:hidden text-gray-500">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/>
+                    </svg>
+                </button>
+                <div class="hidden md:flex items-center gap-6 text-sm">
+                    <a href="/" class="text-gray-600 hover:text-gray-900">Dashboard</a>
+                    <a href="/scan" class="text-gray-600 hover:text-gray-900">Scan</a>
+                    <a href="/results" class="text-gray-600 hover:text-gray-900">Résultats</a>
+                    <a href="/reports" class="text-gray-600 hover:text-gray-900">Rapports</a>
+                    <a href="/config" class="text-gray-600 hover:text-gray-900">Paramètres</a>
+                </div>
+            </div>
+            <div x-show="mobileMenu" class="md:hidden pb-3 space-y-1 text-sm">
+                <a href="/" class="block px-2 py-1 text-gray-600 hover:text-gray-900">Dashboard</a>
+                <a href="/scan" class="block px-2 py-1 text-gray-600 hover:text-gray-900">Scan</a>
+                <a href="/results" class="block px-2 py-1 text-gray-600 hover:text-gray-900">Résultats</a>
+                <a href="/reports" class="block px-2 py-1 text-gray-600 hover:text-gray-900">Rapports</a>
+                <a href="/config" class="block px-2 py-1 text-gray-600 hover:text-gray-900">Paramètres</a>
+            </div>
+        </div>
+    </nav>
+    <main class="max-w-6xl mx-auto px-4 py-6">
+        {% block content %}{% endblock %}
+    </main>
+</body>
+</html>
