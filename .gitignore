@@ -8,6 +8,10 @@ build/
 .venv/
 venv/
 env/
+.ruff_cache/
+.pytest_cache/
+.mypy_cache/
+.python-version
 
 # SQLite
 *.db
@@ -27,6 +31,12 @@ env/
 # OS
 .DS_Store
 Thumbs.db
+._*
+
+# Coverage
+.coverage
+htmlcov/
+coverage.xml
 
 # Project specific
 data/
