@@ -9,9 +9,11 @@ def scan_directory(root: str) -> list[dict]:
             target = p.readlink()
             resolved = (p.parent / target).resolve()
             if not resolved.exists():
-                broken.append({
-                    "symlink": str(p),
-                    "target": str(target),
-                    "resolved": str(resolved),
-                })
+                broken.append(
+                    {
+                        "symlink": str(p),
+                        "target": str(target),
+                        "resolved": str(resolved),
+                    }
+                )
     return broken

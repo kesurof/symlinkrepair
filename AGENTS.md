@@ -20,14 +20,34 @@
 ## Commandes
 ```bash
 # Lancer en dev
-uvicorn app.main:app --reload --port 8000
+make dev
 
 # Lint
-ruff check .
+make lint
+
+# Formater le code
+make format
+
+# Lancer les tests
+make test
 
 # Lancer avec Docker
-docker compose up --build
+make docker
 ```
+
+## Tests
+- Framework : pytest
+- Fichiers dans `tests/`
+- Un test de health check est présent
+- Lancer avec `make test` ou `python -m pytest -v`
+
+## Pre-commit
+- Config dans `.pre-commit-config.yaml`
+- Ruff check + format automatique avant chaque commit
+- Installer avec `pre-commit install`
+
+## Endpoints système
+- `GET /health` — health check (status, database)
 
 ## Base de données
 - Fichier SQLite dans `data/symlinkrepair.db` (ignoré par git)

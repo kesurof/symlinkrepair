@@ -1,5 +1,7 @@
-import aiosqlite
 from pathlib import Path
+
+import aiosqlite
+
 from app.config import settings
 
 DATABASE_PATH = Path(settings.data_dir) / "symlinkrepair.db"
