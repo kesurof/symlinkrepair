@@ -1,11 +1,12 @@
 # Skills opencode
 
-Ce dossier contient les compétences réutilisables pour opencode.
+Skills disponibles :
 
-## Structure
-- Chaque skill est un fichier ou un dossier
-- Définit des instructions spécialisées pour des tâches récurrentes
+| Skill | Usage |
+|-------|-------|
+| `verify` | Vérification lint/tests avant commit |
+| `architecture` | Conventions de code et structure |
+| `db` | Patterns d'accès SQLite |
+| `frontend` | Patterns HTMX / Alpine.js / Tailwind |
 
-## Créer un skill
-Créer un fichier `<nom>.md` décrivant le contexte, les étapes et les
-conventions à suivre pour une tâche spécifique.
+Charger un skill avec la commande `/skill <nom>`.
