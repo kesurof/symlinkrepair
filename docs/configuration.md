@@ -20,10 +20,14 @@ sans jamais éditer de fichier manuellement.
 
 | Type | Exemples | UI |
 |------|----------|----|
-| **Chemins répertoires** | `LIBRARY_ROOTS` | Explorateur de dossiers (navigation) |
-| **Préfixes de chemins** | `TARGET_PREFIXES` | Champ texte + ajout par liste |
+| **Chemins répertoires** | `LIBRARY_ROOTS`, `TARGET_PREFIXES` | Explorateur de dossiers (navigation) |
 | **Valeurs scalaires** | URL, clé API, conteneur, webhook | Champ texte, masquage pour secrets |
 | **Booléens** | notifications, refresh, search, keep_symlinks | Toggle / interrupteur |
+
+> **Note :** `TARGET_PREFIXES` sont des points de montage réels (rclone,
+> mergerfs, unionfs ou équivalent). Ce sont donc des répertoires existants
+> sur le système, accessibles via l'explorateur de dossiers au même titre
+> que `LIBRARY_ROOTS`.
 
 ---
 
@@ -109,45 +113,45 @@ qui ouvre l'explorateur dans une modale HTMX / Alpine.js :
 
 ## 2. Préfixes surveillés (pour `TARGET_PREFIXES`)
 
-Les préfixes comme `/mnt/decypharr/alldebrid/` sont des motifs de chemin
-utilisés pour identifier les symlinks pointant vers AllDebrid. Ce ne sont
-**pas nécessairement des répertoires existants** : l'explorateur de dossiers
-n'est pas adapté.
+Les préfixes comme `/mnt/decypharr/alldebrid/` sont des **points de montage
+réels** (rclone mount, mergerfs, unionfs, ou équivalent). Ce sont donc des
+répertoires existants sur le système : l'explorateur de dossiers est parfaitement
+adapté, **exactement comme pour LIBRARY_ROOTS**.
 
-### UI : champ texte + liste d'ajout
+### UI : même explorateur que LIBRARY_ROOTS
+
+Le composant `folderBrowser` est réutilisé à l'identique :
 
 ```html
-<div x-data="{ prefixes: ['/mnt/decypharr/alldebrid/'], newPrefix: '' }">
-  <label>Préfixes surveillés</label>
+<div x-data="{ prefixes: ['/mnt/decypharr/alldebrid/'] }">
+  <label>Points de montage surveillés (AllDebrid / Decypharr)</label>
+  <p class="text-xs text-gray-500 mb-2">
+    Répertoires où sont montés les volumes rclone / mergerfs contenant
+    les fichiers débridés.
+  </p>
 
-  <div class="flex gap-2 mb-2">
-    <input type="text" x-model="newPrefix" placeholder="/mnt/..."
-           class="flex-1 border rounded px-2 py-1 font-mono text-sm">
-    <button @click="prefixes.push(newPrefix); newPrefix = ''"
-            :disabled="!newPrefix.startsWith('/')"
-            class="bg-blue-500 text-white rounded px-3 py-1 text-sm disabled:opacity-50">
-      Ajouter
-    </button>
-  </div>
-
-  <div class="space-y-1">
-    <template x-for="(prefix, i) in prefixes" :key="i">
-      <div class="flex items-center gap-2 bg-gray-50 rounded px-3 py-1.5 text-sm">
-        <span class="font-mono text-gray-700 flex-1" x-text="prefix"></span>
-        <button @click="prefixes.splice(i, 1)" class="text-red-400 hover:text-red-600 text-xs">
-          ✕
-        </button>
+  <div class="space-y-1 mb-2">
+    <template x-for="(p, i) in prefixes" :key="i">
+      <div class="flex items-center gap-2 bg-gray-50 rounded px-3 py-1.5 text-sm font-mono">
+        <span class="flex-1" x-text="p"></span>
+        <button @click="prefixes.splice(i, 1)" class="text-red-400 hover:text-red-600 text-xs">✕</button>
       </div>
     </template>
   </div>
+
+  <button @click="$refs.browserModal.showModal()"
+          class="text-blue-600 text-sm hover:underline">
+    + Ajouter un point de montage
+  </button>
+
+  <!-- Modale explorateur (même composant que pour LIBRARY_ROOTS) -->
+  <dialog x-ref="browserModal" class="rounded-lg shadow-xl border p-4 w-full max-w-lg">
+    <div x-data="folderBrowser('/mnt')">
+      ...
+    </div>
+  </dialog>
 </div>
 ```
-
-**Validation côté frontend :**
-- Doit commencer par `/`
-- Pas de `..` dans le chemin
-- Affichage d'une suggestion si le préfixe ne correspond à aucun
-  répertoire existant (optionnel, via `GET /api/browse`)
 
 ---
 
@@ -244,14 +248,15 @@ n'est pas adapté.
 │  Garder symlinks    [ ]                         │
 │  Limite fichiers    [50]                        │
 │                                                 │
-│  ── Explorateur ── (modale) ─────────────────   │
-│  📁 /mnt                                       │
-│  ├── 📁 userdata/         [Sélectionner]        │
-│  ├── 📁 media/            [Sélectionner]        │
-│  └── 📁 downloads/        [Sélectionner]        │
-│  [↑ Dossier parent]                             │
-│                                                 │
-│  [💾 Enregistrer]                               │
+  │  ── Explorateur ── (modale, même composant ──   │
+  │  │    pour LIBRARY_ROOTS et TARGET_PREFIXES)     │
+  │  📁 /mnt                                       │
+  │  ├── 📁 userdata/         [Sélectionner]        │
+  │  ├── 📁 media/            [Sélectionner]        │
+  │  └── 📁 downloads/        [Sélectionner]        │
+  │  [↑ Dossier parent]                             │
+  │                                                 │
+  │  [💾 Enregistrer]                               │
 └─────────────────────────────────────────────────┘
 ```
 
