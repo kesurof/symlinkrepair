@@ -88,3 +88,5 @@ make docker
 - [x] Docker compose vérifié
 - [x] Notifications Discord (webhook configurable, envoi scan + nettoyage)
 - [x] Scans automatiques planifiés (intervalle configurable dans /config)
+- [x] Pagination + filtres avancés (source, statut, saison, recherche)
+- [x] Sélection multiple et actions batch (ignorer, fixer, revérifier)

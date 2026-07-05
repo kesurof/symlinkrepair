@@ -17,27 +17,46 @@ async def results_page(
     db: Connection = Depends(get_db),
     source: str = "",
     status: str = "",
+    season: str = "",
     q: str = "",
+    page: int = 1,
+    per_page: int = 50,
 ):
-    query = (
-        "SELECT id, source, media_title, media_type, season,"
-        " symlink_path, status, action FROM results WHERE 1=1"
-    )
+    if page < 1:
+        page = 1
+    if per_page < 1:
+        per_page = 50
+
+    where = "WHERE 1=1"
     params = []
 
     if source:
-        query += " AND source = ?"
+        where += " AND source = ?"
         params.append(source)
     if status:
-        query += " AND status = ?"
+        where += " AND status = ?"
         params.append(status)
+    if season:
+        where += " AND season = ?"
+        params.append(int(season))
     if q:
-        query += " AND (media_title LIKE ? OR symlink_path LIKE ?)"
+        where += " AND (media_title LIKE ? OR symlink_path LIKE ?)"
         like = f"%{q}%"
         params.extend([like, like])
 
-    query += " ORDER BY id DESC LIMIT 100"
-    cursor = await db.execute(query, params)
+    count_cursor = await db.execute(f"SELECT COUNT(*) FROM results {where}", params)
+    total = (await count_cursor.fetchone())[0]
+    total_pages = max(1, (total + per_page - 1) // per_page)
+    if page > total_pages:
+        page = total_pages
+
+    offset = (page - 1) * per_page
+    cursor = await db.execute(
+        f"SELECT id, source, media_title, media_type, season,"
+        f" symlink_path, status, action FROM results {where}"
+        f" ORDER BY id DESC LIMIT ? OFFSET ?",
+        params + [per_page, offset],
+    )
     rows = await cursor.fetchall()
     items = [dict(r) for r in rows]
 
@@ -55,7 +74,12 @@ async def results_page(
             "statuses": statuses,
             "active_source": source,
             "active_status": status,
+            "active_season": season,
             "active_q": q,
+            "page": page,
+            "per_page": per_page,
+            "total": total,
+            "total_pages": total_pages,
         },
     )
 
@@ -130,3 +154,37 @@ async def process_single_result(
     await notify_cleanup(config, result, outcome.get("actions", {}))
 
     return outcome
+
+
+@router.post("/api/results/batch")
+async def batch_action(request: Request, db: Connection = Depends(get_db)):
+    body = await request.json()
+    action = body.get("action", "")
+    ids = body.get("ids", [])
+
+    if not ids:
+        return JSONResponse({"ok": False, "error": "Aucun ID fourni"}, status_code=400)
+
+    if action == "ignore":
+        await db.execute(
+            f"UPDATE results SET status = 'ignored', action = 'ignored',"
+            f" action_date = datetime('now') WHERE id IN ({','.join('?' for _ in ids)})",
+            ids,
+        )
+    elif action == "fix":
+        await db.execute(
+            f"UPDATE results SET status = 'fixed', action = 'manual_fix',"
+            f" action_date = datetime('now') WHERE id IN ({','.join('?' for _ in ids)})",
+            ids,
+        )
+    elif action == "recheck":
+        await db.execute(
+            f"UPDATE results SET status = 'recheck_needed',"
+            f" action = NULL, action_date = NULL WHERE id IN ({','.join('?' for _ in ids)})",
+            ids,
+        )
+    else:
+        return JSONResponse({"ok": False, "error": f"Action inconnue: {action}"}, status_code=400)
+
+    await db.commit()
+    return {"ok": True, "affected": len(ids)}
