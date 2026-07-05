@@ -12,7 +12,6 @@ from collections import Counter
 from datetime import UTC, datetime
 from pathlib import Path
 
-
 SCRIPT_DIR = Path(__file__).resolve().parent
 CONFIG_FILE = SCRIPT_DIR / "radarr_cleanup.json"
 
@@ -98,9 +97,7 @@ def normalize_config(config):
         normalized.get("DISCORD_NOTIFICATIONS_ENABLED", False)
     )
 
-    normalized["RADARR_LIBRARY_ROOTS"] = clean_path_list(
-        normalized.get("RADARR_LIBRARY_ROOTS", [])
-    )
+    normalized["RADARR_LIBRARY_ROOTS"] = clean_path_list(normalized.get("RADARR_LIBRARY_ROOTS", []))
 
     normalized["RADARR_TARGET_PREFIXES"] = clean_prefix_list(
         normalized.get("RADARR_TARGET_PREFIXES", [])
@@ -118,11 +115,7 @@ def load_config():
                 loaded = json.load(file)
 
             if isinstance(loaded, dict):
-                config.update({
-                    key: value
-                    for key, value in loaded.items()
-                    if key in DEFAULTS
-                })
+                config.update({key: value for key, value in loaded.items() if key in DEFAULTS})
         except json.JSONDecodeError as error:
             log(f"AVERTISSEMENT: configuration JSON illisible: {CONFIG_FILE} | {error}")
 
@@ -274,9 +267,7 @@ def run_cmd(cmd, check=True):
 
     if check and result.returncode != 0:
         raise RuntimeError(
-            f"Commande échouée: {' '.join(cmd)}\n"
-            f"STDOUT:\n{result.stdout}\n"
-            f"STDERR:\n{result.stderr}"
+            f"Commande échouée: {' '.join(cmd)}\nSTDOUT:\n{result.stdout}\nSTDERR:\n{result.stderr}"
         )
 
     return result
@@ -331,10 +322,7 @@ def api_request(method, base_url, api_key, endpoint, payload=None):
 
 
 def should_send_discord_notification(config):
-    return bool(
-        config.get("DISCORD_NOTIFICATIONS_ENABLED")
-        and config.get("DISCORD_WEBHOOK_URL")
-    )
+    return bool(config.get("DISCORD_NOTIFICATIONS_ENABLED") and config.get("DISCORD_WEBHOOK_URL"))
 
 
 def build_execution_summary(
@@ -385,10 +373,7 @@ def format_counter_lines(counter_dict):
     if not counter_dict:
         return "-"
 
-    return "\n".join(
-        f"`{key}`: **{value}**"
-        for key, value in sorted(counter_dict.items())
-    )
+    return "\n".join(f"`{key}`: **{value}**" for key, value in sorted(counter_dict.items()))
 
 
 def format_list_preview(values, empty_label="Tous"):
@@ -469,43 +454,53 @@ def send_discord_webhook(webhook_url, summary):
 
     report_path = summary.get("report_path")
     if report_path:
-        fields.append({
-            "name": "📄 Rapport",
-            "value": f"`{report_path[:1018]}`",
-            "inline": False,
-        })
+        fields.append(
+            {
+                "name": "📄 Rapport",
+                "value": f"`{report_path[:1018]}`",
+                "inline": False,
+            }
+        )
 
     delete_http_counts = summary.get("delete_http_counts") or {}
     if delete_http_counts:
-        fields.append({
-            "name": "🌐 HTTP suppressions",
-            "value": format_counter_lines(delete_http_counts),
-            "inline": True,
-        })
+        fields.append(
+            {
+                "name": "🌐 HTTP suppressions",
+                "value": format_counter_lines(delete_http_counts),
+                "inline": True,
+            }
+        )
 
     unlink_counts = summary.get("unlink_counts") or {}
     if unlink_counts:
-        fields.append({
-            "name": "🧹 Symlinks locaux",
-            "value": format_counter_lines(unlink_counts),
-            "inline": True,
-        })
+        fields.append(
+            {
+                "name": "🧹 Symlinks locaux",
+                "value": format_counter_lines(unlink_counts),
+                "inline": True,
+            }
+        )
 
     reason_counts = summary.get("reason_counts") or {}
     if reason_counts:
-        fields.append({
-            "name": "📌 Raisons",
-            "value": format_counter_lines(reason_counts),
-            "inline": True,
-        })
+        fields.append(
+            {
+                "name": "📌 Raisons",
+                "value": format_counter_lines(reason_counts),
+                "inline": True,
+            }
+        )
 
     error_message = summary.get("error")
     if error_message:
-        fields.append({
-            "name": "🚨 Erreur",
-            "value": f"```\n{error_message[:1016]}\n```",
-            "inline": False,
-        })
+        fields.append(
+            {
+                "name": "🚨 Erreur",
+                "value": f"```\n{error_message[:1016]}\n```",
+                "inline": False,
+            }
+        )
 
     description = (
         f"**{summary.get('targets_selected', 0)}** MovieFiles selectionnes, "
@@ -513,19 +508,21 @@ def send_discord_webhook(webhook_url, summary):
     )
 
     payload = {
-        "embeds": [{
-            "title": title,
-            "description": description,
-            "color": color,
-            "fields": fields,
-            "footer": {
-                "text": (
-                    f"Radarr: {summary.get('radarr_url') or '-'}"
-                    f" | Version: {summary.get('radarr_version') or '-'}"
-                )
-            },
-            "timestamp": datetime.now(UTC).isoformat().replace("+00:00", "Z"),
-        }]
+        "embeds": [
+            {
+                "title": title,
+                "description": description,
+                "color": color,
+                "fields": fields,
+                "footer": {
+                    "text": (
+                        f"Radarr: {summary.get('radarr_url') or '-'}"
+                        f" | Version: {summary.get('radarr_version') or '-'}"
+                    )
+                },
+                "timestamp": datetime.now(UTC).isoformat().replace("+00:00", "Z"),
+            }
+        ]
     }
 
     request = urllib.request.Request(
@@ -638,10 +635,12 @@ def get_tags(config):
         label = tag.get("label")
 
         if tag_id is not None and label:
-            tags.append({
-                "id": int(tag_id),
-                "label": str(label),
-            })
+            tags.append(
+                {
+                    "id": int(tag_id),
+                    "label": str(label),
+                }
+            )
 
     return sorted(tags, key=lambda item: item["label"].lower())
 
@@ -735,12 +734,14 @@ def copy_fresh_db(container, db_path):
 
     log(f"Copie DB fraîche : {container}:/config/radarr.db -> {db_path}")
 
-    run_cmd([
-        "docker",
-        "cp",
-        f"{container}:/config/radarr.db",
-        db_path,
-    ])
+    run_cmd(
+        [
+            "docker",
+            "cp",
+            f"{container}:/config/radarr.db",
+            db_path,
+        ]
+    )
 
     optional_files = [
         ("/config/radarr.db-wal", db_path + "-wal"),
@@ -750,12 +751,14 @@ def copy_fresh_db(container, db_path):
     for source, target in optional_files:
         if docker_file_exists(container, source):
             log(f"Copie fichier SQLite optionnel : {source}")
-            run_cmd([
-                "docker",
-                "cp",
-                f"{container}:{source}",
-                target,
-            ])
+            run_cmd(
+                [
+                    "docker",
+                    "cp",
+                    f"{container}:{source}",
+                    target,
+                ]
+            )
 
     if not os.path.exists(db_path):
         raise RuntimeError(f"DB introuvable après copie : {db_path}")
@@ -813,9 +816,7 @@ def load_radarr_records(db_path):
         full_path = f"{movie_path.rstrip('/')}/{relative_path.lstrip('/')}"
 
         movie_tags = [
-            int(value)
-            for value in parse_json_array(row["movie_tags"])
-            if str(value).isdigit()
+            int(value) for value in parse_json_array(row["movie_tags"]) if str(value).isdigit()
         ]
 
         record = {
@@ -962,11 +963,13 @@ def choose_targets(records_by_path, broken_symlinks, tag_ids, movie_title):
         if not record_matches_filters(record, tag_ids, movie_title):
             continue
 
-        targets.append({
-            **record,
-            "symlink_target": info["target"],
-            "reason": "broken_symlink",
-        })
+        targets.append(
+            {
+                **record,
+                "symlink_target": info["target"],
+                "reason": "broken_symlink",
+            }
+        )
 
     return unique_targets(targets)
 
@@ -1175,14 +1178,12 @@ def run_cleanup(
 
     if max_limit_applied:
         log(
-            "Limite appliquée: "
-            f"{len(targets)}/{total_targets_before_limit} MovieFiles sélectionnés"
+            f"Limite appliquée: {len(targets)}/{total_targets_before_limit} MovieFiles sélectionnés"
         )
 
-    affected_movies = sorted({
-        (target["movie_id"], target["movie_title"], target["movie_year"])
-        for target in targets
-    })
+    affected_movies = sorted(
+        {(target["movie_id"], target["movie_title"], target["movie_year"]) for target in targets}
+    )
 
     reason_counts = Counter(target["reason"] for target in targets)
     summary["targets_selected"] = len(targets)
@@ -1287,13 +1288,15 @@ def run_cleanup(
             http_status, body = post_command(config, payload)
             command_id = body.get("id") if isinstance(body, dict) else None
 
-            refresh_results.append({
-                "movie_id": movie_id,
-                "movie_title": movie_title,
-                "movie_year": movie_year,
-                "http": http_status,
-                "command_id": command_id,
-            })
+            refresh_results.append(
+                {
+                    "movie_id": movie_id,
+                    "movie_title": movie_title,
+                    "movie_year": movie_year,
+                    "http": http_status,
+                    "command_id": command_id,
+                }
+            )
 
             log(
                 f"     RefreshMovie MID={movie_id} "
@@ -1318,16 +1321,15 @@ def run_cleanup(
         http_status, body = post_command(config, payload)
         command_id = body.get("id") if isinstance(body, dict) else None
 
-        search_results.append({
-            "movie_ids": movie_ids,
-            "http": http_status,
-            "command_id": command_id,
-        })
-
-        log(
-            f"     MoviesSearch movies={len(movie_ids)} "
-            f"HTTP={http_status} commandId={command_id}"
+        search_results.append(
+            {
+                "movie_ids": movie_ids,
+                "http": http_status,
+                "command_id": command_id,
+            }
         )
+
+        log(f"     MoviesSearch movies={len(movie_ids)} HTTP={http_status} commandId={command_id}")
 
     write_report(report_path, targets, results)
 
@@ -1432,7 +1434,9 @@ def choose_menu(config):
         print()
         print("Actions après nettoyage")
         print("-----------------------")
-        print("Après suppression dans Radarr, le script peut aussi supprimer les anciens liens locaux cassés.")
+        print(
+            "Après suppression dans Radarr, le script peut aussi supprimer les anciens liens locaux cassés."
+        )
         print("Recommandé : oui.")
         delete_local_symlinks = ask_yes_no("Supprimer les liens locaux cassés", True)
 
@@ -1454,7 +1458,9 @@ def choose_menu(config):
             print()
             print("ATTENTION : mode NETTOYAGE RÉEL.")
             print("Le script va supprimer dans Radarr les références aux MovieFiles sélectionnés.")
-            print("Il ne traite que les fichiers locaux qui sont des liens vers le préfixe AllDebrid configuré.")
+            print(
+                "Il ne traite que les fichiers locaux qui sont des liens vers le préfixe AllDebrid configuré."
+            )
             print("Les vrais fichiers locaux hors AllDebrid ne sont pas ciblés.")
             confirm = input("Tape OUI pour confirmer le nettoyage : ").strip()
 
@@ -1479,23 +1485,62 @@ def parse_args():
         description="Nettoyage Radarr des symlinks cassés AllDebrid / Decypharr."
     )
 
-    parser.add_argument("--setup", action="store_true", help="Créer ou modifier les réglages locaux.")
+    parser.add_argument(
+        "--setup", action="store_true", help="Créer ou modifier les réglages locaux."
+    )
     parser.add_argument("--menu", action="store_true", help="Afficher le menu interactif.")
-    parser.add_argument("--print-config", action="store_true", help="Afficher la configuration actuelle.")
+    parser.add_argument(
+        "--print-config", action="store_true", help="Afficher la configuration actuelle."
+    )
     parser.add_argument("--test-api", action="store_true", help="Tester la connexion API Radarr.")
 
-    parser.add_argument("--apply", action="store_true", help="Mode nettoyage réel : applique les suppressions dans Radarr.")
-    parser.add_argument("--max-files", type=int, default=0, help="Nombre maximum de fichiers à traiter. 0 = tout traiter.")
+    parser.add_argument(
+        "--apply",
+        action="store_true",
+        help="Mode nettoyage réel : applique les suppressions dans Radarr.",
+    )
+    parser.add_argument(
+        "--max-files",
+        type=int,
+        default=0,
+        help="Nombre maximum de fichiers à traiter. 0 = tout traiter.",
+    )
 
-    parser.add_argument("--library-root", action="append", default=[], help="Forcer un dossier racine Radarr à analyser. Option répétable.")
-    parser.add_argument("--target-prefix", action="append", default=[], help="Forcer un préfixe AllDebrid/Decypharr à surveiller. Option répétable.")
+    parser.add_argument(
+        "--library-root",
+        action="append",
+        default=[],
+        help="Forcer un dossier racine Radarr à analyser. Option répétable.",
+    )
+    parser.add_argument(
+        "--target-prefix",
+        action="append",
+        default=[],
+        help="Forcer un préfixe AllDebrid/Decypharr à surveiller. Option répétable.",
+    )
 
-    parser.add_argument("--tag-id", action="append", type=int, default=[], help="Limiter aux films ayant ce tag Radarr. Option répétable.")
-    parser.add_argument("--movie-title", default="", help="Limiter aux films dont le titre contient ce texte.")
+    parser.add_argument(
+        "--tag-id",
+        action="append",
+        type=int,
+        default=[],
+        help="Limiter aux films ayant ce tag Radarr. Option répétable.",
+    )
+    parser.add_argument(
+        "--movie-title", default="", help="Limiter aux films dont le titre contient ce texte."
+    )
 
-    parser.add_argument("--keep-symlinks", action="store_true", help="Conserver les liens locaux cassés après suppression dans Radarr.")
-    parser.add_argument("--skip-rescan", action="store_true", help="Ne pas lancer RefreshMovie après nettoyage.")
-    parser.add_argument("--skip-search", action="store_true", help="Ne pas lancer MoviesSearch après nettoyage.")
+    parser.add_argument(
+        "--keep-symlinks",
+        action="store_true",
+        help="Conserver les liens locaux cassés après suppression dans Radarr.",
+    )
+    parser.add_argument(
+        "--skip-rescan", action="store_true", help="Ne pas lancer RefreshMovie après nettoyage."
+    )
+    parser.add_argument(
+        "--skip-search", action="store_true", help="Ne pas lancer MoviesSearch après nettoyage."
+    )
 
     return parser.parse_args()
 

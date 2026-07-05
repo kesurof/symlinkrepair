@@ -7,13 +7,13 @@ from pathlib import Path
 from app.services import filescanner
 from app.services.config_service import load_config
 from app.services.radarr import (
-    copy_database as radarr_copy_db,
+    copy_database_from_container as radarr_copy_db,
 )
 from app.services.radarr import (
     load_movie_records,
 )
 from app.services.sonarr import (
-    copy_database as sonarr_copy_db,
+    copy_database_from_container as sonarr_copy_db,
 )
 from app.services.sonarr import (
     load_episode_records,

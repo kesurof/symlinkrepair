@@ -1,7 +1,7 @@
 {% extends "base.html" %}
 {% block title %}Résultats — SymlinkRepair{% endblock %}
 {% block content %}
-<div x-data="resultsApp()" x-init='init({{ page }}, {{ total_pages }}, {{ total }}, "{{ active_source|e }}", "{{ active_status|e }}", "{{ active_season|e }}", "{{ active_q|e }}")'>
+<div x-data="resultsApp()" x-init='init({{ page }}, {{ total }}, {{ total_pages }})'>
     <div class="flex items-center justify-between mb-4">
         <h2 class="text-xl font-semibold text-gray-800">Résultats</h2>
         <span class="text-sm text-gray-500" x-text="total + ' résultat' + (total > 1 ? 's' : '')"></span>
@@ -9,22 +9,25 @@
 
     <div class="bg-white rounded-lg shadow-sm border p-3 mb-4">
         <div class="flex flex-wrap gap-2">
-            <select x-model="src" @change="goTo(1)"
-                    class="border rounded px-2 py-1 text-sm">
+            <select id="filter-source" x-model="src"
+                    class="border rounded px-2 py-1 text-sm"
+                    @change="hxNav(1)">
                 <option value="">Toutes sources</option>
                 {% for s in sources %}
                 <option value="{{ s }}" {% if s == active_source %}selected{% endif %}>{{ s }}</option>
                 {% endfor %}
             </select>
-            <select x-model="st" @change="goTo(1)"
-                    class="border rounded px-2 py-1 text-sm">
+            <select id="filter-status" x-model="st"
+                    class="border rounded px-2 py-1 text-sm"
+                    @change="hxNav(1)">
                 <option value="">Tous statuts</option>
                 {% for st in statuses %}
                 <option value="{{ st }}" {% if st == active_status %}selected{% endif %}>{{ st }}</option>
                 {% endfor %}
             </select>
-            <select x-show="src === 'sonarr'" x-model="sn" @change="goTo(1)"
-                    class="border rounded px-2 py-1 text-sm">
+            <select id="filter-season" x-model="sn" x-show="src === 'sonarr'"
+                    class="border rounded px-2 py-1 text-sm"
+                    @change="hxNav(1)">
                 <option value="">Toutes saisons</option>
                 {% for i in range(1, 21) %}
                 <option value="{{ i }}">Saison {{ i }}</option>
@@ -32,9 +35,10 @@
             </select>
             <input type="text" x-model="q" placeholder="Rechercher..."
                    class="border rounded px-2 py-1 text-sm flex-1 min-w-[200px]"
-                   @keydown.enter="goTo(1)">
-            <select x-model="perPage" @change="goTo(1)"
-                    class="border rounded px-2 py-1 text-sm">
+                   @keydown.enter="hxNav(1)">
+            <select id="filter-perpage" x-model="perPage"
+                    class="border rounded px-2 py-1 text-sm"
+                    @change="hxNav(1)">
                 <option value="25">25 / page</option>
                 <option value="50" selected>50 / page</option>
                 <option value="100">100 / page</option>
@@ -51,144 +55,34 @@
         <span x-show="batchMsg" x-text="batchMsg" class="text-green-600 ml-2"></span>
     </div>
 
-    {% if items %}
-    <div class="hidden md:block overflow-x-auto">
-        <table class="w-full text-sm bg-white rounded-lg shadow-sm border">
-            <thead class="bg-gray-50 text-left">
-                <tr>
-                    <th class="px-3 py-2 w-10">
-                        <input type="checkbox" @click="toggleAll($event.target.checked)"
-                               :checked="selected.length === items.length && items.length > 0"
-                               class="rounded">
-                    </th>
-                    <th class="px-3 py-2 font-medium text-gray-600">Source</th>
-                    <th class="px-3 py-2 font-medium text-gray-600">Titre</th>
-                    <th class="px-3 py-2 font-medium text-gray-600">Type</th>
-                    <th class="px-3 py-2 font-medium text-gray-600">Chemin</th>
-                    <th class="px-3 py-2 font-medium text-gray-600">Statut</th>
-                    <th class="px-3 py-2 font-medium text-gray-600"></th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for item in items %}
-                <tr class="border-t hover:bg-gray-50" :class="{'bg-blue-50': selected.includes({{ item.id }})}">
-                    <td class="px-3 py-2">
-                        <input type="checkbox" value="{{ item.id }}"
-                               @change="toggle({{ item.id }})"
-                               :checked="selected.includes({{ item.id }})"
-                               class="rounded">
-                    </td>
-                    <td class="px-3 py-2">
-                        <span class="text-xs font-medium px-2 py-0.5 rounded {{ 'bg-blue-100 text-blue-700' if item.source == 'radarr' else 'bg-green-100 text-green-700' }}">
-                            {{ item.source }}
-                        </span>
-                    </td>
-                    <td class="px-3 py-2 font-medium">{{ item.media_title or '—' }}</td>
-                    <td class="px-3 py-2 text-gray-500">{{ item.media_type or '—' }}{% if item.season %} S{{ item.season }}{% endif %}</td>
-                    <td class="px-3 py-2 text-gray-500 font-mono text-xs max-w-xs truncate">{{ item.symlink_path }}</td>
-                    <td class="px-3 py-2">
-                        <span class="text-xs px-2 py-0.5 rounded
-                            {% if item.status == 'detected' %}bg-yellow-100 text-yellow-700
-                            {% elif item.status == 'ignored' %}bg-gray-100 text-gray-600
-                            {% elif item.status == 'fixed' or item.status == 'processed' %}bg-green-100 text-green-700
-                            {% else %}bg-red-100 text-red-700{% endif %}">
-                            {{ item.status }}
-                        </span>
-                    </td>
-                    <td class="px-3 py-2">
-                        <a href="/results/{{ item.id }}" class="text-blue-600 text-xs hover:underline">Détail</a>
-                    </td>
-                </tr>
-                {% endfor %}
-            </tbody>
-        </table>
+    <div id="results-content">
+        {% include "partials/results_content.html" %}
     </div>
-
-    <div class="md:hidden space-y-3">
-        {% for item in items %}
-        <div class="bg-white rounded-lg shadow-sm border p-3 flex items-start gap-3"
-             :class="{'bg-blue-50 border-blue-200': selected.includes({{ item.id }})}">
-            <input type="checkbox" value="{{ item.id }}"
-                   @change="toggle({{ item.id }})"
-                   :checked="selected.includes({{ item.id }})"
-                   class="mt-1 rounded">
-            <div class="flex-1 min-w-0">
-                <div class="flex items-center justify-between mb-1">
-                    <span class="text-xs font-medium px-2 py-0.5 rounded {{ 'bg-blue-100 text-blue-700' if item.source == 'radarr' else 'bg-green-100 text-green-700' }}">
-                        {{ item.source }}
-                    </span>
-                    <span class="text-xs px-2 py-0.5 rounded
-                        {% if item.status == 'detected' %}bg-yellow-100 text-yellow-700
-                        {% elif item.status == 'ignored' %}bg-gray-100 text-gray-600
-                        {% elif item.status == 'fixed' or item.status == 'processed' %}bg-green-100 text-green-700
-                        {% else %}bg-red-100 text-red-700{% endif %}">
-                        {{ item.status }}
-                    </span>
-                </div>
-                <div class="font-medium text-sm truncate">{{ item.media_title or '—' }}</div>
-                <div class="text-xs text-gray-500 font-mono truncate mt-1">{{ item.symlink_path }}</div>
-                <a href="/results/{{ item.id }}" class="text-blue-600 text-xs hover:underline mt-2 inline-block">Détail →</a>
-            </div>
-        </div>
-        {% endfor %}
-    </div>
-
-    <div class="flex items-center justify-between mt-4 text-sm" x-show="totalPages > 1">
-        <div class="text-gray-500">
-            Page <span x-text="page"></span> / <span x-text="totalPages"></span>
-        </div>
-        <div class="flex gap-1">
-            <button @click="goTo(page - 1)" :disabled="page <= 1"
-                    class="px-3 py-1 rounded border hover:bg-gray-50 disabled:opacity-30 disabled:cursor-not-allowed">
-                ←
-            </button>
-            <template x-for="p in pages()" :key="p">
-                <button @click="goTo(p)"
-                        :class="p === page ? 'bg-blue-600 text-white border-blue-600' : 'border hover:bg-gray-50'"
-                        class="px-3 py-1 rounded border">
-                    <span x-text="p"></span>
-                </button>
-            </template>
-            <button @click="goTo(page + 1)" :disabled="page >= totalPages"
-                    class="px-3 py-1 rounded border hover:bg-gray-50 disabled:opacity-30 disabled:cursor-not-allowed">
-                →
-            </button>
-        </div>
-    </div>
-    {% else %}
-    <div class="bg-white rounded-lg shadow-sm border p-8 text-center text-gray-400">
-        <p>Aucun résultat. Lancez un scan depuis la page <a href="/scan" class="text-blue-600 hover:underline">Scan</a>.</p>
-    </div>
-    {% endif %}
 </div>
 
 <script>
 function resultsApp() {
     return {
         selected: [],
+        itemIds: [],
+        total: 0,
         page: 1,
         totalPages: 1,
-        total: 0,
         src: '',
         st: '',
         sn: '',
         q: '',
         perPage: 50,
-        items: [],
         batchMsg: '',
 
-        init(p, tp, t, src, st, sn, q) {
+        init(p, t, tp) {
             this.page = p;
-            this.totalPages = tp;
             this.total = t;
-            this.src = src;
-            this.st = st;
-            this.sn = sn;
-            this.q = q;
+            this.totalPages = tp;
+            this.itemIds = [{% for item in items %}{{ item.id }}{% if not loop.last %},{% endif %}{% endfor %}];
         },
 
-        goTo(p) {
-            if (p < 1 || p > this.totalPages) return;
+        hxNav(p) {
             const params = new URLSearchParams();
             if (this.src) params.set('source', this.src);
             if (this.st) params.set('status', this.st);
@@ -196,24 +90,19 @@ function resultsApp() {
             if (this.q) params.set('q', this.q);
             if (p > 1) params.set('page', p);
             if (this.perPage !== 50) params.set('per_page', this.perPage);
-            window.location = '/results?' + params.toString();
+            const url = '/results?' + params.toString();
+            htmx.ajax('GET', url, {target: '#results-content', pushUrl: true});
         },
 
         toggle(id) {
             const idx = this.selected.indexOf(id);
-            if (idx === -1) {
-                this.selected.push(id);
-            } else {
-                this.selected.splice(idx, 1);
-            }
+            if (idx === -1) { this.selected.push(id); }
+            else { this.selected.splice(idx, 1); }
         },
 
         toggleAll(checked) {
-            if (checked) {
-                this.selected = [{% for item in items %}{{ item.id }}{% if not loop.last %},{% endif %}{% endfor %}];
-            } else {
-                this.selected = [];
-            }
+            if (checked) { this.selected = [...this.itemIds]; }
+            else { this.selected = []; }
         },
 
         async batchAction(action) {
@@ -227,25 +116,23 @@ function resultsApp() {
             if (data.ok) {
                 this.batchMsg = data.affected + ' mis à jour';
                 this.selected = [];
-                setTimeout(() => { this.batchMsg = ''; window.location.reload(); }, 1000);
+                setTimeout(() => { this.batchMsg = ''; this.hxNav(1); }, 1000);
             } else {
                 alert('Erreur: ' + (data.error || 'inconnue'));
             }
-        },
-
-        pages() {
-            const p = this.page;
-            const tp = this.totalPages;
-            if (tp <= 7) {
-                return Array.from({length: tp}, (_, i) => i + 1);
-            }
-            let start = Math.max(1, p - 2);
-            let end = Math.min(tp, p + 2);
-            if (p <= 3) { start = 1; end = 5; }
-            if (p >= tp - 2) { start = tp - 4; end = tp; }
-            return Array.from({length: end - start + 1}, (_, i) => start + i);
         }
     }
 }
+
+document.body.addEventListener('results-update', function(e) {
+    const d = e.detail;
+    const app = document.querySelector('[x-data="resultsApp()"]')?.__x;
+    if (app) {
+        app.$data.page = d.page;
+        app.$data.totalPages = d.totalPages;
+        app.$data.total = d.total;
+        app.$data.itemIds = d.itemIds;
+    }
+});
 </script>
 {% endblock %}

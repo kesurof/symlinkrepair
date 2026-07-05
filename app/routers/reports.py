@@ -85,19 +85,16 @@ async def reports_page(
 
 @router.get("/api/stats")
 async def stats(db: Connection = Depends(get_db)):
-    total_scans = await db.execute("SELECT COUNT(*) FROM scans")
-    total_results = await db.execute("SELECT COUNT(*) FROM results")
-    broken_count = await db.execute("SELECT COUNT(*) FROM results WHERE status = 'detected'")
-    fixed_count = await db.execute(
-        "SELECT COUNT(*) FROM results WHERE status IN ('fixed', 'processed', 'ignored')"
+    cursor = await db.execute(
+        "SELECT"
+        " (SELECT COUNT(*) FROM scans) AS total_scans,"
+        " (SELECT COUNT(*) FROM results) AS total_results,"
+        " (SELECT COUNT(*) FROM results WHERE status = 'detected') AS broken,"
+        " (SELECT COALESCE(SUM(CASE WHEN status IN ('fixed','processed','ignored')"
+        "  THEN 1 ELSE 0 END), 0) FROM results) AS fixed"
     )
-
-    return {
-        "total_scans": (await total_scans.fetchone())[0],
-        "total_results": (await total_results.fetchone())[0],
-        "broken": (await broken_count.fetchone())[0],
-        "fixed": (await fixed_count.fetchone())[0],
-    }
+    row = await cursor.fetchone()
+    return dict(row)
 
 
 @router.post("/api/scans/delete")

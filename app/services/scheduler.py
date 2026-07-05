@@ -4,7 +4,6 @@ from datetime import datetime, timedelta
 
 import aiosqlite
 
-from app.config import settings
 from app.database import DATABASE_PATH
 from app.services import scanner
 from app.services.config_service import load_config
@@ -26,7 +25,8 @@ async def _trigger_scan(source: str):
         db.row_factory = aiosqlite.Row
         try:
             cursor = await db.execute(
-                "INSERT INTO scans (source, mode, status, total, broken, processed, summary, completed_at)"
+                "INSERT INTO scans"
+                " (source, mode, status, total, broken, processed, summary, completed_at)"
                 " VALUES (?, ?, ?, ?, ?, ?, ?, datetime('now'))",
                 (
                     source,
@@ -64,7 +64,9 @@ async def _trigger_scan(source: str):
                     ),
                 )
             await db.commit()
-            logger.info("Scheduler: %s scan done, %s results", source, len(result.get("targets", [])))
+            logger.info(
+                "Scheduler: %s scan done, %s results", source, len(result.get("targets", []))
+            )
         finally:
             await db.close()
     except Exception as e:

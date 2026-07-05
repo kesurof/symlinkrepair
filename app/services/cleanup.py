@@ -92,7 +92,12 @@ async def process_result_season(result: dict, db: Connection) -> dict:
     all_results = [dict(result)] + [dict(r) for r in rows]
 
     ok_count = 0
-    total_actions = {"api_delete": False, "symlink_removed": False, "refresh": False, "search": False}
+    total_actions = {
+        "api_delete": False,
+        "symlink_removed": False,
+        "refresh": False,
+        "search": False,
+    }
 
     for r in all_results:
         outcome = await _process_single(r, config)
@@ -124,4 +129,10 @@ async def process_result_season(result: dict, db: Connection) -> dict:
             config.sonarr.url, config.sonarr.api_key, series_id, season
         )
 
-    return {"ok": ok_count > 0, "error": "", "actions": total_actions, "processed": ok_count, "total": len(all_results)}
+    return {
+        "ok": ok_count > 0,
+        "error": "",
+        "actions": total_actions,
+        "processed": ok_count,
+        "total": len(all_results),
+    }

@@ -8,10 +8,9 @@ import sys
 import time
 import urllib.error
 import urllib.request
-from collections import Counter, defaultdict
+from collections import Counter
 from datetime import datetime, timezone
 from pathlib import Path
-
 
 SCRIPT_DIR = Path(__file__).resolve().parent
 
@@ -91,7 +90,6 @@ def clean_prefix_list(value):
     return [prefix.rstrip("/") + "/" for prefix in prefixes]
 
 
-
 def target_matches_prefixes(target, prefixes):
     for prefix in prefixes:
         if target.startswith(prefix):
@@ -114,9 +112,7 @@ def normalize_config(config):
         normalized.get("DISCORD_NOTIFICATIONS_ENABLED", False)
     )
 
-    normalized["SONARR_LIBRARY_ROOTS"] = clean_path_list(
-        normalized.get("SONARR_LIBRARY_ROOTS", [])
-    )
+    normalized["SONARR_LIBRARY_ROOTS"] = clean_path_list(normalized.get("SONARR_LIBRARY_ROOTS", []))
 
     normalized["SONARR_TARGET_PREFIXES"] = clean_prefix_list(
         normalized.get("SONARR_TARGET_PREFIXES", [])
@@ -134,11 +130,7 @@ def load_config():
                 loaded = json.load(file)
 
             if isinstance(loaded, dict):
-                config.update({
-                    key: value
-                    for key, value in loaded.items()
-                    if key in DEFAULTS
-                })
+                config.update({key: value for key, value in loaded.items() if key in DEFAULTS})
             else:
                 log(f"AVERTISSEMENT: le fichier {CONFIG_FILE} ne contient pas un objet JSON.")
         except json.JSONDecodeError as error:
@@ -157,6 +149,7 @@ def load_config():
             config[key] = os.environ[key]
 
     return normalize_config(config)
+
 
 def save_config(config):
     normalized = normalize_config(config)
@@ -299,6 +292,7 @@ def setup_config():
     print("./sonarr_cleanup_broken_alldebrid.py")
     print()
 
+
 def run_cmd(cmd, check=True):
     result = subprocess.run(
         cmd,
@@ -309,9 +303,7 @@ def run_cmd(cmd, check=True):
 
     if check and result.returncode != 0:
         raise RuntimeError(
-            f"Commande échouée: {' '.join(cmd)}\n"
-            f"STDOUT:\n{result.stdout}\n"
-            f"STDERR:\n{result.stderr}"
+            f"Commande échouée: {' '.join(cmd)}\nSTDOUT:\n{result.stdout}\nSTDERR:\n{result.stderr}"
         )
 
     return result
@@ -447,10 +439,12 @@ def get_tags(config):
         label = tag.get("label")
 
         if tag_id is not None and label:
-            tags.append({
-                "id": int(tag_id),
-                "label": str(label),
-            })
+            tags.append(
+                {
+                    "id": int(tag_id),
+                    "label": str(label),
+                }
+            )
 
     return sorted(tags, key=lambda item: item["label"].lower())
 
@@ -584,8 +578,12 @@ def choose_menu(config):
         print("------------------")
         if delete_season:
             print("Choisis une limite de traitement pour ce passage.")
-            print("Important : en mode saison entière, le script ne coupe jamais une saison en deux.")
-            print("Il peut donc traiter un peu moins que la limite, ou un peu plus si la première saison dépasse déjà la limite.")
+            print(
+                "Important : en mode saison entière, le script ne coupe jamais une saison en deux."
+            )
+            print(
+                "Il peut donc traiter un peu moins que la limite, ou un peu plus si la première saison dépasse déjà la limite."
+            )
             print("Conseil : commence par 20 ou 50 pour vérifier le résultat.")
             print("Mets 0 uniquement si tu veux tout traiter d'un coup.")
             max_files = ask_int("Limite de fichiers pour ce passage", 20)
@@ -614,7 +612,9 @@ def choose_menu(config):
         print()
         print("Actions après nettoyage")
         print("-----------------------")
-        print("Après suppression dans Sonarr, le script peut aussi supprimer les anciens liens locaux cassés.")
+        print(
+            "Après suppression dans Sonarr, le script peut aussi supprimer les anciens liens locaux cassés."
+        )
         print("Recommandé : oui, pour nettoyer les raccourcis inutiles.")
         delete_local_symlinks = ask_yes_no("Supprimer les liens locaux cassés", True)
 
@@ -624,7 +624,9 @@ def choose_menu(config):
         run_rescan = ask_yes_no("Lancer le scan ciblé après nettoyage", True)
 
         print()
-        print("Après le scan, Sonarr peut rechercher automatiquement les saisons/épisodes manquants.")
+        print(
+            "Après le scan, Sonarr peut rechercher automatiquement les saisons/épisodes manquants."
+        )
         print("Recommandé : oui.")
         run_search = ask_yes_no("Lancer la recherche automatique après nettoyage", True)
 
@@ -636,7 +638,9 @@ def choose_menu(config):
             print()
             print("ATTENTION : mode NETTOYAGE RÉEL.")
             print("Le script va supprimer dans Sonarr les références aux fichiers sélectionnés.")
-            print("Il ne traite que les fichiers locaux qui sont des liens vers le préfixe AllDebrid configuré.")
+            print(
+                "Il ne traite que les fichiers locaux qui sont des liens vers le préfixe AllDebrid configuré."
+            )
             print("Les vrais fichiers locaux hors AllDebrid ne sont pas ciblés.")
             confirm = input("Tape OUI pour confirmer le nettoyage : ").strip()
 
@@ -664,12 +668,14 @@ def copy_fresh_db(container, db_path):
 
     log(f"Copie DB fraîche : {container}:/config/sonarr.db -> {db_path}")
 
-    run_cmd([
-        "docker",
-        "cp",
-        f"{container}:/config/sonarr.db",
-        db_path,
-    ])
+    run_cmd(
+        [
+            "docker",
+            "cp",
+            f"{container}:/config/sonarr.db",
+            db_path,
+        ]
+    )
 
     if not os.path.exists(db_path):
         raise RuntimeError(f"DB introuvable après copie : {db_path}")
@@ -744,9 +750,7 @@ def load_sonarr_records(db_path):
             ]
 
         series_tags = [
-            int(value)
-            for value in parse_json_array(row["series_tags"])
-            if str(value).isdigit()
+            int(value) for value in parse_json_array(row["series_tags"]) if str(value).isdigit()
         ]
 
         record = {
@@ -875,7 +879,16 @@ def record_matches_filters(record, tag_ids=None, series_title="", season=None):
     return True
 
 
-def choose_targets(records, records_by_path, broken_symlinks, target_prefixes, delete_season, tag_ids, series_title, season):
+def choose_targets(
+    records,
+    records_by_path,
+    broken_symlinks,
+    target_prefixes,
+    delete_season,
+    tag_ids,
+    series_title,
+    season,
+):
     broken_records = []
 
     for path, info in broken_symlinks.items():
@@ -887,19 +900,18 @@ def choose_targets(records, records_by_path, broken_symlinks, target_prefixes, d
         if not record_matches_filters(record, tag_ids, series_title, season):
             continue
 
-        broken_records.append({
-            **record,
-            "symlink_target": info["target"],
-            "reason": "broken_symlink",
-        })
+        broken_records.append(
+            {
+                **record,
+                "symlink_target": info["target"],
+                "reason": "broken_symlink",
+            }
+        )
 
     if not delete_season:
         return unique_targets(broken_records), unique_targets(broken_records)
 
-    affected_seasons = {
-        (record["series_id"], record["season_number"])
-        for record in broken_records
-    }
+    affected_seasons = {(record["series_id"], record["season_number"]) for record in broken_records}
 
     season_targets = []
 
@@ -925,11 +937,13 @@ def choose_targets(records, records_by_path, broken_symlinks, target_prefixes, d
         if info["broken"]:
             reason = "season_delete_broken_symlink"
 
-        season_targets.append({
-            **record,
-            "symlink_target": info["target"],
-            "reason": reason,
-        })
+        season_targets.append(
+            {
+                **record,
+                "symlink_target": info["target"],
+                "reason": reason,
+            }
+        )
 
     return unique_targets(season_targets), unique_targets(broken_records)
 
@@ -1086,10 +1100,7 @@ def format_counter_lines(counter_dict):
     if not counter_dict:
         return "-"
 
-    return "\n".join(
-        f"`{key}`: **{value}**"
-        for key, value in sorted(counter_dict.items())
-    )
+    return "\n".join(f"`{key}`: **{value}**" for key, value in sorted(counter_dict.items()))
 
 
 def truncate_text(value, limit=1000):
@@ -1106,7 +1117,9 @@ def build_discord_payload(summary):
     filters = summary["filters"]
     is_error = summary["status"] == "error"
     is_apply = summary["mode"] == "apply"
-    has_actions = stats["api_deletions"] or stats["rescans_requested"] or stats["searches_requested"]
+    has_actions = (
+        stats["api_deletions"] or stats["rescans_requested"] or stats["searches_requested"]
+    )
 
     if is_error:
         color = 0xED4245
@@ -1185,37 +1198,45 @@ def build_discord_payload(summary):
     ]
 
     if summary.get("report_path"):
-        fields.append({
-            "name": "📝 Rapport",
-            "value": f"`{truncate_text(summary['report_path'], 1000)}`",
-            "inline": False,
-        })
+        fields.append(
+            {
+                "name": "📝 Rapport",
+                "value": f"`{truncate_text(summary['report_path'], 1000)}`",
+                "inline": False,
+            }
+        )
 
     if stats["missing_roots"]:
-        fields.append({
-            "name": "⚠️ Chemins ignorés",
-            "value": truncate_text("\n".join(f"`{root}`" for root in stats["missing_roots"])),
-            "inline": False,
-        })
+        fields.append(
+            {
+                "name": "⚠️ Chemins ignorés",
+                "value": truncate_text("\n".join(f"`{root}`" for root in stats["missing_roots"])),
+                "inline": False,
+            }
+        )
 
     if summary.get("error"):
-        fields.append({
-            "name": "🚨 Erreur",
-            "value": f"```\n{truncate_text(summary['error'], 900)}\n```",
-            "inline": False,
-        })
+        fields.append(
+            {
+                "name": "🚨 Erreur",
+                "value": f"```\n{truncate_text(summary['error'], 900)}\n```",
+                "inline": False,
+            }
+        )
 
     return {
-        "embeds": [{
-            "title": title,
-            "description": description,
-            "color": color,
-            "fields": fields,
-            "footer": {
-                "text": "sonarr_cleanup_broken_alldebrid",
-            },
-            "timestamp": summary["finished_at"],
-        }],
+        "embeds": [
+            {
+                "title": title,
+                "description": description,
+                "color": color,
+                "fields": fields,
+                "footer": {
+                    "text": "sonarr_cleanup_broken_alldebrid",
+                },
+                "timestamp": summary["finished_at"],
+            }
+        ],
     }
 
 
@@ -1439,36 +1460,35 @@ def run_cleanup(
                 f"{len(targets)}/{total_targets_before_limit} EpisodeFiles sélectionnés"
             )
 
-    affected_series = sorted({
-        (target["series_id"], target["series_title"])
-        for target in targets
-    })
+    affected_series = sorted({(target["series_id"], target["series_title"]) for target in targets})
 
-    affected_seasons = sorted({
-        (target["series_id"], target["series_title"], target["season_number"])
-        for target in targets
-    })
+    affected_seasons = sorted(
+        {
+            (target["series_id"], target["series_title"], target["season_number"])
+            for target in targets
+        }
+    )
 
-    affected_episode_ids = sorted({
-        episode_id
-        for target in targets
-        for episode_id in target["episode_ids"]
-    })
+    affected_episode_ids = sorted(
+        {episode_id for target in targets for episode_id in target["episode_ids"]}
+    )
 
     reason_counts = Counter(target["reason"] for target in targets)
 
     if summary is not None:
-        summary["stats"].update({
-            "broken_records": len(broken_records),
-            "targets_before_limit": total_targets_before_limit,
-            "targets_selected": len(targets),
-            "series_affected": len(affected_series),
-            "seasons_affected": len(affected_seasons),
-            "episode_ids_affected": len(affected_episode_ids),
-            "max_limit_applied": max_limit_applied,
-            "deferred_groups": len(deferred_groups),
-            "reason_counts": dict(reason_counts),
-        })
+        summary["stats"].update(
+            {
+                "broken_records": len(broken_records),
+                "targets_before_limit": total_targets_before_limit,
+                "targets_selected": len(targets),
+                "series_affected": len(affected_series),
+                "seasons_affected": len(affected_seasons),
+                "episode_ids_affected": len(affected_episode_ids),
+                "max_limit_applied": max_limit_applied,
+                "deferred_groups": len(deferred_groups),
+                "reason_counts": dict(reason_counts),
+            }
+        )
 
     log("Résumé avant action")
     log(f"Broken records Sonarr matchés: {len(broken_records)}")
@@ -1567,12 +1587,14 @@ def run_cleanup(
             http_status, body = post_command(config, payload)
             command_id = body.get("id") if isinstance(body, dict) else None
 
-            scan_results.append({
-                "series_id": series_id,
-                "series_title": series_title,
-                "http": http_status,
-                "command_id": command_id,
-            })
+            scan_results.append(
+                {
+                    "series_id": series_id,
+                    "series_title": series_title,
+                    "http": http_status,
+                    "command_id": command_id,
+                }
+            )
 
             log(
                 f"     RescanSeries SID={series_id} "
@@ -1596,13 +1618,15 @@ def run_cleanup(
             http_status, body = post_command(config, payload)
             command_id = body.get("id") if isinstance(body, dict) else None
 
-            search_results.append({
-                "series_id": series_id,
-                "series_title": series_title,
-                "season_number": season_number,
-                "http": http_status,
-                "command_id": command_id,
-            })
+            search_results.append(
+                {
+                    "series_id": series_id,
+                    "series_title": series_title,
+                    "season_number": season_number,
+                    "http": http_status,
+                    "command_id": command_id,
+                }
+            )
 
             log(
                 f"     SeasonSearch SID={series_id} "
@@ -1618,13 +1642,15 @@ def run_cleanup(
     unlink_counts = Counter(str(result.get("unlink_status")) for result in results.values())
 
     if summary is not None:
-        summary["stats"].update({
-            "api_deletions": len(results),
-            "rescans_requested": len(scan_results),
-            "searches_requested": len(search_results),
-            "delete_http_counts": dict(http_counts),
-            "unlink_counts": dict(unlink_counts),
-        })
+        summary["stats"].update(
+            {
+                "api_deletions": len(results),
+                "rescans_requested": len(scan_results),
+                "searches_requested": len(search_results),
+                "delete_http_counts": dict(http_counts),
+                "unlink_counts": dict(unlink_counts),
+            }
+        )
 
     log("Résumé final")
     log(f"EpisodeFiles ciblés: {len(targets)}")
@@ -1681,11 +1707,21 @@ def parse_args():
         description="Nettoyage Sonarr des symlinks cassés AllDebrid / Decypharr."
     )
 
-    parser.add_argument("--setup", action="store_true", help="Créer ou modifier les réglages locaux.")
+    parser.add_argument(
+        "--setup", action="store_true", help="Créer ou modifier les réglages locaux."
+    )
     parser.add_argument("--menu", action="store_true", help="Afficher le menu interactif.")
 
-    parser.add_argument("--apply", action="store_true", help="Mode nettoyage réel : applique les suppressions dans Sonarr.")
-    parser.add_argument("--delete-season", action="store_true", help="Si une saison contient un fichier cassé, nettoyer toute la saison concernée.")
+    parser.add_argument(
+        "--apply",
+        action="store_true",
+        help="Mode nettoyage réel : applique les suppressions dans Sonarr.",
+    )
+    parser.add_argument(
+        "--delete-season",
+        action="store_true",
+        help="Si une saison contient un fichier cassé, nettoyer toute la saison concernée.",
+    )
     parser.add_argument(
         "--max-files",
         type=int,
@@ -1695,16 +1731,51 @@ def parse_args():
             "Avec --delete-season, la limite ne coupe jamais une saison en deux."
         ),
     )
-    parser.add_argument("--library-root", action="append", default=[], help="Forcer un dossier racine Sonarr à analyser. Option répétable.")
-    parser.add_argument("--target-prefix", action="append", default=[], help="Forcer un préfixe AllDebrid/Decypharr à surveiller. Option répétable.")
+    parser.add_argument(
+        "--library-root",
+        action="append",
+        default=[],
+        help="Forcer un dossier racine Sonarr à analyser. Option répétable.",
+    )
+    parser.add_argument(
+        "--target-prefix",
+        action="append",
+        default=[],
+        help="Forcer un préfixe AllDebrid/Decypharr à surveiller. Option répétable.",
+    )
 
-    parser.add_argument("--tag-id", action="append", type=int, default=[], help="Limiter aux séries ayant ce tag Sonarr. Option répétable.")
-    parser.add_argument("--series-title", default="", help="Limiter aux séries dont le titre contient ce texte.")
-    parser.add_argument("--season", type=int, default=0, help="Limiter à une saison précise. 0 = toutes les saisons.")
+    parser.add_argument(
+        "--tag-id",
+        action="append",
+        type=int,
+        default=[],
+        help="Limiter aux séries ayant ce tag Sonarr. Option répétable.",
+    )
+    parser.add_argument(
+        "--series-title", default="", help="Limiter aux séries dont le titre contient ce texte."
+    )
+    parser.add_argument(
+        "--season",
+        type=int,
+        default=0,
+        help="Limiter à une saison précise. 0 = toutes les saisons.",
+    )
 
-    parser.add_argument("--keep-symlinks", action="store_true", help="Conserver les liens locaux cassés après suppression dans Sonarr.")
-    parser.add_argument("--skip-rescan", action="store_true", help="Ne pas lancer le scan ciblé Sonarr après nettoyage.")
-    parser.add_argument("--skip-search", action="store_true", help="Ne pas lancer la recherche automatique Sonarr après nettoyage.")
+    parser.add_argument(
+        "--keep-symlinks",
+        action="store_true",
+        help="Conserver les liens locaux cassés après suppression dans Sonarr.",
+    )
+    parser.add_argument(
+        "--skip-rescan",
+        action="store_true",
+        help="Ne pas lancer le scan ciblé Sonarr après nettoyage.",
+    )
+    parser.add_argument(
+        "--skip-search",
+        action="store_true",
+        help="Ne pas lancer la recherche automatique Sonarr après nettoyage.",
+    )
 
     return parser.parse_args()
 

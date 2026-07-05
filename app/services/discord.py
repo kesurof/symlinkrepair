@@ -8,13 +8,15 @@ logger = logging.getLogger(__name__)
 
 def _build_embed(title: str, description: str, color: int, fields: list[dict]) -> dict:
     return {
-        "embeds": [{
-            "title": title,
-            "description": description,
-            "color": color,
-            "fields": fields,
-            "timestamp": datetime.now(timezone.utc).isoformat().replace("+00:00", "Z"),
-        }]
+        "embeds": [
+            {
+                "title": title,
+                "description": description,
+                "color": color,
+                "fields": fields,
+                "timestamp": datetime.now(timezone.utc).isoformat().replace("+00:00", "Z"),
+            }
+        ]
     }
 
 
@@ -35,7 +37,8 @@ async def notify_scan(config, source: str, scan_result: dict) -> bool:
     mode = scan_result.get("mode", "simulate")
     is_simulate = mode == "simulate"
     color = 0x57F287 if is_simulate else 0xFEE75C
-    title = f"{'🟢' if is_simulate else '🟡'} Scan {source} — {'Simulation' if is_simulate else 'Nettoyage'}"
+    label = "Simulation" if is_simulate else "Nettoyage"
+    title = f"{'🟢' if is_simulate else '🟡'} Scan {source} — {label}"
 
     fields = [
         {"name": "Source", "value": source, "inline": True},
