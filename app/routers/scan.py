@@ -13,7 +13,8 @@ router = APIRouter()
 
 @router.get("/scan", response_class=HTMLResponse)
 async def scan_page(request: Request):
-    return templates.TemplateResponse(request, "scan.html")
+    config = load_config()
+    return templates.TemplateResponse(request, "scan.html", {"default_limit": config.defaults.limit})
 
 
 @router.post("/api/scan/{source}")
