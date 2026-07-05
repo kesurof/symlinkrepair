@@ -34,4 +34,4 @@ class AppConfig(BaseModel):
     sonarr: SonarrConfig = SonarrConfig()
     discord: DiscordConfig = DiscordConfig()
     defaults: DefaultsConfig = DefaultsConfig()
-    browse_roots: list[str] = ["/mnt", "/data"]
+    browse_roots: list[str] = ["/home", "/mnt", "/data"]

@@ -48,7 +48,7 @@
                             <button @click="cfg.radarr.target_prefixes.splice(i, 1)" class="text-red-400 text-xs">✕</button>
                         </div>
                     </template>
-                    <button @click="openBrowser('radarr', 'target_prefixes')" class="text-blue-600 text-sm mt-1 hover:underline">
+                    <button @click="openBrowser('radarr', 'target_prefixes', '/mnt')" class="text-blue-600 text-sm mt-1 hover:underline">
                         + Ajouter un point de montage
                     </button>
                 </div>
@@ -104,7 +104,7 @@
                             <button @click="cfg.sonarr.target_prefixes.splice(i, 1)" class="text-red-400 text-xs">✕</button>
                         </div>
                     </template>
-                    <button @click="openBrowser('sonarr', 'target_prefixes')" class="text-blue-600 text-sm mt-1 hover:underline">
+                    <button @click="openBrowser('sonarr', 'target_prefixes', '/mnt')" class="text-blue-600 text-sm mt-1 hover:underline">
                         + Ajouter un point de montage
                     </button>
                 </div>
@@ -174,11 +174,12 @@
             <button @click="$refs.browserModal.close()" class="text-gray-400 hover:text-gray-600 text-lg leading-none">&times;</button>
         </div>
         <div class="text-sm font-mono text-gray-500 mb-2" x-text="browserPath"></div>
+        <div x-show="browserError" class="text-sm text-red-500 mb-2" x-text="browserError"></div>
         <div class="border rounded overflow-hidden max-h-60 overflow-y-auto">
             <template x-for="dir in browserDirs" :key="dir.path">
                 <div class="flex items-center px-3 py-2 hover:bg-gray-50 cursor-pointer border-b last:border-b-0 text-sm"
                      @click="navigateDir(dir.path)">
-                    <svg class="w-4 h-4 text-amber-500 mr-2 shrink-0">📁</svg>
+                    <span class="mr-2 shrink-0">📁</span>
                     <span class="flex-1 truncate" x-text="dir.name"></span>
                     <button class="text-xs text-blue-600 hover:underline shrink-0 ml-2"
                             @click.stop="selectDir(dir.path)">
@@ -211,10 +212,11 @@ function configApp() {
         saved: false,
         browserField: null,
         browserSource: null,
-        browserPath: '/mnt',
+        browserPath: '',
         browserDirs: [],
         browserParent: '',
         browserCanGoUp: false,
+        browserError: '',
 
         async loadConfig() {
             const resp = await fetch('/api/config');
@@ -256,17 +258,30 @@ function configApp() {
             this.sonarrTest = data.ok ? `✓ Connecté (v${data.version})` : `✗ ${data.error}`;
         },
 
-        openBrowser(source, field) {
+        async openBrowser(source, field, startPath) {
             this.browserSource = source;
             this.browserField = field;
-            this.browserPath = '/mnt';
-            this.loadBrowser('/mnt');
+            this.browserError = '';
+            if (startPath) {
+                this.browserPath = startPath;
+            } else {
+                const resp = await fetch('/api/config/default-browse-roots');
+                const data = await resp.json();
+                const roots = data.roots;
+                this.browserPath = roots.length ? roots[0] : '/';
+            }
+            this.loadBrowser(this.browserPath);
             this.$refs.browserModal.showModal();
         },
 
         async loadBrowser(path) {
+            this.browserError = '';
             const resp = await fetch(`/api/browse?path=${encodeURIComponent(path)}`);
-            if (!resp.ok) return;
+            if (!resp.ok) {
+                const err = await resp.json();
+                this.browserError = err.error || 'Erreur inconnue';
+                return;
+            }
             const data = await resp.json();
             this.browserPath = data.current;
             this.browserDirs = data.directories;
