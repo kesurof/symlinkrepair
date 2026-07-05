@@ -95,6 +95,7 @@ async def test_radarr_connection(url: str, api_key: str) -> dict:
         return {"ok": False, "error": "URL ou clé API manquante"}
     try:
         import httpx
+
         async with httpx.AsyncClient(timeout=10) as client:
             resp = await client.get(
                 f"{url.rstrip('/')}/api/v3/system/status",

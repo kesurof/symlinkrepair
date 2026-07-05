@@ -1,26 +1,69 @@
 {% extends "base.html" %}
 {% block title %}Scan — SymlinkRepair{% endblock %}
 {% block content %}
-<h2 class="text-xl font-semibold text-gray-800 mb-6">Scan</h2>
-<div class="grid md:grid-cols-2 gap-4">
+<h2 class="text-xl font-semibold text-gray-800 mb-6">Lancer un scan</h2>
+
+<div class="grid md:grid-cols-2 gap-6">
     <div class="bg-white rounded-lg shadow-sm border p-4">
-        <h3 class="font-medium text-gray-700 mb-2">Radarr</h3>
-        <p class="text-sm text-gray-500 mb-3">Analyser les films</p>
-        <button hx-post="/api/scan/radarr?mode=simulate"
-                hx-target="#scan-status"
-                class="bg-blue-600 text-white px-4 py-2 rounded text-sm hover:bg-blue-700">
-            Lancer le scan Radarr
-        </button>
+        <h3 class="font-medium text-gray-700 mb-1">Radarr</h3>
+        <p class="text-sm text-gray-500 mb-3">Analyser les films et détecter les symlinks cassés</p>
+        <div class="flex gap-2">
+            <button hx-post="/api/scan/radarr?mode=simulate"
+                    hx-target="#radarr-result"
+                    hx-indicator="#radarr-spinner"
+                    class="bg-blue-600 text-white px-4 py-2 rounded text-sm hover:bg-blue-700">
+                Scan simulation
+            </button>
+            <button hx-post="/api/scan/radarr?mode=clean"
+                    hx-target="#radarr-result"
+                    hx-indicator="#radarr-spinner"
+                    hx-confirm="Mode nettoyage réel : confirmer ?"
+                    class="bg-red-500 text-white px-4 py-2 rounded text-sm hover:bg-red-600">
+                Scan nettoyage
+            </button>
+        </div>
+        <span id="radarr-spinner" class="htmx-indicator text-sm text-gray-500 ml-2">Scan en cours...</span>
+        <div id="radarr-result" class="mt-3"></div>
     </div>
+
     <div class="bg-white rounded-lg shadow-sm border p-4">
-        <h3 class="font-medium text-gray-700 mb-2">Sonarr</h3>
-        <p class="text-sm text-gray-500 mb-3">Analyser les séries</p>
-        <button hx-post="/api/scan/sonarr?mode=simulate"
-                hx-target="#scan-status"
-                class="bg-blue-600 text-white px-4 py-2 rounded text-sm hover:bg-blue-700">
-            Lancer le scan Sonarr
-        </button>
+        <h3 class="font-medium text-gray-700 mb-1">Sonarr</h3>
+        <p class="text-sm text-gray-500 mb-3">Analyser les séries et détecter les symlinks cassés</p>
+        <div class="flex gap-2">
+            <button hx-post="/api/scan/sonarr?mode=simulate"
+                    hx-target="#sonarr-result"
+                    hx-indicator="#sonarr-spinner"
+                    class="bg-blue-600 text-white px-4 py-2 rounded text-sm hover:bg-blue-700">
+                Scan simulation
+            </button>
+            <button hx-post="/api/scan/sonarr?mode=clean"
+                    hx-target="#sonarr-result"
+                    hx-indicator="#sonarr-spinner"
+                    hx-confirm="Mode nettoyage réel : confirmer ?"
+                    class="bg-red-500 text-white px-4 py-2 rounded text-sm hover:bg-red-600">
+                Scan nettoyage
+            </button>
+        </div>
+        <span id="sonarr-spinner" class="htmx-indicator text-sm text-gray-500 ml-2">Scan en cours...</span>
+        <div id="sonarr-result" class="mt-3"></div>
     </div>
 </div>
+
 <div id="scan-status" class="mt-4"></div>
+
+<script>
+document.body.addEventListener('htmx:afterRequest', function(evt) {
+    if (evt.detail.target && (evt.detail.target.id === 'radarr-result' || evt.detail.target.id === 'sonarr-result')) {
+        // Auto-redirect to results page on success
+        try {
+            const data = JSON.parse(evt.detail.xhr.responseText);
+            if (data.ok && data.scan_id) {
+                setTimeout(function() {
+                    window.location.href = '/results';
+                }, 1500);
+            }
+        } catch(e) {}
+    }
+});
+</script>
 {% endblock %}
