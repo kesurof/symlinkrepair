@@ -4,6 +4,7 @@ from fastapi.responses import HTMLResponse, JSONResponse
 
 from app.database import get_db
 from app.services import scanner
+from app.services.cleanup import process_all_detected
 from app.services.config_service import load_config
 from app.services.discord import notify_scan
 from app.templates import templates
@@ -73,6 +74,11 @@ async def trigger_scan(
     await db.commit()
 
     config = load_config()
+
+    cleanup_stats = {"deleted": 0, "failed": 0}
+    if mode == "clean":
+        cleanup_stats = await process_all_detected(source, db, scan_id)
+
     await notify_scan(config, source, result)
 
     return {
@@ -84,6 +90,7 @@ async def trigger_scan(
         "broken": result.get("broken", 0),
         "processed": result.get("matching", 0),
         "status": result["status"],
+        "cleanup": cleanup_stats,
     }
 
 

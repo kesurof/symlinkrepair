@@ -9,51 +9,71 @@
 
     <div class="bg-white rounded-lg shadow-sm border p-3 mb-4">
         <div class="flex flex-wrap gap-2">
-            <select id="filter-source" x-model="src"
+            <select id="filter-source"
                     class="border rounded px-2 py-1 text-sm"
-                    @change="hxNav(1)">
+                    onchange="hxNavFromFilters()">
                 <option value="">Toutes sources</option>
                 {% for s in sources %}
                 <option value="{{ s }}" {% if s == active_source %}selected{% endif %}>{{ s }}</option>
                 {% endfor %}
             </select>
-            <select id="filter-status" x-model="st"
+            <select id="filter-status"
                     class="border rounded px-2 py-1 text-sm"
-                    @change="hxNav(1)">
+                    onchange="hxNavFromFilters()">
                 <option value="">Tous statuts</option>
                 {% for st in statuses %}
                 <option value="{{ st }}" {% if st == active_status %}selected{% endif %}>{{ st }}</option>
                 {% endfor %}
             </select>
-            <select id="filter-season" x-model="sn" x-show="src === 'sonarr'"
+            <select id="filter-season"
+                    style="display:none"
                     class="border rounded px-2 py-1 text-sm"
-                    @change="hxNav(1)">
+                    onchange="hxNavFromFilters()">
                 <option value="">Toutes saisons</option>
                 {% for i in range(1, 21) %}
                 <option value="{{ i }}">Saison {{ i }}</option>
                 {% endfor %}
             </select>
-            <input type="text" x-model="q" placeholder="Rechercher..."
+            <input type="text" id="filter-q" placeholder="Rechercher..."
                    class="border rounded px-2 py-1 text-sm flex-1 min-w-[200px]"
-                   @keydown.enter="hxNav(1)">
-            <select id="filter-perpage" x-model="perPage"
+                   onkeydown="if(event.key==='Enter') hxNavFromFilters()">
+            <select id="filter-perpage"
                     class="border rounded px-2 py-1 text-sm"
-                    @change="hxNav(1)">
+                    onchange="hxNavFromFilters()">
                 <option value="25">25 / page</option>
-                <option value="50" selected>50 / page</option>
+                <option value="50">50 / page</option>
                 <option value="100">100 / page</option>
             </select>
         </div>
     </div>
 
-    <div x-show="selected.length > 0" class="bg-blue-50 border border-blue-200 rounded-lg p-2 mb-4 flex items-center gap-2 text-sm">
+    {% if total > 0 %}
+    <div x-show="selected.length > 0 || true" class="bg-blue-50 border border-blue-200 rounded-lg p-2 mb-4 flex items-center gap-2 text-sm">
         <span class="text-blue-700 font-medium" x-text="selected.length + ' sélectionné' + (selected.length > 1 ? 's' : '')"></span>
+        <template x-if="selected.length < total">
+            <button @click="selectAllPages()" class="text-blue-600 text-xs hover:underline ml-1">
+                Tout sélectionner (<span x-text="total"></span>)
+            </button>
+        </template>
         <button @click="batchAction('fix')" class="bg-green-100 text-green-700 px-2 py-1 rounded hover:bg-green-200">Marquer corrigé</button>
         <button @click="batchAction('ignore')" class="bg-gray-200 text-gray-700 px-2 py-1 rounded hover:bg-gray-300">Ignorer</button>
         <button @click="batchAction('recheck')" class="bg-blue-100 text-blue-700 px-2 py-1 rounded hover:bg-blue-200">Revérifier</button>
+        <button @click="confirmDelete = true" class="bg-red-100 text-red-700 px-2 py-1 rounded hover:bg-red-200">Supprimer</button>
         <button @click="selected = []" class="text-gray-400 hover:text-gray-600 ml-auto">✕</button>
         <span x-show="batchMsg" x-text="batchMsg" class="text-green-600 ml-2"></span>
     </div>
+
+    <div x-show="confirmDelete" class="fixed inset-0 bg-black/40 flex items-center justify-center z-50" @click.self="confirmDelete = false">
+        <div class="bg-white rounded-lg shadow-xl p-6 max-w-sm mx-4">
+            <h3 class="font-semibold text-gray-800 mb-2">Confirmer la suppression</h3>
+            <p class="text-sm text-gray-600 mb-4" x-text="'Supprimer ' + selected.length + ' résultat' + (selected.length > 1 ? 's' : '') + ' ?'"></p>
+            <div class="flex gap-2 justify-end">
+                <button @click="confirmDelete = false" class="bg-gray-200 px-3 py-1.5 rounded text-sm">Annuler</button>
+                <button @click="batchAction('delete'); confirmDelete = false" class="bg-red-600 text-white px-3 py-1.5 rounded text-sm">Confirmer</button>
+            </div>
+        </div>
+    </div>
+    {% endif %}
 
     <div id="results-content">
         {% include "partials/results_content.html" %}
@@ -61,6 +81,31 @@
 </div>
 
 <script>
+// === Filtres : navigation HTMX sans Alpine (évite les doubles appels) ===
+function hxNavFromFilters() {
+    const params = new URLSearchParams();
+    const src = document.getElementById('filter-source').value;
+    const st = document.getElementById('filter-status').value;
+    const sn = document.getElementById('filter-season').value;
+    const q = document.getElementById('filter-q').value;
+    const pp = document.getElementById('filter-perpage').value;
+    if (src) params.set('source', src);
+    if (st) params.set('status', st);
+    if (sn) params.set('season', sn);
+    if (q) params.set('q', q);
+    if (pp !== '50') params.set('per_page', pp);
+    htmx.ajax('GET', '/results?' + params.toString(), {target: '#results-content', pushUrl: true});
+}
+
+// Afficher/masquer le filtre saison selon la source
+document.getElementById('filter-season').style.display =
+    document.getElementById('filter-source').value === 'sonarr' ? '' : 'none';
+document.getElementById('filter-source').addEventListener('change', function() {
+    document.getElementById('filter-season').style.display =
+        this.value === 'sonarr' ? '' : 'none';
+});
+
+// === Alpine.js : sélection + batch actions ===
 function resultsApp() {
     return {
         selected: [],
@@ -68,12 +113,8 @@ function resultsApp() {
         total: 0,
         page: 1,
         totalPages: 1,
-        src: '',
-        st: '',
-        sn: '',
-        q: '',
-        perPage: 50,
         batchMsg: '',
+        confirmDelete: false,
 
         init(p, t, tp) {
             this.page = p;
@@ -82,16 +123,19 @@ function resultsApp() {
             this.itemIds = [{% for item in items %}{{ item.id }}{% if not loop.last %},{% endif %}{% endfor %}];
         },
 
-        hxNav(p) {
+        async selectAllPages() {
             const params = new URLSearchParams();
-            if (this.src) params.set('source', this.src);
-            if (this.st) params.set('status', this.st);
-            if (this.sn) params.set('season', this.sn);
-            if (this.q) params.set('q', this.q);
-            if (p > 1) params.set('page', p);
-            if (this.perPage !== 50) params.set('per_page', this.perPage);
-            const url = '/results?' + params.toString();
-            htmx.ajax('GET', url, {target: '#results-content', pushUrl: true});
+            const src = document.getElementById('filter-source').value;
+            const st = document.getElementById('filter-status').value;
+            const sn = document.getElementById('filter-season').value;
+            const q = document.getElementById('filter-q').value;
+            if (src) params.set('source', src);
+            if (st) params.set('status', st);
+            if (sn) params.set('season', sn);
+            if (q) params.set('q', q);
+            const resp = await fetch('/api/results/ids?' + params.toString());
+            const data = await resp.json();
+            this.selected = data.ids || [];
         },
 
         toggle(id) {
@@ -116,7 +160,10 @@ function resultsApp() {
             if (data.ok) {
                 this.batchMsg = data.affected + ' mis à jour';
                 this.selected = [];
-                setTimeout(() => { this.batchMsg = ''; this.hxNav(1); }, 1000);
+                setTimeout(() => {
+                    this.batchMsg = '';
+                    hxNavFromFilters();
+                }, 1000);
             } else {
                 alert('Erreur: ' + (data.error || 'inconnue'));
             }

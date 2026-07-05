@@ -3,7 +3,7 @@ from fastapi import APIRouter, Depends, Request
 from fastapi.responses import HTMLResponse, JSONResponse
 
 from app.database import get_db
-from app.services.cleanup import process_result, process_result_season
+from app.services.cleanup import process_season, process_single
 from app.services.config_service import load_config
 from app.services.discord import notify_cleanup
 from app.templates import templates
@@ -84,6 +84,34 @@ async def results_page(
     )
 
 
+@router.get("/api/results/ids")
+async def results_ids(
+    db: Connection = Depends(get_db),
+    source: str = "",
+    status: str = "",
+    season: str = "",
+    q: str = "",
+):
+    where = "WHERE 1=1"
+    params = []
+    if source:
+        where += " AND source = ?"
+        params.append(source)
+    if status:
+        where += " AND status = ?"
+        params.append(status)
+    if season:
+        where += " AND season = ?"
+        params.append(int(season))
+    if q:
+        where += " AND (media_title LIKE ? OR symlink_path LIKE ?)"
+        like = f"%{q}%"
+        params.extend([like, like])
+    cursor = await db.execute(f"SELECT id FROM results {where} ORDER BY id", params)
+    rows = await cursor.fetchall()
+    return {"ids": [r[0] for r in rows]}
+
+
 @router.get("/results/{result_id}", response_class=HTMLResponse)
 async def result_detail(request: Request, result_id: int, db: Connection = Depends(get_db)):
     cursor = await db.execute("SELECT * FROM results WHERE id = ?", (result_id,))
@@ -136,11 +164,12 @@ async def process_single_result(
         return JSONResponse({"ok": False, "error": "Résultat introuvable"}, status_code=404)
 
     result = dict(row)
+    scan_id = result.get("scan_id")
 
     if delete_season and result.get("source") == "sonarr":
-        outcome = await process_result_season(result, db)
+        outcome = await process_season(result, db, scan_id)
     else:
-        outcome = await process_result(result)
+        outcome = await process_single(result)
 
         if outcome["ok"]:
             await db.execute(
@@ -183,6 +212,9 @@ async def batch_action(request: Request, db: Connection = Depends(get_db)):
             f" action = NULL, action_date = NULL WHERE id IN ({','.join('?' for _ in ids)})",
             ids,
         )
+    elif action == "delete":
+        placeholders = ",".join("?" for _ in ids)
+        await db.execute(f"DELETE FROM results WHERE id IN ({placeholders})", ids)
     else:
         return JSONResponse({"ok": False, "error": f"Action inconnue: {action}"}, status_code=400)
 
