@@ -82,7 +82,11 @@ make docker
 - [x] Module Scan (filesystem, bases Radarr/Sonarr, orchestrateur async)
 - [x] Module Résultats (liste, détail, actions statut)
 - [x] Dashboard et statistiques de base
-- [ ] Actions de nettoyage réelles (DELETE API)
-- [ ] Filtres avancés sur la page résultats
+- [x] Actions de nettoyage réelles (DELETE API)
+- [x] Filtres avancés sur la page résultats
+- [x] Page de scan améliorée (options, confirmation 2 étapes)
+- [x] Docker compose vérifié
 - [ ] Tests avec instances Radarr/Sonarr réelles
-- [ ] Docker compose vérifié
+- [ ] Notifications Discord
+- [ ] Export TSV
+- [ ] Statistiques temporelles

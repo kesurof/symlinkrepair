@@ -3,58 +3,106 @@
 {% block content %}
 <h2 class="text-xl font-semibold text-gray-800 mb-6">Lancer un scan</h2>
 
-<div class="grid md:grid-cols-2 gap-6">
-    <div class="bg-white rounded-lg shadow-sm border p-4">
-        <h3 class="font-medium text-gray-700 mb-1">Radarr</h3>
-        <p class="text-sm text-gray-500 mb-3">Analyser les films et détecter les symlinks cassés</p>
-        <div class="flex gap-2">
-            <button hx-post="/api/scan/radarr?mode=simulate"
-                    hx-target="#radarr-result"
-                    hx-indicator="#radarr-spinner"
-                    class="bg-blue-600 text-white px-4 py-2 rounded text-sm hover:bg-blue-700">
-                Scan simulation
-            </button>
-            <button hx-post="/api/scan/radarr?mode=clean"
-                    hx-target="#radarr-result"
-                    hx-indicator="#radarr-spinner"
-                    hx-confirm="Mode nettoyage réel : confirmer ?"
-                    class="bg-red-500 text-white px-4 py-2 rounded text-sm hover:bg-red-600">
-                Scan nettoyage
-            </button>
+<div x-data="{ mode: 'simulate', limit: 50 }">
+    <div class="bg-white rounded-lg shadow-sm border p-4 mb-4">
+        <h3 class="font-medium text-gray-700 mb-3">Options</h3>
+        <div class="flex flex-wrap gap-4">
+            <div>
+                <label class="block text-sm text-gray-600 mb-1">Mode</label>
+                <select x-model="mode" class="border rounded px-2 py-1.5 text-sm">
+                    <option value="simulate">Simulation</option>
+                    <option value="clean">Nettoyage réel</option>
+                </select>
+            </div>
+            <div>
+                <label class="block text-sm text-gray-600 mb-1">Limite fichiers</label>
+                <input type="number" x-model="limit" min="1" max="500" class="border rounded px-2 py-1.5 text-sm w-24">
+            </div>
         </div>
-        <span id="radarr-spinner" class="htmx-indicator text-sm text-gray-500 ml-2">Scan en cours...</span>
-        <div id="radarr-result" class="mt-3"></div>
     </div>
 
-    <div class="bg-white rounded-lg shadow-sm border p-4">
-        <h3 class="font-medium text-gray-700 mb-1">Sonarr</h3>
-        <p class="text-sm text-gray-500 mb-3">Analyser les séries et détecter les symlinks cassés</p>
-        <div class="flex gap-2">
-            <button hx-post="/api/scan/sonarr?mode=simulate"
-                    hx-target="#sonarr-result"
-                    hx-indicator="#sonarr-spinner"
-                    class="bg-blue-600 text-white px-4 py-2 rounded text-sm hover:bg-blue-700">
-                Scan simulation
-            </button>
-            <button hx-post="/api/scan/sonarr?mode=clean"
-                    hx-target="#sonarr-result"
-                    hx-indicator="#sonarr-spinner"
-                    hx-confirm="Mode nettoyage réel : confirmer ?"
-                    class="bg-red-500 text-white px-4 py-2 rounded text-sm hover:bg-red-600">
-                Scan nettoyage
-            </button>
+    <div class="grid md:grid-cols-2 gap-6">
+        <div class="bg-white rounded-lg shadow-sm border p-4">
+            <h3 class="font-medium text-gray-700 mb-1">Radarr</h3>
+            <p class="text-sm text-gray-500 mb-3">Films</p>
+            <template x-if="mode === 'simulate'">
+                <button hx-post="/api/scan/radarr?mode=simulate"
+                        hx-target="#radarr-result"
+                        hx-indicator="#radarr-spinner"
+                        class="bg-blue-600 text-white px-4 py-2 rounded text-sm hover:bg-blue-700">
+                    Lancer la simulation
+                </button>
+            </template>
+            <template x-if="mode === 'clean'">
+                <div x-data="{ confirm: false }">
+                    <template x-if="!confirm">
+                        <button @click="confirm = true"
+                                class="bg-red-500 text-white px-4 py-2 rounded text-sm hover:bg-red-600">
+                            Nettoyage réel
+                        </button>
+                    </template>
+                    <template x-if="confirm">
+                        <div class="flex items-center gap-2">
+                            <span class="text-sm text-red-600 font-medium">Confirmer ?</span>
+                            <button @click="confirm = false" class="bg-gray-200 px-3 py-1.5 rounded text-sm">Annuler</button>
+                            <button hx-post="/api/scan/radarr?mode=clean"
+                                    hx-target="#radarr-result"
+                                    hx-indicator="#radarr-spinner"
+                                    class="bg-red-600 text-white px-3 py-1.5 rounded text-sm">
+                                Confirmer
+                            </button>
+                        </div>
+                    </template>
+                </div>
+            </template>
+            <span id="radarr-spinner" class="htmx-indicator text-sm text-gray-500 ml-2">Scan en cours...</span>
+            <div id="radarr-result" class="mt-3"></div>
         </div>
-        <span id="sonarr-spinner" class="htmx-indicator text-sm text-gray-500 ml-2">Scan en cours...</span>
-        <div id="sonarr-result" class="mt-3"></div>
+
+        <div class="bg-white rounded-lg shadow-sm border p-4">
+            <h3 class="font-medium text-gray-700 mb-1">Sonarr</h3>
+            <p class="text-sm text-gray-500 mb-3">Séries</p>
+            <template x-if="mode === 'simulate'">
+                <button hx-post="/api/scan/sonarr?mode=simulate"
+                        hx-target="#sonarr-result"
+                        hx-indicator="#sonarr-spinner"
+                        class="bg-blue-600 text-white px-4 py-2 rounded text-sm hover:bg-blue-700">
+                    Lancer la simulation
+                </button>
+            </template>
+            <template x-if="mode === 'clean'">
+                <div x-data="{ confirm: false }">
+                    <template x-if="!confirm">
+                        <button @click="confirm = true"
+                                class="bg-red-500 text-white px-4 py-2 rounded text-sm hover:bg-red-600">
+                            Nettoyage réel
+                        </button>
+                    </template>
+                    <template x-if="confirm">
+                        <div class="flex items-center gap-2">
+                            <span class="text-sm text-red-600 font-medium">Confirmer ?</span>
+                            <button @click="confirm = false" class="bg-gray-200 px-3 py-1.5 rounded text-sm">Annuler</button>
+                            <button hx-post="/api/scan/sonarr?mode=clean"
+                                    hx-target="#sonarr-result"
+                                    hx-indicator="#sonarr-spinner"
+                                    class="bg-red-600 text-white px-3 py-1.5 rounded text-sm">
+                                Confirmer
+                            </button>
+                        </div>
+                    </template>
+                </div>
+            </template>
+            <span id="sonarr-spinner" class="htmx-indicator text-sm text-gray-500 ml-2">Scan en cours...</span>
+            <div id="sonarr-result" class="mt-3"></div>
+        </div>
     </div>
+
+    <div id="scan-redirect" class="mt-4"></div>
 </div>
-
-<div id="scan-status" class="mt-4"></div>
 
 <script>
 document.body.addEventListener('htmx:afterRequest', function(evt) {
     if (evt.detail.target && (evt.detail.target.id === 'radarr-result' || evt.detail.target.id === 'sonarr-result')) {
-        // Auto-redirect to results page on success
         try {
             const data = JSON.parse(evt.detail.xhr.responseText);
             if (data.ok && data.scan_id) {
