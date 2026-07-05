@@ -52,6 +52,3 @@ Par élément, sélection, film, série ou saison entière.
 13. Rapports consultables
 14. Interface mobile friendly
 
-## Hors V1
-
-Multi-utilisateurs, WebSocket, React/Vue, PostgreSQL, workflow engine, planification complexe.
