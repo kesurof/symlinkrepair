@@ -52,7 +52,9 @@ def mask_secret(value: str) -> str:
 
 
 def public_config() -> dict:
-    cfg = _load_raw()
+    raw = _load_raw()
+    full = AppConfig(**raw)
+    cfg = full.model_dump()
     radarr = cfg.get("radarr", {})
     sonarr = cfg.get("sonarr", {})
     discord = cfg.get("discord", {})

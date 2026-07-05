@@ -1,3 +1,4 @@
+import asyncio
 import logging
 import os
 
@@ -36,10 +37,14 @@ async def _process_single(result: dict, config) -> dict:
         action_log["api_delete"] = ok
 
         if ok:
+            await asyncio.sleep(config.defaults.cleanup_delay)
+            _remove_symlink(symlink_path, action_log, config)
             movie_id = result.get("movie_id")
-            if movie_id and config.defaults.rescan:
+            if config.defaults.rescan and movie_id:
+                await asyncio.sleep(config.defaults.search_delay)
                 action_log["refresh"] = await refresh_movie(cfg.url, cfg.api_key, movie_id)
-            if movie_id and config.defaults.search:
+            if config.defaults.search and movie_id:
+                await asyncio.sleep(config.defaults.search_delay)
                 action_log["search"] = await search_movies(cfg.url, cfg.api_key, [movie_id])
 
     elif source == "sonarr":
@@ -51,22 +56,31 @@ async def _process_single(result: dict, config) -> dict:
         action_log["api_delete"] = ok
 
         if ok:
+            await asyncio.sleep(config.defaults.cleanup_delay)
+            _remove_symlink(symlink_path, action_log, config)
             series_id = result.get("series_id")
             season = result.get("season")
-            if series_id and config.defaults.rescan:
+            if config.defaults.rescan and series_id:
+                await asyncio.sleep(config.defaults.search_delay)
                 action_log["refresh"] = await rescan_series(cfg.url, cfg.api_key, series_id)
-            if series_id and season and config.defaults.search:
-                action_log["search"] = await search_season(cfg.url, cfg.api_key, series_id, season)
-
-    if action_log["api_delete"] and not config.defaults.keep_symlinks and symlink_path:
-        try:
-            if os.path.islink(symlink_path):
-                os.unlink(symlink_path)
-                action_log["symlink_removed"] = True
-        except OSError as e:
-            logger.warning("Failed to remove symlink %s: %s", symlink_path, e)
+            if config.defaults.search and series_id and season is not None:
+                await asyncio.sleep(config.defaults.search_delay)
+                action_log["search"] = await search_season(
+                    cfg.url, cfg.api_key, series_id, season
+                )
 
     return {"ok": action_log["api_delete"], "actions": action_log}
+
+
+def _remove_symlink(symlink_path: str, action_log: dict, config):
+    if config.defaults.keep_symlinks or not symlink_path:
+        return
+    try:
+        if os.path.islink(symlink_path):
+            os.unlink(symlink_path)
+            action_log["symlink_removed"] = True
+    except OSError as e:
+        logger.warning("Failed to remove symlink %s: %s", symlink_path, e)
 
 
 async def process_result(result: dict) -> dict:
@@ -121,10 +135,12 @@ async def process_result_season(result: dict, db: Connection) -> dict:
     await db.commit()
 
     if ok_count > 0 and config.defaults.rescan:
+        await asyncio.sleep(config.defaults.search_delay)
         total_actions["refresh"] = await rescan_series(
             config.sonarr.url, config.sonarr.api_key, series_id
         )
     if ok_count > 0 and season is not None and config.defaults.search:
+        await asyncio.sleep(config.defaults.search_delay)
         total_actions["search"] = await search_season(
             config.sonarr.url, config.sonarr.api_key, series_id, season
         )

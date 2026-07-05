@@ -74,11 +74,14 @@
             <div x-show="processStep === 'initial'" x-cloak>
                 <button @click="processStep = 'confirm'"
                         class="bg-red-500 text-white px-3 py-1.5 rounded text-sm hover:bg-red-600">
-                    Traiter (DELETE API)
+                    Nettoyer et rechercher
                 </button>
             </div>
             <div x-show="processStep === 'confirm'" x-cloak class="flex items-center gap-2 w-full">
-                <span class="text-sm text-red-600 font-medium">Confirmer la suppression ?</span>
+                <span class="text-sm text-red-600 font-medium">
+                    Supprimer le fichier dans {{ item.source|capitalize }}, retirer le symlink,
+                    rafraîchir et lancer une recherche de remplacement ?
+                </span>
                 <button @click="processStep = 'initial'" class="bg-gray-200 px-3 py-1.5 rounded text-sm">Annuler</button>
                 <button hx-post="/api/results/{{ item.id }}/process"
                         hx-target="closest .bg-white"
@@ -91,7 +94,7 @@
                         hx-target="closest .bg-white"
                         hx-swap="innerHTML"
                         class="bg-orange-600 text-white px-3 py-1.5 rounded text-sm">
-                    Toute la saison
+                    Saison entière
                 </button>
                 {% endif %}
             </div>

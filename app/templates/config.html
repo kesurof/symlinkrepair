@@ -186,6 +186,18 @@
                     <input type="number" x-model="cfg.defaults.limit" min="0" max="500"
                            class="w-24 border rounded px-2 py-1.5 text-sm">
                 </div>
+                <div>
+                    <label class="block text-sm text-gray-600">Pause après suppression API (secondes)</label>
+                    <input type="number" x-model="cfg.defaults.cleanup_delay" min="0" max="60"
+                           class="w-24 border rounded px-2 py-1.5 text-sm">
+                    <p class="text-xs text-gray-400 mt-1">Temps d'attente avant de supprimer le symlink local</p>
+                </div>
+                <div>
+                    <label class="block text-sm text-gray-600">Pause avant recherche (secondes)</label>
+                    <input type="number" x-model="cfg.defaults.search_delay" min="0" max="120"
+                           class="w-24 border rounded px-2 py-1.5 text-sm">
+                    <p class="text-xs text-gray-400 mt-1">Temps d'attente après refresh/rescan avant de lancer la recherche</p>
+                </div>
             </div>
         </section>
 
@@ -230,7 +242,7 @@ function configApp() {
         cfg: { radarr: { url: '', api_key: '', container: 'radarr', library_roots: [], target_prefixes: [] },
                sonarr: { url: '', api_key: '', container: 'sonarr', library_roots: [], target_prefixes: [] },
                discord: { enabled: false, webhook: '' },
-               defaults: { limit: 50, rescan: true, search: true, keep_symlinks: false },
+               defaults: { limit: 50, rescan: true, search: true, keep_symlinks: false, cleanup_delay: 2, search_delay: 5 },
                scheduler: { radarr_enabled: false, radarr_interval_hours: 3, sonarr_enabled: false, sonarr_interval_hours: 3 } },
         showRadarrKey: false,
         showSonarrKey: false,

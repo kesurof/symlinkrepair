@@ -27,6 +27,8 @@ class DefaultsConfig(BaseModel):
     rescan: bool = True
     search: bool = True
     keep_symlinks: bool = False
+    cleanup_delay: int = 2
+    search_delay: int = 5
 
 
 class SchedulerConfig(BaseModel):
