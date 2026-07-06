@@ -24,6 +24,7 @@ async def results_page(
     q: str = "",
     page: int = 1,
     per_page: int = 50,
+    dedup: bool = True,
 ):
     if page < 1:
         page = 1
@@ -47,19 +48,44 @@ async def results_page(
         like = f"%{q}%"
         params.extend([like, like])
 
-    count_cursor = await db.execute(f"SELECT COUNT(*) FROM results {where}", params)
+    if dedup:
+        count_cursor = await db.execute(
+            f"SELECT COUNT(*) FROM ("
+            f"  SELECT MAX(id) FROM results {where} GROUP BY symlink_path, source"
+            f" )",
+            params,
+        )
+    else:
+        count_cursor = await db.execute(f"SELECT COUNT(*) FROM results {where}", params)
     total = (await count_cursor.fetchone())[0]
+
     total_pages = max(1, (total + per_page - 1) // per_page)
     if page > total_pages:
         page = total_pages
 
     offset = (page - 1) * per_page
-    cursor = await db.execute(
-        f"SELECT id, source, media_title, media_type, season,"
-        f" symlink_path, status, action FROM results {where}"
-        f" ORDER BY id DESC LIMIT ? OFFSET ?",
-        params + [per_page, offset],
-    )
+
+    if dedup:
+        cursor = await db.execute(
+            f"SELECT r.id, r.source, r.media_title, r.media_type, r.season,"
+            f" r.symlink_path, r.status, r.action, latest.total_count"
+            f" FROM results r"
+            f" INNER JOIN ("
+            f"   SELECT symlink_path, source, MAX(id) as max_id, COUNT(*) as total_count"
+            f"   FROM results {where}"
+            f"   GROUP BY symlink_path, source"
+            f" ) latest ON r.id = latest.max_id"
+            f" ORDER BY r.id DESC LIMIT ? OFFSET ?",
+            params + [per_page, offset],
+        )
+    else:
+        cursor = await db.execute(
+            f"SELECT id, source, media_title, media_type, season,"
+            f" symlink_path, status, action"
+            f" FROM results {where}"
+            f" ORDER BY id DESC LIMIT ? OFFSET ?",
+            params + [per_page, offset],
+        )
     rows = await cursor.fetchall()
     items = [dict(r) for r in rows]
 
@@ -68,9 +94,12 @@ async def results_page(
     cursor_st = await db.execute("SELECT DISTINCT status FROM results")
     statuses = [r[0] for r in await cursor_st.fetchall()]
 
+    is_htmx = request.headers.get("hx-request") == "true"
+    template = "partials/results_content.html" if is_htmx else "results.html"
+
     return templates.TemplateResponse(
         request,
-        "results.html",
+        template,
         {
             "items": items,
             "sources": sources,
@@ -83,6 +112,7 @@ async def results_page(
             "per_page": per_page,
             "total": total,
             "total_pages": total_pages,
+            "show_duplicates": not dedup,
         },
     )
 
@@ -94,6 +124,7 @@ async def results_ids(
     status: str = "",
     season: str = "",
     q: str = "",
+    dedup: bool = True,
 ):
     where = "WHERE 1=1"
     params = []
@@ -110,7 +141,14 @@ async def results_ids(
         where += " AND (media_title LIKE ? OR symlink_path LIKE ?)"
         like = f"%{q}%"
         params.extend([like, like])
-    cursor = await db.execute(f"SELECT id FROM results {where} ORDER BY id", params)
+
+    if dedup:
+        cursor = await db.execute(
+            f"SELECT MAX(id) as id FROM results {where} GROUP BY symlink_path, source ORDER BY id",
+            params,
+        )
+    else:
+        cursor = await db.execute(f"SELECT id FROM results {where} ORDER BY id", params)
     rows = await cursor.fetchall()
     return {"ids": [r[0] for r in rows]}
 

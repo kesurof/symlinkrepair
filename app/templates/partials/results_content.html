@@ -1,3 +1,9 @@
+<div id="results-data"
+     data-page="{{ page }}"
+     data-total="{{ total }}"
+     data-total-pages="{{ total_pages }}"
+     data-item-ids="[{% for item in items %}{{ item.id }}{% if not loop.last %},{% endif %}{% endfor %}]"
+     style="display:none"></div>
 {% if items %}
 <div class="hidden md:block overflow-x-auto">
     <table class="w-full text-sm bg-white rounded-lg shadow-sm border">
@@ -30,7 +36,13 @@
                         {{ item.source }}
                     </span>
                 </td>
-                <td class="px-3 py-2 font-medium">{{ item.media_title or '—' }}</td>
+                <td class="px-3 py-2 font-medium">
+                    {{ item.media_title or '—' }}
+                    {% set dup = item.total_count|default(0) %}
+                    {% if dup > 1 %}
+                    <span class="text-xs text-gray-400 ml-1">(+{{ dup - 1 }})</span>
+                    {% endif %}
+                </td>
                 <td class="px-3 py-2 text-gray-500">{{ item.media_type or '—' }}{% if item.season %} S{{ item.season }}{% endif %}</td>
                 <td class="px-3 py-2 text-gray-500 font-mono text-xs max-w-xs truncate">{{ item.symlink_path }}</td>
                 <td class="px-3 py-2">
@@ -76,7 +88,13 @@
                     {{ item.status }}
                 </span>
             </div>
-            <div class="font-medium text-sm truncate">{{ item.media_title or '—' }}</div>
+            <div class="font-medium text-sm truncate">
+                {{ item.media_title or '—' }}
+                {% set dup = item.total_count|default(0) %}
+                {% if dup > 1 %}
+                <span class="text-xs text-gray-400">(+{{ dup - 1 }})</span>
+                {% endif %}
+            </div>
             <div class="text-xs text-gray-500 font-mono truncate mt-1">{{ item.symlink_path }}</div>
             <a href="/results/{{ item.id }}" class="text-blue-600 text-xs hover:underline mt-2 inline-block">Détail →</a>
         </div>
@@ -89,7 +107,7 @@
         Page {{ page }} / {{ total_pages }}
     </div>
     <div class="flex gap-1">
-        {% set qp = "source=" + active_source + "&status=" + active_status + "&season=" + active_season + "&q=" + active_q + "&per_page=" + per_page|string %}
+        {% set qp = "source=" + active_source + "&status=" + active_status + "&season=" + active_season + "&q=" + active_q + "&per_page=" + per_page|string + ("&dedup=0" if show_duplicates else "") %}
         <button hx-get="/results?page={{ page - 1 }}&{{ qp }}"
                 hx-target="#results-content" hx-push-url="true"
                 {% if page <= 1 %}disabled{% endif %}
@@ -120,15 +138,4 @@
     <p>Aucun résultat. Lancez un scan depuis la page <a href="/scan" class="text-blue-600 hover:underline">Scan</a>.</p>
 </div>
 {% endif %}
-<script>
-(function(){
-    window.dispatchEvent(new CustomEvent('results-update', {
-        detail: {
-            page: {{ page }},
-            totalPages: {{ total_pages }},
-            total: {{ total }},
-            itemIds: [{% for item in items %}{{ item.id }}{% if not loop.last %},{% endif %}{% endfor %}]
-        }
-    }));
-})();
-</script>
+
