@@ -19,7 +19,7 @@ app/
 │   ├── web.py           # Dashboard (/)
 │   ├── health.py        # Health check (/health)
 │   ├── config_ui.py     # Configuration HTML (/config)
-│   ├── scan.py          # Scans (/scan, /fastscan)
+│   ├── scan.py          # Scans (/scan, /api/scan/*, /api/fast-scan)
 │   ├── results.py       # Résultats (/results, /api/results/*)
 │   ├── reports.py       # Rapports (/reports, /api/stats)
 │   └── api_config.py    # API config (/api/config, /api/browse)
@@ -37,21 +37,22 @@ app/
 │   ├── config.py         # AppConfig, RadarrConfig, SonarrConfig...
 │   └── scan.py           # Scan, Result
 ├── templates/        # Templates Jinja2
-│   ├── base.html         # Layout global (nav)
+│   ├── base.html         # Layout : sidebar desktop + bottom nav mobile
 │   ├── index.html        # Dashboard
-│   ├── scan.html         # Page scan
-│   ├── fastscan.html     # Scan rapide
+│   ├── scan.html         # Page scan (complet + rapide fusionnés)
 │   ├── results.html      # Liste résultats
 │   ├── detail.html       # Détail élément
 │   ├── reports.html      # Rapports
 │   ├── config.html       # Configuration
-│   ├── error.html        # Erreur générique
-│   ├── 404.html          # Page non trouvée
+│   ├── error.html        # Erreur générique (étend base.html)
+│   ├── 404.html          # Page non trouvée (étend base.html)
 │   └── partials/
-│       ├── results_content.html  # Tableau résultats (swap HTMX)
-│       └── reports_content.html  # Tableau rapports (swap HTMX)
-└── static/
-    └── htmx.min.js       # HTMX 2.x
+│       ├── results_content.html  # Tableau/cards résultats (swap HTMX)
+│       └── reports_content.html  # Tableau/cards rapports (swap HTMX)
+├── static/
+│   ├── htmx.min.js       # HTMX 2.x
+│   ├── alpine.min.js     # Alpine.js 3.x
+│   └── app.css           # Animations CSS (fade, slide-up, skeleton)
 ```
 
 ## Conventions
@@ -72,7 +73,7 @@ app/
 | `web.py` | `/` | HTML |
 | `health.py` | `/health` | JSON |
 | `config_ui.py` | `/config` | HTML |
-| `scan.py` | `/scan`, `/fastscan`, `/api/scan/*`, `/api/fast-scan` | HTML + JSON |
+| `scan.py` | `/scan`, `/fastscan` (→ 301), `/api/scan/*`, `/api/fast-scan` | HTML + JSON |
 | `results.py` | `/results`, `/results/{id}`, `/api/results/*` | HTML + JSON |
 | `reports.py` | `/reports`, `/api/stats`, `/api/scans/delete` | HTML + JSON |
 | `api_config.py` | `/api/config`, `/api/browse`, `/api/config/test-*` | JSON |
@@ -96,3 +97,5 @@ app/
 - Les endpoints qui retournent du HTML pour HTMX doivent détecter `HX-Request` header
 - Ne PAS utiliser Alpine pour stocker l'état serveur — utiliser `data-*` attributes + OOB
 - Les templates Jinja2 reçoivent toujours `request` automatiquement (Starlette)
+- Layout : sidebar desktop rétractable (`w-56` / `w-16`) + bottom nav mobile 5 onglets
+- Dark mode : classe `dark` sur `<html>`, persisté localStorage, Inter font, palette indigo

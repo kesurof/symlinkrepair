@@ -34,6 +34,11 @@ make test      # pytest -v
 - [ ] Les mutations DB sont suivies de `await db.commit()`
 - [ ] Les requêtes SQL utilisent des paramètres `?` (pas de f-string pour les valeurs)
 - [ ] Les actions destructives ont une confirmation (modale Alpine ou `hx-confirm`)
+- [ ] Les classes `dark:` sont ajoutées sur chaque élément (dark mode)
+- [ ] Les pages ont un layout mobile (bottom nav + cards) et desktop (sidebar + table)
+- [ ] Les nouvelles pages étendent `base.html` (pas de page HTML standalone sauf erreur/404)
+- [ ] Les modales de confirmation utilisent `slide-up` + `items-end md:items-center` (responsive)
+- [ ] Les statuts des résultats utilisent le pattern pastille (dot `w-1.5 h-1.5 rounded-full` + texte)
 
 ## Si un check échoue
 

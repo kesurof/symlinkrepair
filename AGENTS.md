@@ -3,7 +3,9 @@
 ## Stack
 - **Backend** : FastAPI (Python ≥3.11)
 - **Templates** : Jinja2
-- **Frontend** : HTMX 2.x + Alpine.js 3.x + Tailwind CSS (CDN)
+- **Frontend** : HTMX 2.x + Alpine.js 3.x + Tailwind CSS (CDN) + Inter (Google Fonts)
+- **Icônes** : Heroicons SVG inline
+- **Design** : Mobile-first, dark mode, palette brand indigo
 - **Base de données** : SQLite via aiosqlite
 - **Déploiement** : Docker (python:3.12-slim)
 
@@ -15,8 +17,10 @@
 - La logique métier dans `app/services/`
 - Les modèles Pydantic dans `app/models/`
 - Les templates Jinja2 dans `app/templates/`
-- Le fichier statique éventuel dans `app/static/`
+- Les fichiers statiques dans `app/static/`
 - L'instance Jinja2Templates partagée dans `app/templates.py`
+- **Layout** : sidebar desktop (rétractable) + bottom nav mobile (5 onglets)
+- **Animations** CSS dans `app/static/app.css` (fade-in, slide-up, skeleton)
 
 ## HTMX + Alpine — Règles
 - **NE PAS** stocker l'état serveur dans Alpine (`x-text`, `x-init`)
@@ -60,11 +64,11 @@ make docker
 - `GET /` — Dashboard avec stats
 - `GET /health` — Health check (status, database)
 - `GET /config` — Configuration + explorateur de dossiers
-- `GET /scan` — Page de lancement de scan
-- `GET /fastscan` — Scan rapide éphémère (filesystem only)
+- `GET /scan` — Page de scan (complet + rapide fusionnés)
 - `GET /results` — Liste des résultats (avec pagination, filtres)
 - `GET /results/{id}` — Détail d'un résultat
 - `GET /reports` — Historique des scans
+- `GET /fastscan` → redirect 301 vers `/scan?mode=fast`
 
 ### Actions scan
 - `POST /api/scan/{source}` — Déclencher un scan (radarr/sonarr)
@@ -121,9 +125,10 @@ make docker
 - [x] Filtres avancés + pagination sur page résultats
 - [x] Déduplication (GROUP BY symlink_path + source)
 - [x] Page de scan améliorée (options, confirmation 2 étapes)
-- [x] Scan rapide éphémère (fastscan)
+- [x] Scan rapide éphémère (fusionné dans /scan)
 - [x] Docker compose vérifié
 - [x] Notifications Discord (webhook configurable, envoi scan + nettoyage)
 - [x] Scans automatiques planifiés (intervalle configurable dans /config)
 - [x] Vérificateur asynchrone (surveille remplacement des symlinks)
 - [x] Sélection multiple et actions batch (process, fix, ignore, recheck, delete)
+- [x] **Refonte UI** : sidebar desktop + bottom nav mobile, dark mode, mobile-first, Heroicons

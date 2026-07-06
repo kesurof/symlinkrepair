@@ -119,8 +119,12 @@ function resultsApp() {
 ## Tailwind CSS
 
 - Version CDN via `<script src="https://cdn.tailwindcss.com"></script>`
-- Pas de fichier CSS personnalisé
-- Utiliser les classes utilitaires directement dans le HTML
+- Configuration custom dans un `<script>` après le CDN :
+  - Dark mode : `darkMode: 'class'`
+  - Couleurs brand indigo : `brand-50` à `brand-900`
+  - Font : `Inter, system-ui, sans-serif`
+- Fichier CSS custom : `app/static/app.css` (animations fade-in, slide-up, skeleton)
+- Dark mode : classe `dark` sur `<html>`, persisté localStorage, system preference au 1er lancement
 
 ## Templates Jinja2
 
@@ -130,3 +134,5 @@ function resultsApp() {
 - Boucles : `{% for item in items %}...{% endfor %}`
 - Conditions : `{% if condition %}...{% endif %}`
 - Les templates reçoivent toujours `request` automatiquement (injecté par Starlette)
+- Les modales de confirmation utilisent le pattern `slide-up` (sheet bottom mobile / dialog desktop)
+- Les statuts des résultats utilisent des pastilles colorées (dot + texte) dans des `rounded-full`

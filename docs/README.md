@@ -9,6 +9,7 @@ docs/
 ├── api.md                  ← Référence des endpoints
 ├── database.md             ← Schéma et accès BDD
 ├── frontend.md             ← Organisation des pages et composants
+├── redesign-ui.md          ← Refonte UI (sidebar + bottom nav + dark mode)
 ├── security.md             ← Modèle de sécurité
 ├── scripts/
 │   ├── radarr_cleanup.md   ← Script Radarr existant
