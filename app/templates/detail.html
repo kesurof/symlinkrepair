@@ -48,9 +48,11 @@
             <div>
                 <dt class="text-gray-500">Statut</dt>
                 <dd><span class="text-xs px-2 py-0.5 rounded
-                    {% if item.status == 'detected' %}bg-yellow-100 text-yellow-700
-                    {% elif item.status == 'ignored' %}bg-gray-100 text-gray-600
-                    {% elif item.status == 'fixed' or item.status == 'processed' %}bg-green-100 text-green-700
+                    {% if item.status in ('détecté','recherche') %}bg-yellow-100 text-yellow-700
+                    {% elif item.status == 'ignoré' %}bg-gray-100 text-gray-600
+                    {% elif item.status in ('réparé','remplacé') %}bg-green-100 text-green-700
+                    {% elif item.status == 'en_attente' %}bg-blue-100 text-blue-700
+                    {% elif item.status in ('non_remplacé','échoué') %}bg-red-100 text-red-700
                     {% else %}bg-red-100 text-red-700{% endif %}">
                     {{ item.status }}
                 </span></dd>
@@ -70,7 +72,7 @@
         </dl>
 
         <div class="mt-6 flex flex-wrap gap-2">
-            {% if item.status == 'detected' or item.status == 'recheck_needed' %}
+            {% if item.status in ('détecté','recherche') %}
             <div x-show="processStep === 'initial'" x-cloak>
                 <button @click="processStep = 'confirm'"
                         class="bg-red-500 text-white px-3 py-1.5 rounded text-sm hover:bg-red-600">

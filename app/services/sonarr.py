@@ -19,6 +19,7 @@ def copy_database(container: str, db_name: str) -> str | None:
             capture_output=True,
             timeout=30,
         )
+        logger.info("Copied %s from container %s to %s", db_name, container, tmp.name)
         return tmp.name
     except Exception as e:
         logger.error("Failed to copy %s from %s: %s", db_name, container, e)
@@ -53,6 +54,7 @@ def load_episode_records(db_path: str) -> dict[str, dict]:
             if fp:
                 records_by_path[fp] = d
         conn.close()
+        logger.info("Loaded %d Sonarr episode records", len(records_by_path))
     except Exception as e:
         logger.error("Failed to load Sonarr records: %s", e)
     finally:
@@ -70,9 +72,17 @@ async def delete_episode_file(url: str, api_key: str, file_id: int) -> bool:
                 f"{url.rstrip('/')}/api/v3/episodefile/{file_id}",
                 headers={"X-Api-Key": api_key},
             )
-            return resp.status_code == 200
+            ok = resp.status_code == 200
+            if ok:
+                logger.info("Deleted episode file %d", file_id)
+            else:
+                logger.warning(
+                    "Failed to delete episode file %d: HTTP %d",
+                    file_id, resp.status_code,
+                )
+            return ok
     except Exception as e:
-        logger.error("Failed to delete episode file %s: %s", file_id, e)
+        logger.error("Failed to delete episode file %d: %s", file_id, e)
         return False
 
 
@@ -84,9 +94,17 @@ async def rescan_series(url: str, api_key: str, series_id: int) -> bool:
                 json={"name": "RescanSeries", "seriesId": series_id},
                 headers={"X-Api-Key": api_key},
             )
-            return resp.status_code == 201
+            ok = resp.status_code == 201
+            if ok:
+                logger.info("Rescan command submitted for series %d", series_id)
+            else:
+                logger.warning(
+                    "Rescan command failed for series %d: HTTP %d",
+                    series_id, resp.status_code,
+                )
+            return ok
     except Exception as e:
-        logger.error("Failed to rescan series %s: %s", series_id, e)
+        logger.error("Rescan command failed for series %d: %s", series_id, e)
         return False
 
 
@@ -102,9 +120,17 @@ async def search_season(url: str, api_key: str, series_id: int, season: int) -> 
                 },
                 headers={"X-Api-Key": api_key},
             )
-            return resp.status_code == 201
+            ok = resp.status_code == 201
+            if ok:
+                logger.info("Search command submitted for season %d/%d", series_id, season)
+            else:
+                logger.warning(
+                    "Search command failed for season %d/%d: HTTP %d",
+                    series_id, season, resp.status_code,
+                )
+            return ok
     except Exception as e:
-        logger.error("Failed to search season %s/%s: %s", series_id, season, e)
+        logger.error("Search command failed for season %d/%d: %s", series_id, season, e)
         return False
 
 

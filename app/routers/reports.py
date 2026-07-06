@@ -1,3 +1,5 @@
+import logging
+
 from aiosqlite import Connection
 from fastapi import APIRouter, Depends, Request
 from fastapi.responses import HTMLResponse, JSONResponse
@@ -5,6 +7,7 @@ from fastapi.responses import HTMLResponse, JSONResponse
 from app.database import get_db
 from app.templates import templates
 
+logger = logging.getLogger(__name__)
 router = APIRouter()
 
 
@@ -89,8 +92,8 @@ async def stats(db: Connection = Depends(get_db)):
         "SELECT"
         " (SELECT COUNT(*) FROM scans) AS total_scans,"
         " (SELECT COUNT(*) FROM results) AS total_results,"
-        " (SELECT COUNT(*) FROM results WHERE status = 'detected') AS broken,"
-        " (SELECT COALESCE(SUM(CASE WHEN status IN ('fixed','processed','ignored')"
+        " (SELECT COUNT(*) FROM results WHERE status IN ('détecté','recherche')) AS broken,"
+        " (SELECT COALESCE(SUM(CASE WHEN status IN ('réparé','remplacé','en_attente','ignoré')"
         "  THEN 1 ELSE 0 END), 0) FROM results) AS fixed"
     )
     row = await cursor.fetchone()
@@ -108,4 +111,5 @@ async def delete_scans(request: Request, db: Connection = Depends(get_db)):
     await db.execute(f"DELETE FROM results WHERE scan_id IN ({placeholders})", ids)
     await db.execute(f"DELETE FROM scans WHERE id IN ({placeholders})", ids)
     await db.commit()
+    logger.info("Scans deleted: ids=%s count=%d", ids, len(ids))
     return {"ok": True, "affected": len(ids)}

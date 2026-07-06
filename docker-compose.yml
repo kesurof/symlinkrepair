@@ -11,6 +11,7 @@ services:
     environment:
       - DATABASE_URL=sqlite+aiosqlite:///data/symlinkrepair.db
       - DATA_DIR=/app/data
+      - LOG_FORMAT=pretty
     networks:
       - traefik_proxy
 

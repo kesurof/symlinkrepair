@@ -1,3 +1,4 @@
+import logging
 from contextlib import asynccontextmanager
 from pathlib import Path
 
@@ -11,15 +12,24 @@ from app.logging_config import setup_logging
 from app.routers import api_config, config_ui, health, reports, results, scan, web
 from app.services.scheduler import start as start_scheduler
 from app.services.scheduler import stop as stop_scheduler
+from app.services.verifier import start as start_verifier
+from app.services.verifier import stop as stop_verifier
 
 setup_logging()
+
+logger = logging.getLogger(__name__)
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    logger.info("SymlinkRepair starting")
     await init_db()
     start_scheduler()
+    start_verifier()
+    logger.info("SymlinkRepair started")
     yield
+    logger.info("SymlinkRepair shutting down")
+    stop_verifier()
     stop_scheduler()
 
 

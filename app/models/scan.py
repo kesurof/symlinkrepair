@@ -28,7 +28,7 @@ class Result(BaseModel):
     file_id: int | None = None
     tags: str | None = None
     detection: str = "broken_symlink"
-    status: str = "detected"
+    status: str = "détecté"
     action: str | None = None
     action_date: str | None = None
     notes: str | None = None

@@ -1,3 +1,5 @@
+import logging
+
 from aiosqlite import Connection
 from fastapi import APIRouter, Depends, Request
 from fastapi.responses import HTMLResponse, JSONResponse
@@ -9,6 +11,7 @@ from app.services.config_service import load_config
 from app.services.discord import notify_scan
 from app.templates import templates
 
+logger = logging.getLogger(__name__)
 router = APIRouter()
 
 
@@ -27,8 +30,10 @@ async def trigger_scan(
     if source not in ("radarr", "sonarr"):
         return JSONResponse({"error": "source invalide"}, status_code=400)
 
+    logger.info("Scan triggered: source=%s mode=%s limit=%d", source, mode, limit)
     result = await scanner.start_scan(source, mode, limit)
     if result["status"] == "error":
+        logger.warning("Scan failed: source=%s error=%s", source, result.get("error"))
         return JSONResponse(result, status_code=409)
 
     # Store scan in DB
@@ -68,7 +73,7 @@ async def trigger_scan(
                 target.get("series_id"),
                 target.get("tags"),
                 target.get("detection", "broken_symlink"),
-                target.get("status", "detected"),
+                target.get("status", "détecté"),
             ),
         )
     await db.commit()
@@ -81,6 +86,12 @@ async def trigger_scan(
 
     await notify_scan(config, source, result)
 
+    logger.info(
+        "Scan completed: source=%s mode=%s total=%d broken=%d "
+        "processed=%d cleanup_deleted=%d",
+        source, mode, result.get("total", 0), result.get("broken", 0),
+        result.get("matching", 0), cleanup_stats.get("deleted", 0),
+    )
     return {
         "ok": True,
         "scan_id": scan_id,

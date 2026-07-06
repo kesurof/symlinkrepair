@@ -24,6 +24,7 @@ def _save_raw(data: dict):
 
 def load_config() -> AppConfig:
     raw = _load_raw()
+    logger.debug("Config loaded from %s", CONFIG_PATH)
     return AppConfig(**raw)
 
 
@@ -41,6 +42,7 @@ def save_config(cfg: AppConfig):
         raw["discord"]["webhook"] = stored.get("discord", {}).get("webhook", "")
 
     _save_raw(raw)
+    logger.info("Config saved to %s", CONFIG_PATH)
 
 
 def mask_secret(value: str) -> str:
@@ -104,7 +106,7 @@ def browse_directory(path_str: str, allowed_roots: list[str]) -> dict | None:
     }
 
 
-async def test_radarr_connection(url: str, api_key: str) -> dict:
+async def _test_connection(source: str, url: str, api_key: str) -> dict:
     if not url or not api_key:
         return {"ok": False, "error": "URL ou clé API manquante"}
     try:
@@ -117,10 +119,19 @@ async def test_radarr_connection(url: str, api_key: str) -> dict:
             )
             if resp.status_code == 200:
                 data = resp.json()
-                return {"ok": True, "version": data.get("version", "?")}
+                version = data.get("version", "?")
+                logger.info("%s connection test: ok=True version=%s", source, version)
+                return {"ok": True, "version": version}
+            logger.warning("%s connection test: ok=False http=%d", source, resp.status_code)
             return {"ok": False, "error": f"HTTP {resp.status_code}"}
     except Exception as e:
+        logger.warning("%s connection test: ok=False error=%s", source, e)
         return {"ok": False, "error": str(e)}
 
 
-test_sonarr_connection = test_radarr_connection
+async def test_radarr_connection(url: str, api_key: str) -> dict:
+    return await _test_connection("Radarr", url, api_key)
+
+
+async def test_sonarr_connection(url: str, api_key: str) -> dict:
+    return await _test_connection("Sonarr", url, api_key)

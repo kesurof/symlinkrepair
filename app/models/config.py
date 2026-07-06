@@ -36,10 +36,17 @@ class SchedulerConfig(BaseModel):
     sonarr_interval_hours: int = 3
 
 
+class VerifierConfig(BaseModel):
+    enabled: bool = True
+    interval_minutes: int = 3
+    max_duration_minutes: int = 60
+
+
 class AppConfig(BaseModel):
     radarr: RadarrConfig = RadarrConfig()
     sonarr: SonarrConfig = SonarrConfig()
     discord: DiscordConfig = DiscordConfig()
     defaults: DefaultsConfig = DefaultsConfig()
     scheduler: SchedulerConfig = SchedulerConfig()
+    verifier: VerifierConfig = VerifierConfig()
     browse_roots: list[str] = ["/home", "/mnt", "/data"]

@@ -24,7 +24,9 @@ async def send_webhook(webhook_url: str, payload: dict) -> bool:
     try:
         async with httpx.AsyncClient(timeout=15) as client:
             resp = await client.post(webhook_url, json=payload)
-            return resp.status_code in (200, 204)
+            ok = resp.status_code in (200, 204)
+            logger.info("Discord webhook sent: status=%d ok=%s", resp.status_code, ok)
+            return ok
     except Exception as e:
         logger.warning("Discord webhook failed: %s", e)
         return False
@@ -34,6 +36,7 @@ async def notify_scan(config, source: str, scan_result: dict) -> bool:
     if not config.discord.enabled or not config.discord.webhook:
         return False
 
+    logger.debug("Discord notify: source=%s event=scan", source)
     mode = scan_result.get("mode", "simulate")
     is_simulate = mode == "simulate"
     color = 0x57F287 if is_simulate else 0xFEE75C
@@ -58,6 +61,11 @@ async def notify_cleanup(config, result: dict, action_log: dict) -> bool:
     if not config.discord.enabled or not config.discord.webhook:
         return False
 
+    logger.debug(
+        "Discord notify: source=%s event=cleanup title=%s",
+        result.get("source", "?"),
+        result.get("media_title", "?"),
+    )
     ok = action_log.get("api_delete", False)
     color = 0x57F287 if ok else 0xED4245
     title = f"{'✅' if ok else '❌'} Nettoyage — {result.get('media_title') or 'Sans titre'}"

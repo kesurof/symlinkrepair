@@ -1,3 +1,5 @@
+import logging
+
 from aiosqlite import Connection
 from fastapi import APIRouter, Depends, Request
 from fastapi.responses import HTMLResponse, JSONResponse
@@ -8,6 +10,7 @@ from app.services.config_service import load_config
 from app.services.discord import notify_cleanup
 from app.templates import templates
 
+logger = logging.getLogger(__name__)
 router = APIRouter()
 
 
@@ -124,33 +127,36 @@ async def result_detail(request: Request, result_id: int, db: Connection = Depen
 @router.post("/api/results/{result_id}/ignore")
 async def ignore_result(result_id: int, db: Connection = Depends(get_db)):
     await db.execute(
-        "UPDATE results SET status = 'ignored', action = 'ignored',"
+        "UPDATE results SET status = 'ignoré', action = 'ignored',"
         " action_date = datetime('now') WHERE id = ?",
         (result_id,),
     )
     await db.commit()
+    logger.info("Result %d ignored", result_id)
     return {"ok": True}
 
 
 @router.post("/api/results/{result_id}/recheck")
 async def recheck_result(result_id: int, db: Connection = Depends(get_db)):
     await db.execute(
-        "UPDATE results SET status = 'recheck_needed',"
+        "UPDATE results SET status = 'recherche',"
         " action = NULL, action_date = NULL WHERE id = ?",
         (result_id,),
     )
     await db.commit()
+    logger.info("Result %d recheck_needed", result_id)
     return {"ok": True}
 
 
 @router.post("/api/results/{result_id}/fix")
 async def fix_result(result_id: int, db: Connection = Depends(get_db)):
     await db.execute(
-        "UPDATE results SET status = 'fixed', action = 'manual_fix',"
+        "UPDATE results SET status = 'réparé', action = 'manual_fix',"
         " action_date = datetime('now') WHERE id = ?",
         (result_id,),
     )
     await db.commit()
+    logger.info("Result %d fixed (manual)", result_id)
     return {"ok": True}
 
 
@@ -173,7 +179,7 @@ async def process_single_result(
 
         if outcome["ok"]:
             await db.execute(
-                "UPDATE results SET status = 'processed', action = 'api_delete',"
+                "UPDATE results SET status = 'en_attente', action = 'api_delete',"
                 " action_date = datetime('now') WHERE id = ?",
                 (result_id,),
             )
@@ -182,6 +188,10 @@ async def process_single_result(
     config = load_config()
     await notify_cleanup(config, result, outcome.get("actions", {}))
 
+    logger.info(
+        "Result %d processed: ok=%s error=%s delete_season=%s",
+        result_id, outcome.get("ok"), outcome.get("error", ""), delete_season,
+    )
     return outcome
 
 
@@ -196,19 +206,19 @@ async def batch_action(request: Request, db: Connection = Depends(get_db)):
 
     if action == "ignore":
         await db.execute(
-            f"UPDATE results SET status = 'ignored', action = 'ignored',"
+            f"UPDATE results SET status = 'ignoré', action = 'ignored',"
             f" action_date = datetime('now') WHERE id IN ({','.join('?' for _ in ids)})",
             ids,
         )
     elif action == "fix":
         await db.execute(
-            f"UPDATE results SET status = 'fixed', action = 'manual_fix',"
+            f"UPDATE results SET status = 'réparé', action = 'manual_fix',"
             f" action_date = datetime('now') WHERE id IN ({','.join('?' for _ in ids)})",
             ids,
         )
     elif action == "recheck":
         await db.execute(
-            f"UPDATE results SET status = 'recheck_needed',"
+            f"UPDATE results SET status = 'recherche',"
             f" action = NULL, action_date = NULL WHERE id IN ({','.join('?' for _ in ids)})",
             ids,
         )
@@ -219,4 +229,5 @@ async def batch_action(request: Request, db: Connection = Depends(get_db)):
         return JSONResponse({"ok": False, "error": f"Action inconnue: {action}"}, status_code=400)
 
     await db.commit()
+    logger.info("Batch %s: %d results affected", action, len(ids))
     return {"ok": True, "affected": len(ids)}

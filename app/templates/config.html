@@ -162,7 +162,34 @@
                                class="w-24 border rounded px-2 py-1.5 text-sm">
                     </div>
                 </div>
-                <p class="text-xs text-gray-400">Les scans sont lancés en mode simulation. Les résultats sont visibles sur la page Résultats.</p>
+                <p class="text-xs text-gray-400">Les scans sont lancés en mode réel. Les résultats sont visibles sur la page Résultats.</p>
+            </div>
+        </section>
+
+        <section class="bg-white rounded-lg shadow-sm border p-4">
+            <h3 class="font-medium text-gray-700 mb-3">Vérification post-nettoyage</h3>
+            <div class="space-y-3">
+                <label class="flex items-center gap-2">
+                    <input type="checkbox" x-model="cfg.verifier.enabled" class="rounded">
+                    <span class="text-sm">Vérification automatique après nettoyage</span>
+                </label>
+                <div x-show="cfg.verifier.enabled" class="ml-6 space-y-3">
+                    <div>
+                        <label class="block text-sm text-gray-600">Intervalle (minutes)</label>
+                        <input type="number" x-model="cfg.verifier.interval_minutes" min="1" max="60"
+                               class="w-24 border rounded px-2 py-1.5 text-sm">
+                    </div>
+                    <div>
+                        <label class="block text-sm text-gray-600">Durée max avant recherche forcée (minutes)</label>
+                        <input type="number" x-model="cfg.verifier.max_duration_minutes" min="5" max="480"
+                               class="w-24 border rounded px-2 py-1.5 text-sm">
+                    </div>
+                </div>
+                <p class="text-xs text-gray-400">
+                    Vérifie toutes les N minutes si les symlinks traités ont été réparés.
+                    Au bout de la durée max, une recherche forcée est déclenchée dans Sonarr/Radarr.
+                    Si toujours cassé après le deuxième cycle, le résultat est marqué "non remplacé".
+                </p>
             </div>
         </section>
 
@@ -231,7 +258,8 @@ function configApp() {
                sonarr: { url: '', api_key: '', container: 'sonarr', library_roots: [], target_prefixes: [] },
                discord: { enabled: false, webhook: '' },
                defaults: { limit: 50, rescan: true, search: true, keep_symlinks: false },
-               scheduler: { radarr_enabled: false, radarr_interval_hours: 3, sonarr_enabled: false, sonarr_interval_hours: 3 } },
+               scheduler: { radarr_enabled: false, radarr_interval_hours: 3, sonarr_enabled: false, sonarr_interval_hours: 3 },
+               verifier: { enabled: true, interval_minutes: 3, max_duration_minutes: 60 } },
         showRadarrKey: false,
         showSonarrKey: false,
         showWebhook: false,

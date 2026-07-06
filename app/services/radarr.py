@@ -19,6 +19,7 @@ def copy_database(container: str, db_name: str) -> str | None:
             capture_output=True,
             timeout=30,
         )
+        logger.info("Copied %s from container %s to %s", db_name, container, tmp.name)
         return tmp.name
     except Exception as e:
         logger.error("Failed to copy %s from %s: %s", db_name, container, e)
@@ -54,6 +55,7 @@ def load_movie_records(db_path: str) -> dict[str, dict]:
             if fp:
                 records_by_path[fp] = d
         conn.close()
+        logger.info("Loaded %d Radarr movie records", len(records_by_path))
     except Exception as e:
         logger.error("Failed to load Radarr records: %s", e)
     finally:
@@ -71,9 +73,14 @@ async def delete_movie_file(url: str, api_key: str, file_id: int) -> bool:
                 f"{url.rstrip('/')}/api/v3/moviefile/{file_id}?deleteFile=false",
                 headers={"X-Api-Key": api_key},
             )
-            return resp.status_code == 200
+            ok = resp.status_code == 200
+            if ok:
+                logger.info("Deleted movie file %d", file_id)
+            else:
+                logger.warning("Failed to delete movie file %d: HTTP %d", file_id, resp.status_code)
+            return ok
     except Exception as e:
-        logger.error("Failed to delete movie file %s: %s", file_id, e)
+        logger.error("Failed to delete movie file %d: %s", file_id, e)
         return False
 
 
@@ -85,9 +92,17 @@ async def refresh_movie(url: str, api_key: str, movie_id: int) -> bool:
                 json={"name": "RefreshMovie", "movieIds": [movie_id]},
                 headers={"X-Api-Key": api_key},
             )
-            return resp.status_code == 201
+            ok = resp.status_code == 201
+            if ok:
+                logger.info("Refresh command submitted for movie %d", movie_id)
+            else:
+                logger.warning(
+                    "Refresh command failed for movie %d: HTTP %d",
+                    movie_id, resp.status_code,
+                )
+            return ok
     except Exception as e:
-        logger.error("Failed to refresh movie %s: %s", movie_id, e)
+        logger.error("Refresh command failed for movie %d: %s", movie_id, e)
         return False
 
 
@@ -99,9 +114,17 @@ async def search_movies(url: str, api_key: str, movie_ids: list[int]) -> bool:
                 json={"name": "MoviesSearch", "movieIds": movie_ids},
                 headers={"X-Api-Key": api_key},
             )
-            return resp.status_code == 201
+            ok = resp.status_code == 201
+            if ok:
+                logger.info("Search command submitted for movies %s", movie_ids)
+            else:
+                logger.warning(
+                    "Search command failed for movies %s: HTTP %d",
+                    movie_ids, resp.status_code,
+                )
+            return ok
     except Exception as e:
-        logger.error("Failed to search movies: %s", e)
+        logger.error("Search command failed for movies %s: %s", movie_ids, e)
         return False
 
 

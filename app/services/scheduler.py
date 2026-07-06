@@ -14,11 +14,10 @@ _scheduler_task: asyncio.Task | None = None
 
 
 async def _trigger_scan(source: str):
-    logger.info("Scheduler: triggering %s scan", source)
     try:
-        result = await scanner.start_scan(source, "simulate", 0)
+        result = await scanner.start_scan(source, "clean", 0)
         if result["status"] == "error":
-            logger.warning("Scheduler: %s scan error: %s", source, result.get("error"))
+            logger.warning("%s scan error: %s", source, result.get("error"))
             return
 
         db = await aiosqlite.connect(str(DATABASE_PATH))
@@ -30,7 +29,7 @@ async def _trigger_scan(source: str):
                 " VALUES (?, ?, ?, ?, ?, ?, ?, datetime('now'))",
                 (
                     source,
-                    "simulate",
+                    "clean",
                     result["status"],
                     result.get("total", 0),
                     result.get("broken", 0),
@@ -65,12 +64,13 @@ async def _trigger_scan(source: str):
                 )
             await db.commit()
             logger.info(
-                "Scheduler: %s scan done, %s results", source, len(result.get("targets", []))
+                "%s scan done: %d broken, %d results",
+                source, result.get("broken", 0), len(result.get("targets", [])),
             )
         finally:
             await db.close()
     except Exception as e:
-        logger.error("Scheduler: %s scan failed: %s", source, e)
+        logger.error("%s scan failed: %s", source, e)
 
 
 async def _should_run(source: str, interval_hours: int) -> bool:
@@ -90,12 +90,12 @@ async def _should_run(source: str, interval_hours: int) -> bool:
         finally:
             await db.close()
     except Exception as e:
-        logger.warning("Scheduler: failed to check last scan for %s: %s", source, e)
+        logger.warning("Failed to check last scan for %s: %s", source, e)
         return False
 
 
 async def _scheduler_loop():
-    logger.info("Scheduler: starting background loop")
+    logger.info("Background loop started")
     while True:
         try:
             config = load_config()
@@ -111,9 +111,10 @@ async def _scheduler_loop():
                 if interval < 1:
                     interval = 1
                 if await _should_run(source, interval):
+                    logger.info("Triggering %s scan (interval=%dh)", source, interval)
                     await _trigger_scan(source)
         except Exception as e:
-            logger.error("Scheduler: loop error: %s", e)
+            logger.error("Loop error: %s", e)
 
         await asyncio.sleep(60)
 
@@ -122,7 +123,7 @@ def start():
     global _scheduler_task
     if _scheduler_task is None or _scheduler_task.done():
         _scheduler_task = asyncio.create_task(_scheduler_loop())
-        logger.info("Scheduler: started")
+        logger.info("Scheduler started")
 
 
 def stop():
@@ -130,4 +131,4 @@ def stop():
     if _scheduler_task and not _scheduler_task.done():
         _scheduler_task.cancel()
         _scheduler_task = None
-        logger.info("Scheduler: stopped")
+        logger.info("Scheduler stopped")

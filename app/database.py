@@ -1,8 +1,11 @@
+import logging
 from pathlib import Path
 
 import aiosqlite
 
 from app.config import settings
+
+logger = logging.getLogger(__name__)
 
 DATABASE_PATH = Path(settings.data_dir) / "symlinkrepair.db"
 
@@ -50,7 +53,7 @@ async def init_db():
                 series_id       INTEGER,
                 tags            TEXT,
                 detection       TEXT NOT NULL DEFAULT 'broken_symlink',
-                status          TEXT NOT NULL DEFAULT 'detected',
+                status          TEXT NOT NULL DEFAULT 'détecté',
                 action          TEXT,
                 action_date     TEXT,
                 notes           TEXT,
@@ -68,4 +71,19 @@ async def init_db():
             except Exception:
                 pass
 
+        for old, new in [
+            ("detected", "détecté"),
+            ("ignored", "ignoré"),
+            ("fixed", "réparé"),
+            ("processed", "en_attente"),
+            ("recheck_needed", "recherche"),
+            ("not_replaced", "non_remplacé"),
+            ("failed", "échoué"),
+        ]:
+            await db.execute(
+                "UPDATE results SET status = ? WHERE status = ?",
+                (new, old),
+            )
+
         await db.commit()
+    logger.info("Database initialized at %s", DATABASE_PATH)

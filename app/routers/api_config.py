@@ -1,3 +1,5 @@
+import logging
+
 from fastapi import APIRouter, Request
 from fastapi.responses import JSONResponse
 
@@ -11,6 +13,7 @@ from app.services.config_service import (
     test_sonarr_connection,
 )
 
+logger = logging.getLogger(__name__)
 router = APIRouter()
 
 
@@ -22,6 +25,7 @@ async def get_config():
 @router.post("/api/config")
 async def update_config(cfg: AppConfig):
     save_config(cfg)
+    logger.info("Config updated")
     return {"ok": True}
 
 
@@ -42,10 +46,14 @@ async def default_browse_roots():
 @router.post("/api/config/test-radarr")
 async def test_radarr(request: Request):
     body = await request.json()
-    return await test_radarr_connection(body.get("url", ""), body.get("api_key", ""))
+    result = await test_radarr_connection(body.get("url", ""), body.get("api_key", ""))
+    logger.info("Radarr test connection: ok=%s", result.get("ok"))
+    return result
 
 
 @router.post("/api/config/test-sonarr")
 async def test_sonarr(request: Request):
     body = await request.json()
-    return await test_sonarr_connection(body.get("url", ""), body.get("api_key", ""))
+    result = await test_sonarr_connection(body.get("url", ""), body.get("api_key", ""))
+    logger.info("Sonarr test connection: ok=%s", result.get("ok"))
+    return result

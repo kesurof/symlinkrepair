@@ -43,11 +43,17 @@ async def _run_scan(source: str, mode: str, limit: int = 0) -> dict:
         db_copy_fn = sonarr_copy_db
 
     if not cfg.library_roots or not cfg.target_prefixes:
+        logger.warning("Scan aborted: incomplete config for %s", source)
         return {"status": "error", "error": "Configuration incomplète"}
 
     limit = limit or config.defaults.limit
+    logger.info("Starting scan: source=%s mode=%s limit=%d", source, mode, limit)
     results, total, matching, broken = filescanner.scan_library_roots(
         cfg.library_roots, cfg.target_prefixes, limit
+    )
+    logger.info(
+        "Filesystem scan done: source=%s total=%d matching=%d broken=%d",
+        source, total, matching, broken,
     )
 
     db_path = db_copy_fn(cfg.container)
@@ -88,8 +94,18 @@ async def _run_scan(source: str, mode: str, limit: int = 0) -> dict:
             r["tags"] = "[]"
         r["source"] = source
         r["detection"] = "broken_symlink"
-        r["status"] = "detected"
+        r["status"] = "détecté"
         targets.append(r)
+
+    if targets:
+        logger.info("Broken symlinks for %s:", source)
+        for t in targets:
+            logger.info("  %s (%s)", t["symlink_path"], t.get("media_title") or "?")
+
+    logger.info(
+        "Scan completed: source=%s broken=%d matched=%d affected_titles=%d",
+        source, broken, len(targets), len(affected_titles),
+    )
 
     return {
         "status": "completed",
