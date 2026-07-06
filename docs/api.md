@@ -26,7 +26,6 @@
 | Méthode | Chemin | Description |
 |---------|--------|-------------|
 | POST | `/api/results/{id}/ignore` | Ignorer un élément |
-| POST | `/api/results/{id}/recheck` | Revérifier un élément |
 | POST | `/api/results/{id}/fix` | Marquer manuellement comme corrigé |
 | POST | `/api/results/{id}/process` | Traitement réel : DELETE API + recherche |
 | POST | `/api/results/batch` | Action groupée sur plusieurs IDs |

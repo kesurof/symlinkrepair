@@ -55,6 +55,3 @@
 }
 
 /* === Sidebar transition === */
-.sidebar-transition {
-  transition: width 300ms ease-in-out;
-}

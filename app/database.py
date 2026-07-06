@@ -65,9 +65,9 @@ async def init_db():
             CREATE INDEX IF NOT EXISTS idx_scans_created ON scans(created_at);
         """)
 
-        for col in ("movie_id", "series_id"):
+        for col in ("movie_id", "series_id", "search_count"):
             try:
-                await db.execute(f"ALTER TABLE results ADD COLUMN {col} INTEGER")
+                await db.execute(f"ALTER TABLE results ADD COLUMN {col} INTEGER DEFAULT 0")
             except Exception:
                 pass
 
@@ -76,7 +76,6 @@ async def init_db():
             ("ignored", "ignoré"),
             ("fixed", "remplacé"),
             ("processed", "en_attente"),
-            ("recheck_needed", "recherche"),
             ("not_replaced", "non_remplacé"),
             ("failed", "échoué"),
         ]:
@@ -86,6 +85,7 @@ async def init_db():
             )
 
         await db.execute("UPDATE results SET status = 'remplacé' WHERE status = 'réparé'")
+        await db.execute("UPDATE results SET status = 'détecté' WHERE status = 'recherche'")
 
         await db.commit()
     logger.info("Database initialized at %s", DATABASE_PATH)

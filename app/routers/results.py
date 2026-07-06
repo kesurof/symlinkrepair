@@ -9,6 +9,8 @@ from app.database import get_db
 from app.services.cleanup import process_season, process_single
 from app.services.config_service import load_config
 from app.services.discord import notify_cleanup
+from app.services.verifier import get_status as verifier_get_status
+from app.services.verifier import remove as verifier_remove
 from app.templates import templates
 
 logger = logging.getLogger(__name__)
@@ -219,17 +221,6 @@ async def ignore_result(result_id: int, db: Connection = Depends(get_db)):
     return {"ok": True}
 
 
-@router.post("/api/results/{result_id}/recheck")
-async def recheck_result(result_id: int, db: Connection = Depends(get_db)):
-    await db.execute(
-        "UPDATE results SET status = 'recherche', action = NULL, action_date = NULL WHERE id = ?",
-        (result_id,),
-    )
-    await db.commit()
-    logger.info("Result %d recheck_needed", result_id)
-    return {"ok": True}
-
-
 @router.post("/api/results/{result_id}/fix")
 async def fix_result(result_id: int, db: Connection = Depends(get_db)):
     await db.execute(
@@ -239,6 +230,36 @@ async def fix_result(result_id: int, db: Connection = Depends(get_db)):
     )
     await db.commit()
     logger.info("Result %d fixed (manual)", result_id)
+    return {"ok": True}
+
+
+@router.get("/api/results/{result_id}/verifier")
+async def verifier_status(result_id: int, db: Connection = Depends(get_db)):
+    cursor = await db.execute("SELECT symlink_path FROM results WHERE id = ?", (result_id,))
+    row = await cursor.fetchone()
+    if not row:
+        return JSONResponse({"ok": False, "error": "Résultat introuvable"}, status_code=404)
+    status = verifier_get_status(row["symlink_path"])
+    if not status:
+        return {"ok": True, "pending": False}
+    return {"ok": True, **status}
+
+
+@router.post("/api/results/{result_id}/stop-verifier")
+async def stop_verifier(result_id: int, db: Connection = Depends(get_db)):
+    cursor = await db.execute("SELECT symlink_path FROM results WHERE id = ?", (result_id,))
+    row = await cursor.fetchone()
+    if not row:
+        return JSONResponse({"ok": False, "error": "Résultat introuvable"}, status_code=404)
+    removed = verifier_remove(row["symlink_path"])
+    if removed:
+        await db.execute(
+            "UPDATE results SET status = 'non_remplacé', action = 'abandon',"
+            " action_date = datetime('now') WHERE id = ?",
+            (result_id,),
+        )
+        await db.commit()
+        logger.info("Result %d verifier stopped (abandon)", result_id)
     return {"ok": True}
 
 
@@ -262,7 +283,7 @@ async def process_single_result(
         if outcome["ok"]:
             await db.execute(
                 "UPDATE results SET status = 'en_attente', action = 'api_delete',"
-                " action_date = datetime('now') WHERE id = ?",
+                " search_count = search_count + 1, action_date = datetime('now') WHERE id = ?",
                 (result_id,),
             )
             await db.commit()
@@ -305,14 +326,6 @@ async def batch_action(request: Request, db: Connection = Depends(get_db)):
         )
         await db.commit()
         affected = len(ids)
-    elif action == "recheck":
-        await db.execute(
-            f"UPDATE results SET status = 'recherche',"
-            f" action = NULL, action_date = NULL WHERE id IN ({','.join('?' for _ in ids)})",
-            ids,
-        )
-        await db.commit()
-        affected = len(ids)
     elif action == "delete":
         placeholders = ",".join("?" for _ in ids)
         await db.execute(f"DELETE FROM results WHERE id IN ({placeholders})", ids)
@@ -332,7 +345,7 @@ async def batch_action(request: Request, db: Connection = Depends(get_db)):
                 ok_count += 1
                 await db.execute(
                     "UPDATE results SET status = 'en_attente', action = 'api_delete',"
-                    " action_date = datetime('now') WHERE id = ?",
+                    " search_count = search_count + 1, action_date = datetime('now') WHERE id = ?",
                     (rid,),
                 )
                 await db.commit()

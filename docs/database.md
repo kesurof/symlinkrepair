@@ -41,7 +41,8 @@ CREATE TABLE results (
     tags            TEXT,                          -- JSON array des tags Radarr/Sonarr
     detection       TEXT    NOT NULL DEFAULT 'broken_symlink',
     status          TEXT    NOT NULL DEFAULT 'détecté',
-    action          TEXT,                          -- 'ignored' | 'manual_fix' | 'api_delete' | 'verifier_ok' | 'verifier_fail'
+    action          TEXT,                          -- 'ignored' | 'manual_fix' | 'api_delete' | 'verifier_ok' | 'verifier_fail' | 'abandon'
+    search_count    INTEGER DEFAULT 0,             -- Nombre de traitements effectués
     action_date     TEXT,
     notes           TEXT,
     FOREIGN KEY (scan_id) REFERENCES scans(id)
@@ -61,10 +62,9 @@ CREATE INDEX idx_scans_created ON scans(created_at);
 | Statut | Description |
 |--------|-------------|
 | `détecté` | Détecté par un scan, en attente d'action |
-| `recherche` | En cours de revérification |
-| `en_attente` | DELETE API envoyé, en attente de confirmation |
+| `en_attente` | DELETE API envoyé, vérification en cours |
 | `remplacé` | Symlink remplacé ou marqué manuellement comme corrigé |
-| `non_remplacé` | Vérifié : le symlink n'a pas été remplacé |
+| `non_remplacé` | Vérifié : le symlink n'a pas été remplacé (ou cycle abandonné) |
 | `ignoré` | Ignoré par l'utilisateur |
 | `échoué` | L'action API a échoué |
 
@@ -73,10 +73,11 @@ CREATE INDEX idx_scans_created ON scans(created_at);
 | Action | Déclencheur |
 |--------|-------------|
 | `ignored` | Action "Ignorer" |
-| `manual_fix` | Action "Marquer corrigé" |
+| `manual_fix` | Action "Marquer remplacé" |
 | `api_delete` | Action "Traiter" (DELETE API Radarr/Sonarr) |
 | `verifier_ok` | Vérificateur : symlink remplacé |
 | `verifier_fail` | Vérificateur : symlink non remplacé |
+| `abandon` | Cycle de vérification arrêté manuellement |
 
 ## Accès
 

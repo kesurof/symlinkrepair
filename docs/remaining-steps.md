@@ -8,7 +8,7 @@
 - [x] Orchestrateur async avec Lock (Radarr et Sonarr en parallèle)
 - [x] Routes scan (POST déclenchement, stockage résultats en base)
 - [x] Nettoyage réel : DELETE API Radarr/Sonarr, suppression symlink, refresh/search
-- [x] Actions batch : Traiter (process), Marquer corrigé, Ignorer, Revérifier, Supprimer
+- [x] Actions batch : Traiter (process), Marquer remplacé, Ignorer, Supprimer
 - [x] Filtres page résultats : source, statut, saison, recherche texte
 - [x] Pagination + filtres avancés (25/50/100 par page)
 - [x] Déduplication des résultats (GROUP BY symlink_path + source)
@@ -32,7 +32,7 @@
 - Test de l'API config CRUD
 - Test de l'explorateur de dossiers
 - Mock des APIs Radarr/Sonarr pour tests unitaires
-- Test des actions batch (process, fix, ignore, recheck, delete)
+- Test des actions batch (process, fix, ignore, delete)
 - Test de la déduplication (GROUP BY)
 
 ### 2. Sécurité

@@ -101,9 +101,11 @@ async def stats(db: Connection = Depends(get_db)):
         "SELECT"
         " (SELECT COUNT(*) FROM scans) AS total_scans,"
         " (SELECT COUNT(*) FROM results) AS total_results,"
-        " (SELECT COUNT(*) FROM results WHERE status IN ('détecté','recherche')) AS broken,"
-        " (SELECT COALESCE(SUM(CASE WHEN status IN ('remplacé','en_attente','ignoré')"
-        "  THEN 1 ELSE 0 END), 0) FROM results) AS fixed"
+        " (SELECT COUNT(*) FROM results WHERE status = 'remplacé') AS replaced,"
+        " (SELECT COUNT(*) FROM results"
+        "  WHERE status IN ('non_remplacé','en_attente')) AS not_replaced,"
+        " (SELECT COUNT(*) FROM results WHERE status = 'échoué') AS failed,"
+        " (SELECT COUNT(*) FROM results WHERE status = 'ignoré') AS ignored"
     )
     row = dict(await cursor.fetchone())
 
@@ -117,16 +119,22 @@ async def stats(db: Connection = Depends(get_db)):
     cursor3 = await db.execute("""
         SELECT
          (SELECT COUNT(*) FROM results
-          WHERE source='radarr' AND status IN ('détecté','recherche')) AS br,
+          WHERE source='radarr' AND status = 'remplacé') AS rr,
          (SELECT COUNT(*) FROM results
-          WHERE source='sonarr' AND status IN ('détecté','recherche')) AS bs,
+          WHERE source='sonarr' AND status = 'remplacé') AS rs,
+         (SELECT COUNT(*) FROM results
+          WHERE source='radarr' AND status IN ('non_remplacé','en_attente')) AS nr,
+         (SELECT COUNT(*) FROM results
+          WHERE source='sonarr' AND status IN ('non_remplacé','en_attente')) AS ns,
          (SELECT COUNT(*) FROM results WHERE source='radarr') AS tr,
          (SELECT COUNT(*) FROM results WHERE source='sonarr') AS ts,
          (SELECT COUNT(*) FROM scans WHERE DATE(created_at)=DATE('now')) AS st
     """)
     extra = dict(await cursor3.fetchone())
-    row["broken_radarr"] = extra["br"]
-    row["broken_sonarr"] = extra["bs"]
+    row["replaced_radarr"] = extra["rr"]
+    row["replaced_sonarr"] = extra["rs"]
+    row["not_replaced_radarr"] = extra["nr"]
+    row["not_replaced_sonarr"] = extra["ns"]
     row["total_radarr"] = extra["tr"]
     row["total_sonarr"] = extra["ts"]
     row["scans_today"] = extra["st"]
@@ -146,19 +154,23 @@ async def stats_history(db: Connection = Depends(get_db), days: int = 30):
 
     cursor = await db.execute(
         "SELECT DATE(action_date) as day,"
-        "  SUM(CASE WHEN status = 'remplacé' THEN 1 ELSE 0 END) as replaced"
+        "  SUM(CASE WHEN status = 'remplacé' THEN 1 ELSE 0 END) as replaced,"
+        "  SUM(CASE WHEN status IN ('non_remplacé','en_attente') THEN 1 ELSE 0 END) as not_replaced"
         " FROM results"
-        " WHERE action_date IS NOT NULL AND status = 'remplacé'"
+        " WHERE action_date IS NOT NULL AND status IN ('remplacé','non_remplacé','en_attente')"
         "  AND action_date >= DATE('now', ? || ' days')"
         " GROUP BY DATE(action_date) ORDER BY day",
         (f"-{days}",),
     )
-    action_by_day = {r[0]: {"replaced": r[1]} for r in await cursor.fetchall()}
+    action_by_day: dict[str, dict[str, int]] = {}
+    for r in await cursor.fetchall():
+        action_by_day[r[0]] = {"replaced": r[1], "not_replaced": r[2]}
 
     today = datetime.now().date()
     days_list = []
     detected_series = []
     replaced_series = []
+    not_replaced_series = []
     cumulative_list = []
     running = 0
 
@@ -166,10 +178,12 @@ async def stats_history(db: Connection = Depends(get_db), days: int = 30):
         day = (today - timedelta(days=i)).isoformat()
         d = detected_by_day.get(day, 0)
         p = action_by_day.get(day, {}).get("replaced", 0)
-        running += d - p
+        n = action_by_day.get(day, {}).get("not_replaced", 0)
+        running += d - p - n
         days_list.append(day)
         detected_series.append(d)
         replaced_series.append(p)
+        not_replaced_series.append(n)
         cumulative_list.append(max(0, running))
 
     return {
@@ -177,9 +191,38 @@ async def stats_history(db: Connection = Depends(get_db), days: int = 30):
         "series": {
             "detected": detected_series,
             "replaced": replaced_series,
+            "not_replaced": not_replaced_series,
             "cumulative": cumulative_list,
         },
     }
+
+
+@router.get("/api/scans/ids")
+async def scans_ids(
+    db: Connection = Depends(get_db),
+    source: str = "",
+    status: str = "",
+    mode: str = "",
+    q: str = "",
+):
+    where = "WHERE 1=1"
+    params: list[str] = []
+    if source:
+        where += " AND source = ?"
+        params.append(source)
+    if status:
+        where += " AND status = ?"
+        params.append(status)
+    if mode:
+        where += " AND mode = ?"
+        params.append(mode)
+    if q:
+        where += " AND (source LIKE ? OR mode LIKE ? OR status LIKE ?)"
+        like = f"%{q}%"
+        params.extend([like, like, like])
+    cursor = await db.execute(f"SELECT id FROM scans {where} ORDER BY id", params)
+    rows = await cursor.fetchall()
+    return {"ids": [r[0] for r in rows]}
 
 
 @router.post("/api/scans/delete")

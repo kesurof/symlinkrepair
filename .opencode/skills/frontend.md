@@ -111,9 +111,8 @@ function resultsApp() {
 | action | Bouton | Effet |
 |--------|--------|-------|
 | `process` | Traiter | DELETE API Radarr/Sonarr + recherche |
-| `fix` | Marquer corrigé | Flag manuel |
+| `fix` | Marquer remplacé | Flag manuel |
 | `ignore` | Ignorer | Cache le résultat |
-| `recheck` | Revérifier | Remet en file d'attente |
 | `delete` | Supprimer | Supprime la ligne (avec confirmation) |
 
 ## Tailwind CSS

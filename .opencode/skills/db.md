@@ -45,6 +45,7 @@ CREATE TABLE results (
     detection       TEXT NOT NULL DEFAULT 'broken_symlink',
     status          TEXT NOT NULL DEFAULT 'détecté',
     action          TEXT,
+    search_count    INTEGER DEFAULT 0,
     action_date     TEXT,
     notes           TEXT,
     FOREIGN KEY (scan_id) REFERENCES scans(id)
@@ -80,21 +81,19 @@ async def list_results(db: Connection = Depends(get_db)):
 | Valeur | Signification |
 |--------|--------------|
 | `détecté` | Détecté par un scan, en attente d'action |
-| `recherche` | En cours de revérification |
-| `en_attente` | DELETE API envoyé, en attente |
+| `en_attente` | DELETE API envoyé, vérification en cours |
 | `remplacé` | Symlink remplacé ou marqué manuellement comme corrigé |
-| `non_remplacé` | Vérifié : symlink non remplacé |
+| `non_remplacé` | Vérifié : symlink non remplacé (ou cycle abandonné) |
 | `ignoré` | Ignoré par l'utilisateur |
 | `échoué` | L'action API a échoué |
 
-## Actions batch (results.action)
+## Actions batch
 
 | action | Déclencheur | Statut |
 |--------|-------------|--------|
 | `process` | Traiter (DELETE API) | `en_attente` |
-| `fix` | Marquer corrigé | `remplacé` |
+| `fix` | Marquer remplacé | `remplacé` |
 | `ignore` | Ignorer | `ignoré` |
-| `recheck` | Revérifier | `recherche` |
 | `delete` | Supprimer | — (DELETE row) |
 
 ## Déduplication
