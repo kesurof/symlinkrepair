@@ -1,4 +1,4 @@
-.PHONY: dev lint format test docker
+.PHONY: dev lint format test docker push
 
 dev:
 	uvicorn app.main:app --reload --port 8000
@@ -14,6 +14,10 @@ test:
 
 docker:
 	docker compose up --build
+
+push:
+	git push origin main
+	git push origin --tags
 
 precommit:
 	pre-commit run --all-files
