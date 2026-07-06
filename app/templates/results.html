@@ -127,6 +127,22 @@
 </div>
 
 <script>
+const copyIcon = {{ copy_icon|tojson|safe }};
+
+function clipboardCopy(text) {
+    if (navigator.clipboard) {
+        navigator.clipboard.writeText(text);
+    } else {
+        const el = document.createElement('input');
+        el.value = text;
+        el.style.cssText = 'position:fixed;opacity:0';
+        document.body.appendChild(el);
+        el.select();
+        document.execCommand('copy');
+        document.body.removeChild(el);
+    }
+}
+
 function hxNavFromFilters() {
     const params = new URLSearchParams();
     const src = document.getElementById('filter-source').value;

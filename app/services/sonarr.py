@@ -72,9 +72,11 @@ async def delete_episode_file(url: str, api_key: str, file_id: int) -> bool:
                 f"{url.rstrip('/')}/api/v3/episodefile/{file_id}",
                 headers={"X-Api-Key": api_key},
             )
-            ok = resp.status_code == 200
-            if ok:
+            ok = resp.status_code in (200, 404)
+            if resp.status_code == 200:
                 logger.info("Deleted episode file %d", file_id)
+            elif resp.status_code == 404:
+                logger.info("Episode file %d already deleted (HTTP 404)", file_id)
             else:
                 logger.warning(
                     "Failed to delete episode file %d: HTTP %d",

@@ -51,13 +51,13 @@
                     <span class="inline-flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-full font-medium
                         {% if item.status in ('détecté','recherche') %}bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300
                         {% elif item.status == 'ignoré' %}bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400
-                        {% elif item.status in ('réparé','remplacé') %}bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300
+                        {% elif item.status == 'remplacé' %}bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300
                         {% elif item.status == 'en_attente' %}bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300
                         {% else %}bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300{% endif %}">
                         <span class="w-1.5 h-1.5 rounded-full
                             {% if item.status in ('détecté','recherche') %}bg-amber-500
                             {% elif item.status == 'ignoré' %}bg-gray-400
-                            {% elif item.status in ('réparé','remplacé') %}bg-green-500
+                            {% elif item.status == 'remplacé' %}bg-green-500
                             {% elif item.status == 'en_attente' %}bg-blue-500
                             {% else %}bg-red-500{% endif %}">
                         </span>
@@ -84,7 +84,7 @@
             <div class="flex items-center justify-between mb-1.5">
                 <span class="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wider font-medium">Symlink</span>
                 <button @click="
-                    navigator.clipboard.writeText($el.getAttribute('data-path'));
+                    clipboardCopy($el.getAttribute('data-path'));
                     $el.textContent = 'Copié !';
                     setTimeout(() => $el.textContent = 'Copier', 1500);
                 " data-path="{{ item.symlink_path }}"
@@ -98,7 +98,7 @@
             <div class="flex items-center justify-between mb-1.5">
                 <span class="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wider font-medium">Cible</span>
                 <button @click="
-                    navigator.clipboard.writeText($el.getAttribute('data-path'));
+                    clipboardCopy($el.getAttribute('data-path'));
                     $el.textContent = 'Copié !';
                     setTimeout(() => $el.textContent = 'Copier', 1500);
                 " data-path="{{ item.target_path }}"
@@ -169,6 +169,20 @@
 </div>
 
 <script>
+function clipboardCopy(text) {
+    if (navigator.clipboard) {
+        navigator.clipboard.writeText(text);
+    } else {
+        const el = document.createElement('input');
+        el.value = text;
+        el.style.cssText = 'position:fixed;opacity:0';
+        document.body.appendChild(el);
+        el.select();
+        document.execCommand('copy');
+        document.body.removeChild(el);
+    }
+}
+
 document.body.addEventListener('htmx:beforeSwap', function(evt) {
     if (evt.detail.pathInfo && evt.detail.pathInfo.requestPath && evt.detail.pathInfo.requestPath.includes('/api/results/')) {
         const data = evt.detail.serverResponse;

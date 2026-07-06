@@ -74,7 +74,7 @@ async def init_db():
         for old, new in [
             ("detected", "détecté"),
             ("ignored", "ignoré"),
-            ("fixed", "réparé"),
+            ("fixed", "remplacé"),
             ("processed", "en_attente"),
             ("recheck_needed", "recherche"),
             ("not_replaced", "non_remplacé"),
@@ -84,6 +84,8 @@ async def init_db():
                 "UPDATE results SET status = ? WHERE status = ?",
                 (new, old),
             )
+
+        await db.execute("UPDATE results SET status = 'remplacé' WHERE status = 'réparé'")
 
         await db.commit()
     logger.info("Database initialized at %s", DATABASE_PATH)

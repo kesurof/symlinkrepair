@@ -73,15 +73,13 @@ async def _delete_one(result: dict, config, delete_season: bool = False) -> dict
         return action
 
     info = _check_symlink(result, cfg.target_prefixes)
-    if not info:
-        action["skipped"] = "not_symlink"
-        return action
-    if not info["matches_prefix"]:
-        action["skipped"] = "target_not_allowed"
-        return action
-    if not delete_season and not info["broken"]:
-        action["skipped"] = "not_broken"
-        return action
+    if info:
+        if not info["matches_prefix"]:
+            action["skipped"] = "target_not_allowed"
+            return action
+        if not delete_season and not info["broken"]:
+            action["skipped"] = "not_broken"
+            return action
 
     if source == "radarr":
         action["api_delete"] = await delete_movie_file(cfg.url, cfg.api_key, file_id)

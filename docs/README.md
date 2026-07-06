@@ -40,6 +40,12 @@ Il correspond à l'ancienne configuration avec réseau traefik et montage `/home
 docker compose -f docker-compose.dev.yml up --build
 ```
 
+Relancer localement avec build
+
+```bash
+docker compose down 2>&1 && docker compose -f docker-compose.dev.yml up --build 2>&1
+```
+
 | Particularité | Prod (`docker-compose.yml`) | Dev (`docker-compose.dev.yml`) |
 |---|---|---|
 | Restart auto | `unless-stopped` | Non |
