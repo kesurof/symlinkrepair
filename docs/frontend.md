@@ -9,26 +9,33 @@
 - Alpine NE stocke PAS l'état provenant du serveur (pagination, totaux, listes d'IDs)
 - Les données serveur sont lues depuis le DOM via des attributs `data-*`
 - Les mises à jour du DOM parent se font via `hx-swap-oob="true"` (pas d'événements custom)
-- Mobile first : cartes sur mobile, tableau sur desktop
-- Icônes SVG inline (pas de dépendance Font Awesome)
+- **Mobile first** : cartes sur mobile, tableau sur desktop ; bottom nav sur mobile, sidebar desktop
+- **Dark mode** : classe `dark` sur `<html>`, persisté en localStorage, system preference au premier lancement
+- **Icônes SVG inline** (Heroicons, pas de dépendance externe)
+- **Font** : Inter (Google Fonts CDN)
+- **Couleurs** : palette `brand` indigo, configurée dans `tailwind.config`
 
 ## Structure des templates
 
 ```
 templates/
-├── base.html           # Layout : nav, footer
+├── base.html           # Layout : sidebar desktop + bottom nav mobile
 ├── index.html          # Dashboard
-├── scan.html           # Page scan
-├── fastscan.html       # Scan rapide
+├── scan.html           # Page scan (complet + rapide fusionnés)
 ├── results.html        # Liste résultats
 ├── detail.html         # Détail
-├── reports.html        # Rapports
+├── reports.html        # Rapports d'exécution
 ├── config.html         # Configuration + explorateur dossiers
-├── error.html          # Erreur générique
-├── 404.html            # Page non trouvée
+├── error.html          # Erreur générique (étend base.html)
+├── 404.html            # Page non trouvée (étend base.html)
 └── partials/
-    ├── results_content.html    # Tableau résultats (swap HTMX)
-    └── reports_content.html    # Tableau rapports (swap HTMX)
+    ├── results_content.html    # Tableau/cards résultats (swap HTMX)
+    └── reports_content.html    # Tableau/cards rapports (swap HTMX)
+
+static/
+├── htmx.min.js         # HTMX 2.x
+├── alpine.min.js       # Alpine.js 3.x
+├── app.css             # Styles custom (animations, skeleton)
 ```
 
 ## Patterns HTMX
@@ -156,5 +163,9 @@ function resultsApp() {
 
 ## Responsive
 
+- **Mobile-first** : toute page commence par le layout mobile (bottom nav), s'adapte au desktop (sidebar)
 - `<table>` remplacé par des `<div class="card">` sur mobile (`hidden md:block` / `md:hidden`)
-- Navigation en hamburger menu sur mobile (`x-data="{ mobileMenu: false }"`)
+- **Bottom nav** : 5 onglets fixes en bas sur mobile (`< 768px`), `pb-16` sur le main
+- **Sidebar** : cachée sur mobile, visible sur desktop ; rétractable (`w-56` / `w-16`)
+- **Safe area** : `pb-[env(safe-area-inset-bottom)]` pour les appareils avec notch
+- **Dark mode** : classe `dark` sur `<html>`, persisté dans `localStorage`

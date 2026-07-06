@@ -1,99 +1,192 @@
 {% extends "base.html" %}
 {% block title %}Scan — SymlinkRepair{% endblock %}
 {% block content %}
-<h2 class="text-xl font-semibold text-gray-800 mb-6">Lancer un scan</h2>
+{% set active_tab = request.query_params.get('mode', 'full') %}
 
-<div x-data="{ mode: 'simulate', limit: {{ default_limit }} }" x-init="$watch('limit', v => window._scanLimit = v); window._scanLimit = limit">
-    <div class="bg-white rounded-lg shadow-sm border p-4 mb-4">
-        <h3 class="font-medium text-gray-700 mb-3">Options</h3>
-        <div class="flex flex-wrap gap-4">
-            <div>
-                <label class="block text-sm text-gray-600 mb-1">Mode</label>
-                <select x-model="mode" class="border rounded px-2 py-1.5 text-sm">
-                    <option value="simulate">Simulation</option>
-                    <option value="clean">Nettoyage réel</option>
-                </select>
+<div x-data="{ tab: '{{ active_tab }}', mode: 'simulate', limit: {{ default_limit }} }"
+     x-init="$watch('limit', v => window._scanLimit = v); window._scanLimit = limit">
+    <div class="flex items-center gap-1 mb-6 p-1 bg-gray-100 dark:bg-gray-800 rounded-lg w-fit">
+        <button @click="tab = 'full'"
+                class="px-4 py-2 text-sm font-medium rounded-md transition-colors duration-150"
+                :class="tab === 'full' ? 'bg-white dark:bg-gray-900 text-gray-800 dark:text-gray-100 shadow-sm' : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'">
+            <span class="hidden sm:inline">Scan </span>complet
+        </button>
+        <button @click="tab = 'fast'"
+                class="px-4 py-2 text-sm font-medium rounded-md transition-colors duration-150"
+                :class="tab === 'fast' ? 'bg-white dark:bg-gray-900 text-gray-800 dark:text-gray-100 shadow-sm' : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'">
+            Scan rapide
+        </button>
+    </div>
+
+    {# === SCAN COMPLET === #}
+    <div x-show="tab === 'full'" x-cloak>
+        <div class="bg-white dark:bg-gray-900 rounded-xl shadow-sm border border-gray-200 dark:border-gray-800 p-4 mb-4">
+            <h3 class="font-medium text-gray-700 dark:text-gray-300 mb-3">Options</h3>
+            <div class="flex flex-wrap gap-4">
+                <div>
+                    <label class="block text-sm text-gray-500 dark:text-gray-400 mb-1">Mode</label>
+                    <select x-model="mode" class="border border-gray-200 dark:border-gray-700 rounded-lg px-3 py-2 text-sm bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-200">
+                        <option value="simulate">Simulation</option>
+                        <option value="clean">Nettoyage réel</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-sm text-gray-500 dark:text-gray-400 mb-1">Limite fichiers (0 = illimité)</label>
+                    <input type="number" x-model="limit" min="0" max="500" class="border border-gray-200 dark:border-gray-700 rounded-lg px-3 py-2 text-sm w-24 bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-200">
+                </div>
             </div>
-            <div>
-                <label class="block text-sm text-gray-600 mb-1">Limite fichiers (0 = illimité)</label>
-                <input type="number" x-model="limit" min="0" max="500" class="border rounded px-2 py-1.5 text-sm w-24">
+        </div>
+
+        <div class="grid md:grid-cols-2 gap-4">
+            <div class="bg-white dark:bg-gray-900 rounded-xl shadow-sm border border-gray-200 dark:border-gray-800 p-5">
+                <div class="flex items-center gap-2 mb-1">
+                    <svg class="w-5 h-5 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.5">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M3.375 19.5h17.25m-17.25 0a1.125 1.125 0 01-1.125-1.125M3.375 19.5h7.5c.621 0 1.125-.504 1.125-1.125m-9.75 0V5.625m0 12.75v-1.5c0-.621.504-1.125 1.125-1.125m18.375 2.625V5.625m0 12.75c0 .621-.504 1.125-1.125 1.125m1.125-1.125v-1.5c0-.621-.504-1.125-1.125-1.125m0 3.75h-7.5A1.125 1.125 0 0112 18.375m9.75-12.75c0-.621-.504-1.125-1.125-1.125H3.375c-.621 0-1.125.504-1.125 1.125m19.5 0v1.5c0 .621-.504 1.125-1.125 1.125M2.25 5.625v1.5c0 .621.504 1.125 1.125 1.125m0 0h17.25"/>
+                    </svg>
+                    <h3 class="font-medium text-gray-800 dark:text-gray-200">Radarr</h3>
+                </div>
+                <p class="text-sm text-gray-500 dark:text-gray-400 mb-4 ml-7">Films</p>
+                <div x-show="mode === 'simulate'" x-cloak>
+                    <button hx-post="/api/scan/radarr?mode=simulate"
+                            hx-vals='js:{limit: window._scanLimit || 0}'
+                            hx-target="#radarr-result"
+                            hx-indicator="#radarr-spinner"
+                            class="bg-brand-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-brand-700 transition-colors">
+                        Lancer la simulation
+                    </button>
+                </div>
+                <div x-show="mode === 'clean'" x-cloak>
+                    <div x-data="{ confirm: false }">
+                        <div x-show="!confirm" x-cloak>
+                            <button @click="confirm = true"
+                                    class="bg-red-500 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-red-600 transition-colors">
+                                Nettoyage réel
+                            </button>
+                        </div>
+                        <div x-show="confirm" x-cloak class="flex flex-wrap items-center gap-2">
+                            <span class="text-sm text-red-600 dark:text-red-400 font-medium">Confirmer ?</span>
+                            <button @click="confirm = false" class="bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 px-3 py-1.5 rounded-lg text-sm hover:bg-gray-200 dark:hover:bg-gray-700">Annuler</button>
+                            <button hx-post="/api/scan/radarr?mode=clean"
+                                    hx-vals='js:{limit: window._scanLimit || 0}'
+                                    hx-target="#radarr-result"
+                                    hx-indicator="#radarr-spinner"
+                                    class="bg-red-600 text-white px-3 py-1.5 rounded-lg text-sm font-medium">
+                                Confirmer
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                <span id="radarr-spinner" class="htmx-indicator text-sm text-gray-500 ml-2">Scan en cours...</span>
+                <div id="radarr-result" class="mt-3"></div>
+            </div>
+
+            <div class="bg-white dark:bg-gray-900 rounded-xl shadow-sm border border-gray-200 dark:border-gray-800 p-5">
+                <div class="flex items-center gap-2 mb-1">
+                    <svg class="w-5 h-5 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.5">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                    </svg>
+                    <h3 class="font-medium text-gray-800 dark:text-gray-200">Sonarr</h3>
+                </div>
+                <p class="text-sm text-gray-500 dark:text-gray-400 mb-4 ml-7">Séries</p>
+                <div x-show="mode === 'simulate'" x-cloak>
+                    <button hx-post="/api/scan/sonarr?mode=simulate"
+                            hx-vals='js:{limit: window._scanLimit || 0}'
+                            hx-target="#sonarr-result"
+                            hx-indicator="#sonarr-spinner"
+                            class="bg-brand-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-brand-700 transition-colors">
+                        Lancer la simulation
+                    </button>
+                </div>
+                <div x-show="mode === 'clean'" x-cloak>
+                    <div x-data="{ confirm: false }">
+                        <div x-show="!confirm" x-cloak>
+                            <button @click="confirm = true"
+                                    class="bg-red-500 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-red-600 transition-colors">
+                                Nettoyage réel
+                            </button>
+                        </div>
+                        <div x-show="confirm" x-cloak class="flex flex-wrap items-center gap-2">
+                            <span class="text-sm text-red-600 dark:text-red-400 font-medium">Confirmer ?</span>
+                            <button @click="confirm = false" class="bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 px-3 py-1.5 rounded-lg text-sm hover:bg-gray-200 dark:hover:bg-gray-700">Annuler</button>
+                            <button hx-post="/api/scan/sonarr?mode=clean"
+                                    hx-vals='js:{limit: window._scanLimit || 0}'
+                                    hx-target="#sonarr-result"
+                                    hx-indicator="#sonarr-spinner"
+                                    class="bg-red-600 text-white px-3 py-1.5 rounded-lg text-sm font-medium">
+                                Confirmer
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                <span id="sonarr-spinner" class="htmx-indicator text-sm text-gray-500 ml-2">Scan en cours...</span>
+                <div id="sonarr-result" class="mt-3"></div>
             </div>
         </div>
     </div>
 
-    <div class="grid md:grid-cols-2 gap-6">
-        <div class="bg-white rounded-lg shadow-sm border p-4">
-            <h3 class="font-medium text-gray-700 mb-1">Radarr</h3>
-            <p class="text-sm text-gray-500 mb-3">Films</p>
-            <div x-show="mode === 'simulate'" x-cloak>
-                <button hx-post="/api/scan/radarr?mode=simulate"
-                        hx-vals='js:{limit: window._scanLimit || 0}'
-                        hx-target="#radarr-result"
-                        hx-indicator="#radarr-spinner"
-                        class="bg-blue-600 text-white px-4 py-2 rounded text-sm hover:bg-blue-700">
-                    Lancer la simulation
-                </button>
-            </div>
-            <div x-show="mode === 'clean'" x-cloak>
-                <div x-data="{ confirm: false }">
-                    <div x-show="!confirm" x-cloak>
-                        <button @click="confirm = true"
-                                class="bg-red-500 text-white px-4 py-2 rounded text-sm hover:bg-red-600">
-                            Nettoyage réel
-                        </button>
-                    </div>
-                    <div x-show="confirm" x-cloak class="flex items-center gap-2">
-                        <span class="text-sm text-red-600 font-medium">Confirmer ?</span>
-                        <button @click="confirm = false" class="bg-gray-200 px-3 py-1.5 rounded text-sm">Annuler</button>
-                        <button hx-post="/api/scan/radarr?mode=clean"
-                                hx-vals='js:{limit: window._scanLimit || 0}'
-                                hx-target="#radarr-result"
-                                hx-indicator="#radarr-spinner"
-                                class="bg-red-600 text-white px-3 py-1.5 rounded text-sm">
-                            Confirmer
-                        </button>
-                    </div>
-                </div>
-            </div>
-            <span id="radarr-spinner" class="htmx-indicator text-sm text-gray-500 ml-2">Scan en cours...</span>
-            <div id="radarr-result" class="mt-3"></div>
-        </div>
+    {# === SCAN RAPIDE === #}
+    <div x-show="tab === 'fast'" x-cloak x-data="fastScan()">
+        <div class="bg-white dark:bg-gray-900 rounded-xl shadow-sm border border-gray-200 dark:border-gray-800 p-5">
+            <p class="text-sm text-gray-500 dark:text-gray-400 mb-4">
+                Scan filesystem uniquement — sans appel à Sonarr/Radarr. Résultats non persistés.
+            </p>
+            <button @click="run()" :disabled="running"
+                    class="bg-brand-600 text-white px-5 py-2.5 rounded-lg text-sm font-medium hover:bg-brand-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                    x-text="running ? 'Scan en cours...' : 'Lancer le scan rapide'">
+            </button>
 
-        <div class="bg-white rounded-lg shadow-sm border p-4">
-            <h3 class="font-medium text-gray-700 mb-1">Sonarr</h3>
-            <p class="text-sm text-gray-500 mb-3">Séries</p>
-            <div x-show="mode === 'simulate'" x-cloak>
-                <button hx-post="/api/scan/sonarr?mode=simulate"
-                        hx-vals='js:{limit: window._scanLimit || 0}'
-                        hx-target="#sonarr-result"
-                        hx-indicator="#sonarr-spinner"
-                        class="bg-blue-600 text-white px-4 py-2 rounded text-sm hover:bg-blue-700">
-                    Lancer la simulation
-                </button>
-            </div>
-            <div x-show="mode === 'clean'" x-cloak>
-                <div x-data="{ confirm: false }">
-                    <div x-show="!confirm" x-cloak>
-                        <button @click="confirm = true"
-                                class="bg-red-500 text-white px-4 py-2 rounded text-sm hover:bg-red-600">
-                            Nettoyage réel
-                        </button>
+            <template x-if="results">
+            <div class="mt-6 space-y-4">
+                <div class="grid grid-cols-2 gap-4 max-w-xs">
+                    <div class="bg-gray-50 dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-4 text-center">
+                        <div class="text-2xl font-bold text-gray-800 dark:text-gray-200" x-text="results.total"></div>
+                        <div class="text-xs text-gray-500 dark:text-gray-400">Symlinks</div>
                     </div>
-                    <div x-show="confirm" x-cloak class="flex items-center gap-2">
-                        <span class="text-sm text-red-600 font-medium">Confirmer ?</span>
-                        <button @click="confirm = false" class="bg-gray-200 px-3 py-1.5 rounded text-sm">Annuler</button>
-                        <button hx-post="/api/scan/sonarr?mode=clean"
-                                hx-vals='js:{limit: window._scanLimit || 0}'
-                                hx-target="#sonarr-result"
-                                hx-indicator="#sonarr-spinner"
-                                class="bg-red-600 text-white px-3 py-1.5 rounded text-sm">
-                            Confirmer
-                        </button>
+                    <div class="bg-gray-50 dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-4 text-center">
+                        <div class="text-2xl font-bold text-amber-600 dark:text-amber-400" x-text="results.broken"></div>
+                        <div class="text-xs text-gray-500 dark:text-gray-400">Cassés</div>
                     </div>
                 </div>
+
+                <template x-if="results.broken > 0">
+                    <div class="overflow-x-auto rounded-lg border border-gray-200 dark:border-gray-700">
+                        <table class="w-full text-sm">
+                            <thead class="bg-gray-50 dark:bg-gray-800 text-left">
+                                <tr>
+                                    <th class="px-3 py-2 font-medium text-gray-600 dark:text-gray-400">Source</th>
+                                    <th class="px-3 py-2 font-medium text-gray-600 dark:text-gray-400">Symlink</th>
+                                    <th class="px-3 py-2 font-medium text-gray-600 dark:text-gray-400">Cible</th>
+                                    <th class="px-3 py-2 font-medium text-gray-600 dark:text-gray-400">Statut</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <template x-for="item in results.results" :key="item.symlink_path">
+                                    <tr class="border-t border-gray-100 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800/50">
+                                        <td class="px-3 py-2">
+                                            <span class="text-xs font-medium px-2 py-0.5 rounded"
+                                                  :class="item.source === 'radarr' ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/50 dark:text-blue-300' : 'bg-green-100 text-green-700 dark:bg-green-900/50 dark:text-green-300'"
+                                                  x-text="item.source">
+                                            </span>
+                                        </td>
+                                        <td class="px-3 py-2 text-gray-500 dark:text-gray-400 font-mono text-xs max-w-xs truncate" x-text="item.symlink_path"></td>
+                                        <td class="px-3 py-2 text-gray-500 dark:text-gray-400 font-mono text-xs max-w-xs truncate" x-text="item.target_path"></td>
+                                        <td class="px-3 py-2">
+                                            <span class="text-xs px-2 py-0.5 rounded bg-amber-100 text-amber-700 dark:bg-amber-900/50 dark:text-amber-300">cassé</span>
+                                        </td>
+                                    </tr>
+                                </template>
+                            </tbody>
+                        </table>
+                    </div>
+                </template>
+
+                <template x-if="results.broken === 0">
+                    <div class="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg p-4 text-sm text-green-700 dark:text-green-400">
+                        Aucun symlink cassé trouvé.
+                    </div>
+                </template>
             </div>
-            <span id="sonarr-spinner" class="htmx-indicator text-sm text-gray-500 ml-2">Scan en cours...</span>
-            <div id="sonarr-result" class="mt-3"></div>
+            </template>
         </div>
     </div>
 
@@ -101,6 +194,23 @@
 </div>
 
 <script>
+function fastScan() {
+    return {
+        running: false,
+        results: null,
+        run() {
+            this.running = true;
+            fetch('/api/fast-scan', { method: 'POST' })
+                .then(r => r.json())
+                .then(data => {
+                    this.results = data;
+                    this.running = false;
+                })
+                .catch(() => { this.running = false; });
+        },
+    };
+}
+
 document.body.addEventListener('htmx:afterRequest', function(evt) {
     if (evt.detail.target && (evt.detail.target.id === 'radarr-result' || evt.detail.target.id === 'sonarr-result')) {
         try {

@@ -1,135 +1,168 @@
 {% extends "base.html" %}
 {% block title %}Paramètres — SymlinkRepair{% endblock %}
 {% block content %}
-<div x-data="configApp()" x-init="loadConfig()" class="max-w-3xl mx-auto">
-    <h2 class="text-xl font-semibold text-gray-800 mb-6">Paramètres</h2>
+<div x-data="configApp()" x-init="loadConfig()" class="max-w-3xl mx-auto pb-20 md:pb-0">
+    <h2 class="text-lg font-semibold text-gray-800 dark:text-gray-200 mb-6">Paramètres</h2>
 
-    <div class="space-y-6">
-        <section class="bg-white rounded-lg shadow-sm border p-4">
-            <h3 class="font-medium text-gray-700 mb-3">Radarr</h3>
-            <div class="grid gap-3">
+    <div class="space-y-4">
+        {# === Radarr === #}
+        <section class="bg-white dark:bg-gray-900 rounded-xl shadow-sm border border-gray-200 dark:border-gray-800">
+            <button @click="sections.radarr = !sections.radarr" class="w-full flex items-center justify-between p-4 text-left">
+                <div class="flex items-center gap-2">
+                    <svg class="w-5 h-5 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.5">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M3.375 19.5h17.25m-17.25 0a1.125 1.125 0 01-1.125-1.125M3.375 19.5h7.5c.621 0 1.125-.504 1.125-1.125m-9.75 0V5.625m0 12.75v-1.5c0-.621.504-1.125 1.125-1.125m18.375 2.625V5.625m0 12.75c0 .621-.504 1.125-1.125 1.125m1.125-1.125v-1.5c0-.621-.504-1.125-1.125-1.125m0 3.75h-7.5A1.125 1.125 0 0112 18.375m9.75-12.75c0-.621-.504-1.125-1.125-1.125H3.375c-.621 0-1.125.504-1.125 1.125m19.5 0v1.5c0 .621-.504 1.125-1.125 1.125M2.25 5.625v1.5c0 .621.504 1.125 1.125 1.125m0 0h17.25"/>
+                    </svg>
+                    <h3 class="font-medium text-gray-800 dark:text-gray-200">Radarr</h3>
+                </div>
+                <svg class="w-4 h-4 text-gray-400 transition-transform duration-200" :class="sections.radarr ? 'rotate-180' : ''" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 8.25l-7.5 7.5-7.5-7.5"/>
+                </svg>
+            </button>
+            <div x-show="sections.radarr" x-cloak class="px-4 pb-4 space-y-3 border-t border-gray-100 dark:border-gray-800 pt-3">
                 <div>
-                    <label class="block text-sm text-gray-600">URL</label>
+                    <label class="block text-sm text-gray-500 dark:text-gray-400 mb-1">URL</label>
                     <input type="url" x-model="cfg.radarr.url" placeholder="http://radarr:7878"
-                           class="w-full border rounded px-2 py-1.5 text-sm">
+                           class="w-full border border-gray-200 dark:border-gray-700 rounded-lg px-3 py-2 text-sm bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-200 placeholder-gray-400">
                 </div>
                 <div>
-                    <label class="block text-sm text-gray-600">Clé API</label>
+                    <label class="block text-sm text-gray-500 dark:text-gray-400 mb-1">Clé API</label>
                     <div class="flex gap-2">
                         <input :type="showRadarrKey ? 'text' : 'password'" x-model="cfg.radarr.api_key"
-                               class="flex-1 border rounded px-2 py-1.5 text-sm font-mono">
-                        <button @click="showRadarrKey = !showRadarrKey" class="text-xs text-gray-500 hover:text-gray-700 shrink-0">
+                               class="flex-1 border border-gray-200 dark:border-gray-700 rounded-lg px-3 py-2 text-sm font-mono bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-200">
+                        <button @click="showRadarrKey = !showRadarrKey" class="text-xs text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300 shrink-0 px-2">
                             <span x-text="showRadarrKey ? 'Masquer' : 'Afficher'"></span>
                         </button>
                     </div>
                 </div>
                 <div>
-                    <label class="block text-sm text-gray-600">Conteneur Docker</label>
+                    <label class="block text-sm text-gray-500 dark:text-gray-400 mb-1">Conteneur Docker</label>
                     <input type="text" x-model="cfg.radarr.container" placeholder="radarr"
-                           class="w-full border rounded px-2 py-1.5 text-sm">
+                           class="w-full border border-gray-200 dark:border-gray-700 rounded-lg px-3 py-2 text-sm bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-200">
                 </div>
                 <div>
-                    <label class="block text-sm text-gray-600">Bibliothèques</label>
+                    <label class="block text-sm text-gray-500 dark:text-gray-400 mb-1">Bibliothèques</label>
                     <template x-for="(root, i) in cfg.radarr.library_roots" :key="'rl'+i">
                         <div class="flex items-center gap-2 mt-1">
-                            <span class="text-sm font-mono flex-1 bg-gray-50 px-2 py-1 rounded" x-text="root"></span>
-                            <button @click="cfg.radarr.library_roots.splice(i, 1)" class="text-red-400 text-xs">✕</button>
+                            <span class="text-sm font-mono flex-1 bg-gray-50 dark:bg-gray-800 px-3 py-1.5 rounded-lg text-gray-600 dark:text-gray-300" x-text="root"></span>
+                            <button @click="cfg.radarr.library_roots.splice(i, 1)" class="text-red-400 hover:text-red-600 text-sm p-1">✕</button>
                         </div>
                     </template>
-                    <button @click="openBrowser('radarr', 'library_roots')" class="text-blue-600 text-sm mt-1 hover:underline">
+                    <button @click="openBrowser('radarr', 'library_roots')" class="text-brand-600 dark:text-brand-400 text-sm mt-1 hover:underline font-medium">
                         + Ajouter un dossier
                     </button>
                 </div>
                 <div>
-                    <label class="block text-sm text-gray-600">Préfixes surveillés (rclone/mergerfs)</label>
+                    <label class="block text-sm text-gray-500 dark:text-gray-400 mb-1">Préfixes surveillés</label>
                     <template x-for="(p, i) in cfg.radarr.target_prefixes" :key="'rp'+i">
                         <div class="flex items-center gap-2 mt-1">
-                            <span class="text-sm font-mono flex-1 bg-gray-50 px-2 py-1 rounded" x-text="p"></span>
-                            <button @click="cfg.radarr.target_prefixes.splice(i, 1)" class="text-red-400 text-xs">✕</button>
+                            <span class="text-sm font-mono flex-1 bg-gray-50 dark:bg-gray-800 px-3 py-1.5 rounded-lg text-gray-600 dark:text-gray-300" x-text="p"></span>
+                            <button @click="cfg.radarr.target_prefixes.splice(i, 1)" class="text-red-400 hover:text-red-600 text-sm p-1">✕</button>
                         </div>
                     </template>
-                    <button @click="openBrowser('radarr', 'target_prefixes', '/mnt')" class="text-blue-600 text-sm mt-1 hover:underline">
+                    <button @click="openBrowser('radarr', 'target_prefixes', '/mnt')" class="text-brand-600 dark:text-brand-400 text-sm mt-1 hover:underline font-medium">
                         + Ajouter un point de montage
                     </button>
                 </div>
                 <div class="pt-2">
-                    <button @click="testRadarr()" class="bg-gray-100 border rounded px-3 py-1 text-sm hover:bg-gray-200">
+                    <button @click="testRadarr()" class="bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg px-3 py-1.5 text-sm hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300 transition-colors">
                         Tester la connexion Radarr
                     </button>
-                    <span x-show="radarrTest" class="ml-2 text-sm" x-text="radarrTest" :class="radarrOk ? 'text-green-600' : 'text-red-600'"></span>
+                    <span x-show="radarrTest" class="ml-2 text-sm" x-text="radarrTest" :class="radarrOk ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'"></span>
                 </div>
             </div>
         </section>
 
-        <section class="bg-white rounded-lg shadow-sm border p-4">
-            <h3 class="font-medium text-gray-700 mb-3">Sonarr</h3>
-            <div class="grid gap-3">
+        {# === Sonarr === #}
+        <section class="bg-white dark:bg-gray-900 rounded-xl shadow-sm border border-gray-200 dark:border-gray-800">
+            <button @click="sections.sonarr = !sections.sonarr" class="w-full flex items-center justify-between p-4 text-left">
+                <div class="flex items-center gap-2">
+                    <svg class="w-5 h-5 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.5">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                    </svg>
+                    <h3 class="font-medium text-gray-800 dark:text-gray-200">Sonarr</h3>
+                </div>
+                <svg class="w-4 h-4 text-gray-400 transition-transform duration-200" :class="sections.sonarr ? 'rotate-180' : ''" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 8.25l-7.5 7.5-7.5-7.5"/>
+                </svg>
+            </button>
+            <div x-show="sections.sonarr" x-cloak class="px-4 pb-4 space-y-3 border-t border-gray-100 dark:border-gray-800 pt-3">
                 <div>
-                    <label class="block text-sm text-gray-600">URL</label>
+                    <label class="block text-sm text-gray-500 dark:text-gray-400 mb-1">URL</label>
                     <input type="url" x-model="cfg.sonarr.url" placeholder="http://sonarr:8989"
-                           class="w-full border rounded px-2 py-1.5 text-sm">
+                           class="w-full border border-gray-200 dark:border-gray-700 rounded-lg px-3 py-2 text-sm bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-200 placeholder-gray-400">
                 </div>
                 <div>
-                    <label class="block text-sm text-gray-600">Clé API</label>
+                    <label class="block text-sm text-gray-500 dark:text-gray-400 mb-1">Clé API</label>
                     <div class="flex gap-2">
                         <input :type="showSonarrKey ? 'text' : 'password'" x-model="cfg.sonarr.api_key"
-                               class="flex-1 border rounded px-2 py-1.5 text-sm font-mono">
-                        <button @click="showSonarrKey = !showSonarrKey" class="text-xs text-gray-500 hover:text-gray-700 shrink-0">
+                               class="flex-1 border border-gray-200 dark:border-gray-700 rounded-lg px-3 py-2 text-sm font-mono bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-200">
+                        <button @click="showSonarrKey = !showSonarrKey" class="text-xs text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300 shrink-0 px-2">
                             <span x-text="showSonarrKey ? 'Masquer' : 'Afficher'"></span>
                         </button>
                     </div>
                 </div>
                 <div>
-                    <label class="block text-sm text-gray-600">Conteneur Docker</label>
+                    <label class="block text-sm text-gray-500 dark:text-gray-400 mb-1">Conteneur Docker</label>
                     <input type="text" x-model="cfg.sonarr.container" placeholder="sonarr"
-                           class="w-full border rounded px-2 py-1.5 text-sm">
+                           class="w-full border border-gray-200 dark:border-gray-700 rounded-lg px-3 py-2 text-sm bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-200">
                 </div>
                 <div>
-                    <label class="block text-sm text-gray-600">Bibliothèques</label>
+                    <label class="block text-sm text-gray-500 dark:text-gray-400 mb-1">Bibliothèques</label>
                     <template x-for="(root, i) in cfg.sonarr.library_roots" :key="'sl'+i">
                         <div class="flex items-center gap-2 mt-1">
-                            <span class="text-sm font-mono flex-1 bg-gray-50 px-2 py-1 rounded" x-text="root"></span>
-                            <button @click="cfg.sonarr.library_roots.splice(i, 1)" class="text-red-400 text-xs">✕</button>
+                            <span class="text-sm font-mono flex-1 bg-gray-50 dark:bg-gray-800 px-3 py-1.5 rounded-lg text-gray-600 dark:text-gray-300" x-text="root"></span>
+                            <button @click="cfg.sonarr.library_roots.splice(i, 1)" class="text-red-400 hover:text-red-600 text-sm p-1">✕</button>
                         </div>
                     </template>
-                    <button @click="openBrowser('sonarr', 'library_roots')" class="text-blue-600 text-sm mt-1 hover:underline">
+                    <button @click="openBrowser('sonarr', 'library_roots')" class="text-brand-600 dark:text-brand-400 text-sm mt-1 hover:underline font-medium">
                         + Ajouter un dossier
                     </button>
                 </div>
                 <div>
-                    <label class="block text-sm text-gray-600">Préfixes surveillés (rclone/mergerfs)</label>
+                    <label class="block text-sm text-gray-500 dark:text-gray-400 mb-1">Préfixes surveillés</label>
                     <template x-for="(p, i) in cfg.sonarr.target_prefixes" :key="'sp'+i">
                         <div class="flex items-center gap-2 mt-1">
-                            <span class="text-sm font-mono flex-1 bg-gray-50 px-2 py-1 rounded" x-text="p"></span>
-                            <button @click="cfg.sonarr.target_prefixes.splice(i, 1)" class="text-red-400 text-xs">✕</button>
+                            <span class="text-sm font-mono flex-1 bg-gray-50 dark:bg-gray-800 px-3 py-1.5 rounded-lg text-gray-600 dark:text-gray-300" x-text="p"></span>
+                            <button @click="cfg.sonarr.target_prefixes.splice(i, 1)" class="text-red-400 hover:text-red-600 text-sm p-1">✕</button>
                         </div>
                     </template>
-                    <button @click="openBrowser('sonarr', 'target_prefixes', '/mnt')" class="text-blue-600 text-sm mt-1 hover:underline">
+                    <button @click="openBrowser('sonarr', 'target_prefixes', '/mnt')" class="text-brand-600 dark:text-brand-400 text-sm mt-1 hover:underline font-medium">
                         + Ajouter un point de montage
                     </button>
                 </div>
                 <div class="pt-2">
-                    <button @click="testSonarr()" class="bg-gray-100 border rounded px-3 py-1 text-sm hover:bg-gray-200">
+                    <button @click="testSonarr()" class="bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg px-3 py-1.5 text-sm hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300 transition-colors">
                         Tester la connexion Sonarr
                     </button>
-                    <span x-show="sonarrTest" class="ml-2 text-sm" x-text="sonarrTest" :class="sonarrOk ? 'text-green-600' : 'text-red-600'"></span>
+                    <span x-show="sonarrTest" class="ml-2 text-sm" x-text="sonarrTest" :class="sonarrOk ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'"></span>
                 </div>
             </div>
         </section>
 
-        <section class="bg-white rounded-lg shadow-sm border p-4">
-            <h3 class="font-medium text-gray-700 mb-3">Discord</h3>
-            <div class="space-y-3">
-                <label class="flex items-center gap-2">
-                    <input type="checkbox" x-model="cfg.discord.enabled" class="rounded">
-                    <span class="text-sm">Notifications Discord activées</span>
+        {# === Discord === #}
+        <section class="bg-white dark:bg-gray-900 rounded-xl shadow-sm border border-gray-200 dark:border-gray-800">
+            <button @click="sections.discord = !sections.discord" class="w-full flex items-center justify-between p-4 text-left">
+                <div class="flex items-center gap-2">
+                    <svg class="w-5 h-5 text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.5">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M7.217 10.907a2.25 2.25 0 100 2.186m0-2.186c.18.324.283.696.283 1.093s-.103.77-.283 1.093m0-2.186l9.566-5.314m-9.566 7.5l9.566 5.314m0 0a2.25 2.25 0 103.935 2.186 2.25 2.25 0 00-3.935-2.186zm0-12.814a2.25 2.25 0 103.933-2.185 2.25 2.25 0 00-3.933 2.185z"/>
+                    </svg>
+                    <h3 class="font-medium text-gray-800 dark:text-gray-200">Discord</h3>
+                </div>
+                <svg class="w-4 h-4 text-gray-400 transition-transform duration-200" :class="sections.discord ? 'rotate-180' : ''" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 8.25l-7.5 7.5-7.5-7.5"/>
+                </svg>
+            </button>
+            <div x-show="sections.discord" x-cloak class="px-4 pb-4 space-y-3 border-t border-gray-100 dark:border-gray-800 pt-3">
+                <label class="flex items-center gap-2 cursor-pointer">
+                    <input type="checkbox" x-model="cfg.discord.enabled" class="rounded border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800">
+                    <span class="text-sm text-gray-700 dark:text-gray-300">Notifications Discord activées</span>
                 </label>
                 <div x-show="cfg.discord.enabled">
-                    <label class="block text-sm text-gray-600">Webhook URL</label>
+                    <label class="block text-sm text-gray-500 dark:text-gray-400 mb-1">Webhook URL</label>
                     <div class="flex gap-2">
                         <input :type="showWebhook ? 'text' : 'password'" x-model="cfg.discord.webhook"
-                               class="flex-1 border rounded px-2 py-1.5 text-sm font-mono">
-                        <button @click="showWebhook = !showWebhook" class="text-xs text-gray-500 hover:text-gray-700">
+                               class="flex-1 border border-gray-200 dark:border-gray-700 rounded-lg px-3 py-2 text-sm font-mono bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-200">
+                        <button @click="showWebhook = !showWebhook" class="text-xs text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300 shrink-0 px-2">
                             <span x-text="showWebhook ? 'Masquer' : 'Afficher'"></span>
                         </button>
                     </div>
@@ -137,117 +170,155 @@
             </div>
         </section>
 
-        <section class="bg-white rounded-lg shadow-sm border p-4">
-            <h3 class="font-medium text-gray-700 mb-3">Scans automatiques</h3>
-            <div class="space-y-4">
+        {# === Scans automatiques === #}
+        <section class="bg-white dark:bg-gray-900 rounded-xl shadow-sm border border-gray-200 dark:border-gray-800">
+            <button @click="sections.scheduler = !sections.scheduler" class="w-full flex items-center justify-between p-4 text-left">
+                <div class="flex items-center gap-2">
+                    <svg class="w-5 h-5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.5">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                    </svg>
+                    <h3 class="font-medium text-gray-800 dark:text-gray-200">Scans automatiques</h3>
+                </div>
+                <svg class="w-4 h-4 text-gray-400 transition-transform duration-200" :class="sections.scheduler ? 'rotate-180' : ''" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 8.25l-7.5 7.5-7.5-7.5"/>
+                </svg>
+            </button>
+            <div x-show="sections.scheduler" x-cloak class="px-4 pb-4 space-y-4 border-t border-gray-100 dark:border-gray-800 pt-3">
                 <div>
-                    <label class="flex items-center gap-2">
-                        <input type="checkbox" x-model="cfg.scheduler.radarr_enabled" class="rounded">
-                        <span class="text-sm font-medium">Radarr</span>
+                    <label class="flex items-center gap-2 cursor-pointer">
+                        <input type="checkbox" x-model="cfg.scheduler.radarr_enabled" class="rounded border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800">
+                        <span class="text-sm font-medium text-gray-700 dark:text-gray-300">Radarr</span>
                     </label>
                     <div x-show="cfg.scheduler.radarr_enabled" class="mt-2 ml-6">
-                        <label class="block text-sm text-gray-600">Intervalle (heures)</label>
+                        <label class="block text-sm text-gray-500 dark:text-gray-400 mb-1">Intervalle (heures)</label>
                         <input type="number" x-model="cfg.scheduler.radarr_interval_hours" min="1" max="168"
-                               class="w-24 border rounded px-2 py-1.5 text-sm">
+                               class="w-24 border border-gray-200 dark:border-gray-700 rounded-lg px-3 py-2 text-sm bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-200">
                     </div>
                 </div>
                 <div>
-                    <label class="flex items-center gap-2">
-                        <input type="checkbox" x-model="cfg.scheduler.sonarr_enabled" class="rounded">
-                        <span class="text-sm font-medium">Sonarr</span>
+                    <label class="flex items-center gap-2 cursor-pointer">
+                        <input type="checkbox" x-model="cfg.scheduler.sonarr_enabled" class="rounded border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800">
+                        <span class="text-sm font-medium text-gray-700 dark:text-gray-300">Sonarr</span>
                     </label>
                     <div x-show="cfg.scheduler.sonarr_enabled" class="mt-2 ml-6">
-                        <label class="block text-sm text-gray-600">Intervalle (heures)</label>
+                        <label class="block text-sm text-gray-500 dark:text-gray-400 mb-1">Intervalle (heures)</label>
                         <input type="number" x-model="cfg.scheduler.sonarr_interval_hours" min="1" max="168"
-                               class="w-24 border rounded px-2 py-1.5 text-sm">
+                               class="w-24 border border-gray-200 dark:border-gray-700 rounded-lg px-3 py-2 text-sm bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-200">
                     </div>
                 </div>
-                <p class="text-xs text-gray-400">Les scans sont lancés en mode réel. Les résultats sont visibles sur la page Résultats.</p>
+                <p class="text-xs text-gray-400 dark:text-gray-500">Les scans sont lancés en mode réel. Les résultats sont visibles sur la page Résultats.</p>
             </div>
         </section>
 
-        <section class="bg-white rounded-lg shadow-sm border p-4">
-            <h3 class="font-medium text-gray-700 mb-3">Vérification post-nettoyage</h3>
-            <div class="space-y-3">
-                <label class="flex items-center gap-2">
-                    <input type="checkbox" x-model="cfg.verifier.enabled" class="rounded">
-                    <span class="text-sm">Vérification automatique après nettoyage</span>
+        {# === Vérification === #}
+        <section class="bg-white dark:bg-gray-900 rounded-xl shadow-sm border border-gray-200 dark:border-gray-800">
+            <button @click="sections.verifier = !sections.verifier" class="w-full flex items-center justify-between p-4 text-left">
+                <div class="flex items-center gap-2">
+                    <svg class="w-5 h-5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.5">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75L11.25 15 15 9.75m-3-7.036A11.959 11.959 0 013.598 6 11.99 11.99 0 003 9.749c0 5.592 3.824 10.29 9 11.623 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.571-.598-3.751h-.152c-3.196 0-6.1-1.248-8.25-3.285z"/>
+                    </svg>
+                    <h3 class="font-medium text-gray-800 dark:text-gray-200">Vérification post-nettoyage</h3>
+                </div>
+                <svg class="w-4 h-4 text-gray-400 transition-transform duration-200" :class="sections.verifier ? 'rotate-180' : ''" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 8.25l-7.5 7.5-7.5-7.5"/>
+                </svg>
+            </button>
+            <div x-show="sections.verifier" x-cloak class="px-4 pb-4 space-y-3 border-t border-gray-100 dark:border-gray-800 pt-3">
+                <label class="flex items-center gap-2 cursor-pointer">
+                    <input type="checkbox" x-model="cfg.verifier.enabled" class="rounded border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800">
+                    <span class="text-sm text-gray-700 dark:text-gray-300">Vérification automatique après nettoyage</span>
                 </label>
                 <div x-show="cfg.verifier.enabled" class="ml-6 space-y-3">
                     <div>
-                        <label class="block text-sm text-gray-600">Intervalle (minutes)</label>
+                        <label class="block text-sm text-gray-500 dark:text-gray-400 mb-1">Intervalle (minutes)</label>
                         <input type="number" x-model="cfg.verifier.interval_minutes" min="1" max="60"
-                               class="w-24 border rounded px-2 py-1.5 text-sm">
+                               class="w-24 border border-gray-200 dark:border-gray-700 rounded-lg px-3 py-2 text-sm bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-200">
                     </div>
                     <div>
-                        <label class="block text-sm text-gray-600">Durée max avant recherche forcée (minutes)</label>
+                        <label class="block text-sm text-gray-500 dark:text-gray-400 mb-1">Durée max avant recherche forcée</label>
                         <input type="number" x-model="cfg.verifier.max_duration_minutes" min="5" max="480"
-                               class="w-24 border rounded px-2 py-1.5 text-sm">
+                               class="w-24 border border-gray-200 dark:border-gray-700 rounded-lg px-3 py-2 text-sm bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-200">
                     </div>
                 </div>
-                <p class="text-xs text-gray-400">
+                <p class="text-xs text-gray-400 dark:text-gray-500">
                     Vérifie toutes les N minutes si les symlinks traités ont été réparés.
-                    Au bout de la durée max, une recherche forcée est déclenchée dans Sonarr/Radarr.
-                    Si toujours cassé après le deuxième cycle, le résultat est marqué "non remplacé".
+                    Au bout de la durée max, une recherche forcée est déclenchée.
                 </p>
             </div>
         </section>
 
-        <section class="bg-white rounded-lg shadow-sm border p-4">
-            <h3 class="font-medium text-gray-700 mb-3">Valeurs par défaut</h3>
-            <div class="space-y-3">
-                <label class="flex items-center gap-2">
-                    <input type="checkbox" x-model="cfg.defaults.rescan" class="rounded">
-                    <span class="text-sm">Refresh après traitement</span>
+        {# === Valeurs par défaut === #}
+        <section class="bg-white dark:bg-gray-900 rounded-xl shadow-sm border border-gray-200 dark:border-gray-800">
+            <button @click="sections.defaults = !sections.defaults" class="w-full flex items-center justify-between p-4 text-left">
+                <div class="flex items-center gap-2">
+                    <svg class="w-5 h-5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.5">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M10.5 6h9.75M10.5 6a1.5 1.5 0 11-3 0m3 0a1.5 1.5 0 10-3 0M3.75 6H7.5m3 12h9.75m-9.75 0a1.5 1.5 0 01-3 0m3 0a1.5 1.5 0 00-3 0m-3.75 0H7.5m9-6h3.75m-3.75 0a1.5 1.5 0 01-3 0m3 0a1.5 1.5 0 00-3 0m-9.75 0h9.75"/>
+                    </svg>
+                    <h3 class="font-medium text-gray-800 dark:text-gray-200">Valeurs par défaut</h3>
+                </div>
+                <svg class="w-4 h-4 text-gray-400 transition-transform duration-200" :class="sections.defaults ? 'rotate-180' : ''" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 8.25l-7.5 7.5-7.5-7.5"/>
+                </svg>
+            </button>
+            <div x-show="sections.defaults" x-cloak class="px-4 pb-4 space-y-3 border-t border-gray-100 dark:border-gray-800 pt-3">
+                <label class="flex items-center gap-2 cursor-pointer">
+                    <input type="checkbox" x-model="cfg.defaults.rescan" class="rounded border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800">
+                    <span class="text-sm text-gray-700 dark:text-gray-300">Refresh après traitement</span>
                 </label>
-                <label class="flex items-center gap-2">
-                    <input type="checkbox" x-model="cfg.defaults.search" class="rounded">
-                    <span class="text-sm">Recherche automatique après nettoyage</span>
+                <label class="flex items-center gap-2 cursor-pointer">
+                    <input type="checkbox" x-model="cfg.defaults.search" class="rounded border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800">
+                    <span class="text-sm text-gray-700 dark:text-gray-300">Recherche automatique après nettoyage</span>
                 </label>
-                <label class="flex items-center gap-2">
-                    <input type="checkbox" x-model="cfg.defaults.keep_symlinks" class="rounded">
-                    <span class="text-sm">Conserver les symlinks locaux</span>
+                <label class="flex items-center gap-2 cursor-pointer">
+                    <input type="checkbox" x-model="cfg.defaults.keep_symlinks" class="rounded border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800">
+                    <span class="text-sm text-gray-700 dark:text-gray-300">Conserver les symlinks locaux</span>
                 </label>
                 <div>
-                    <label class="block text-sm text-gray-600">Limite fichiers par scan (0 = illimité)</label>
+                    <label class="block text-sm text-gray-500 dark:text-gray-400 mb-1">Limite fichiers par scan</label>
                     <input type="number" x-model="cfg.defaults.limit" min="0" max="500"
-                           class="w-24 border rounded px-2 py-1.5 text-sm">
+                           class="w-24 border border-gray-200 dark:border-gray-700 rounded-lg px-3 py-2 text-sm bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-200">
                 </div>
             </div>
         </section>
 
-        <div class="flex gap-3">
-            <button @click="saveConfig()" class="bg-blue-600 text-white px-4 py-2 rounded text-sm hover:bg-blue-700">
-                💾 Enregistrer
+        {# === Save bar === #}
+        <div class="sticky bottom-0 md:relative bg-white dark:bg-gray-900 border-t md:border border-gray-200 dark:border-gray-800 md:rounded-xl md:shadow-sm p-4 -mx-4 md:mx-0 md:mt-6 flex items-center gap-3 safe-bottom">
+            <button @click="saveConfig()" class="bg-brand-600 text-white px-5 py-2.5 rounded-lg text-sm font-medium hover:bg-brand-700 transition-colors">
+                <span x-show="!saving">Enregistrer</span>
+                <span x-show="saving" x-cloak>Enregistrement...</span>
             </button>
-            <span x-show="saved" class="text-sm text-green-600 self-center">✓ Enregistré</span>
+            <span x-show="saved" class="text-sm text-green-600 dark:text-green-400" x-cloak>✓ Enregistré</span>
+            <span x-show="error" class="text-sm text-red-600 dark:text-red-400" x-text="error" x-cloak></span>
         </div>
     </div>
 
-    <dialog x-ref="browserModal" class="rounded-lg shadow-xl border p-4 w-full max-w-lg">
-        <div class="flex items-center justify-between mb-3">
-            <span class="text-sm font-medium text-gray-700">Explorateur</span>
-            <button @click="$refs.browserModal.close()" class="text-gray-400 hover:text-gray-600 text-lg leading-none">&times;</button>
+    {# === Browser dialog === #}
+    <dialog x-ref="browserModal" class="rounded-2xl shadow-xl border border-gray-200 dark:border-gray-800 p-0 w-full max-w-lg bg-white dark:bg-gray-900 backdrop:bg-black/40">
+        <div class="p-4 border-b border-gray-100 dark:border-gray-800 flex items-center justify-between">
+            <span class="text-sm font-medium text-gray-700 dark:text-gray-300">Explorateur</span>
+            <button @click="$refs.browserModal.close()" class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 p-1">&times;</button>
         </div>
-        <div class="text-sm font-mono text-gray-500 mb-2" x-text="browserPath"></div>
-        <div x-show="browserError" class="text-sm text-red-500 mb-2" x-text="browserError"></div>
-        <div class="border rounded overflow-hidden max-h-60 overflow-y-auto">
-            <template x-for="dir in browserDirs" :key="dir.path">
-                <div class="flex items-center px-3 py-2 hover:bg-gray-50 cursor-pointer border-b last:border-b-0 text-sm"
-                     @click="navigateDir(dir.path)">
-                    <span class="mr-2 shrink-0">📁</span>
-                    <span class="flex-1 truncate" x-text="dir.name"></span>
-                    <button class="text-xs text-blue-600 hover:underline shrink-0 ml-2"
-                            @click.stop="selectDir(dir.path)">
-                        Sélectionner
-                    </button>
-                </div>
-            </template>
+        <div class="p-4">
+            <div class="text-sm font-mono text-gray-500 dark:text-gray-400 mb-2 truncate" x-text="browserPath"></div>
+            <div x-show="browserError" class="text-sm text-red-500 dark:text-red-400 mb-2" x-text="browserError"></div>
+            <div class="border border-gray-200 dark:border-gray-700 rounded-xl overflow-hidden max-h-60 overflow-y-auto">
+                <template x-for="dir in browserDirs" :key="dir.path">
+                    <div class="flex items-center px-4 py-2.5 hover:bg-gray-50 dark:hover:bg-gray-800 cursor-pointer border-b border-gray-100 dark:border-gray-800 last:border-b-0 text-sm"
+                         @click="navigateDir(dir.path)">
+                        <span class="mr-2 shrink-0">📁</span>
+                        <span class="flex-1 truncate text-gray-700 dark:text-gray-300" x-text="dir.name"></span>
+                        <button class="text-xs text-brand-600 dark:text-brand-400 hover:underline shrink-0 ml-2 font-medium"
+                                @click.stop="selectDir(dir.path)">
+                            Sélectionner
+                        </button>
+                    </div>
+                </template>
+            </div>
+            <button x-show="browserCanGoUp" @click="navigateDir(browserParent)"
+                    class="text-sm text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300 mt-2 font-medium">
+                ↑ Dossier parent
+            </button>
         </div>
-        <button x-show="browserCanGoUp" @click="navigateDir(browserParent)"
-                class="text-sm text-gray-500 hover:text-gray-700 mt-2">
-            ↑ Dossier parent
-        </button>
     </dialog>
 </div>
 
@@ -260,6 +331,7 @@ function configApp() {
                defaults: { limit: 50, rescan: true, search: true, keep_symlinks: false },
                scheduler: { radarr_enabled: false, radarr_interval_hours: 3, sonarr_enabled: false, sonarr_interval_hours: 3 },
                verifier: { enabled: true, interval_minutes: 3, max_duration_minutes: 60 } },
+        sections: { radarr: true, sonarr: true, discord: false, scheduler: false, verifier: false, defaults: false },
         showRadarrKey: false,
         showSonarrKey: false,
         showWebhook: false,
@@ -268,6 +340,8 @@ function configApp() {
         sonarrTest: '',
         sonarrOk: false,
         saved: false,
+        saving: false,
+        error: '',
         browserField: null,
         browserSource: null,
         browserPath: '',
@@ -283,14 +357,19 @@ function configApp() {
         },
 
         async saveConfig() {
+            this.saving = true;
+            this.error = '';
             const resp = await fetch('/api/config', {
                 method: 'POST',
                 headers: {'Content-Type': 'application/json'},
                 body: JSON.stringify(this.cfg)
             });
+            this.saving = false;
             if (resp.ok) {
                 this.saved = true;
                 setTimeout(() => this.saved = false, 2000);
+            } else {
+                this.error = 'Erreur lors de la sauvegarde';
             }
         },
 

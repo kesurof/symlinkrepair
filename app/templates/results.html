@@ -3,14 +3,14 @@
 {% block content %}
 <div x-data="resultsApp()">
     <div class="flex items-center justify-between mb-4">
-        <h2 class="text-xl font-semibold text-gray-800">Résultats</h2>
-        <span id="results-count" class="text-sm text-gray-500">{{ total }} résultat{% if total > 1 %}s{% endif %}</span>
+        <h2 class="text-lg font-semibold text-gray-800 dark:text-gray-200">Résultats</h2>
+        <span id="results-count" class="text-sm text-gray-500 dark:text-gray-400">{{ total }} résultat{% if total > 1 %}s{% endif %}</span>
     </div>
 
-    <div class="bg-white rounded-lg shadow-sm border p-3 mb-4">
+    <div class="bg-white dark:bg-gray-900 rounded-xl shadow-sm border border-gray-200 dark:border-gray-800 p-3 mb-4">
         <div class="flex flex-wrap gap-2">
             <select id="filter-source"
-                    class="border rounded px-2 py-1 text-sm"
+                    class="border border-gray-200 dark:border-gray-700 rounded-lg px-3 py-2 text-sm bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-200"
                     onchange="hxNavFromFilters()">
                 <option value="">Toutes sources</option>
                 {% for s in sources %}
@@ -18,7 +18,7 @@
                 {% endfor %}
             </select>
             <select id="filter-status"
-                    class="border rounded px-2 py-1 text-sm"
+                    class="border border-gray-200 dark:border-gray-700 rounded-lg px-3 py-2 text-sm bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-200"
                     onchange="hxNavFromFilters()">
                 <option value="">Tous statuts</option>
                 {% for st in statuses %}
@@ -27,57 +27,63 @@
             </select>
             <select id="filter-season"
                     style="display:none"
-                    class="border rounded px-2 py-1 text-sm"
+                    class="border border-gray-200 dark:border-gray-700 rounded-lg px-3 py-2 text-sm bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-200"
                     onchange="hxNavFromFilters()">
                 <option value="">Toutes saisons</option>
                 {% for i in range(1, 21) %}
                 <option value="{{ i }}">Saison {{ i }}</option>
                 {% endfor %}
             </select>
-            <input type="text" id="filter-q" placeholder="Rechercher..."
-                   class="border rounded px-2 py-1 text-sm flex-1 min-w-[200px]"
-                   onkeydown="if(event.key==='Enter') hxNavFromFilters()">
+            <div class="relative flex-1 min-w-[200px]">
+                <svg class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.5">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z"/>
+                </svg>
+                <input type="text" id="filter-q" placeholder="Rechercher..."
+                       class="w-full border border-gray-200 dark:border-gray-700 rounded-lg pl-9 pr-3 py-2 text-sm bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-200 placeholder-gray-400 dark:placeholder-gray-500"
+                       onkeydown="if(event.key==='Enter') hxNavFromFilters()">
+            </div>
             <select id="filter-perpage"
-                    class="border rounded px-2 py-1 text-sm"
+                    class="border border-gray-200 dark:border-gray-700 rounded-lg px-3 py-2 text-sm bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-200"
                     onchange="hxNavFromFilters()">
                 <option value="25">25 / page</option>
                 <option value="50">50 / page</option>
                 <option value="100">100 / page</option>
             </select>
-            <label class="flex items-center gap-1.5 text-sm cursor-pointer select-none">
+            <label class="flex items-center gap-1.5 text-sm cursor-pointer select-none text-gray-600 dark:text-gray-400">
                 <input type="checkbox" id="filter-dedup"
                        {% if not show_duplicates %}checked{% endif %}
                        onchange="hxNavFromFilters()"
-                       class="rounded">
-                <span class="text-gray-600">Masquer les doublons</span>
+                       class="rounded border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800">
+                <span>Masquer les doublons</span>
             </label>
         </div>
     </div>
 
     {% if total > 0 %}
-    <div x-show="selected.length > 0 || true" class="bg-blue-50 border border-blue-200 rounded-lg p-2 mb-4 flex items-center gap-2 text-sm">
-        <span class="text-blue-700 font-medium" x-text="selected.length + ' sélectionné' + (selected.length > 1 ? 's' : '')">0 sélectionné</span>
+    <div x-show="selected.length > 0" class="bg-brand-50 dark:bg-brand-900/20 border border-brand-200 dark:border-brand-800 rounded-xl p-3 mb-4 flex items-center gap-2 text-sm" x-cloak>
+        <span class="text-brand-700 dark:text-brand-300 font-medium" x-text="selected.length + ' sélectionné' + (selected.length > 1 ? 's' : '')">0 sélectionné</span>
         <template x-if="selected.length < parseInt((document.getElementById('results-total-num')||{}).textContent||'0')">
-            <button @click="selectAllPages()" class="text-blue-600 text-xs hover:underline ml-1">
+            <button @click="selectAllPages()" class="text-brand-600 dark:text-brand-400 text-xs hover:underline ml-1">
                 Tout sélectionner (<span id="results-total-num">{{ total }}</span>)
             </button>
         </template>
-        <button @click="batchAction('process')" class="bg-amber-100 text-amber-700 px-2 py-1 rounded hover:bg-amber-200">Traiter</button>
-        <button @click="batchAction('fix')" class="bg-green-100 text-green-700 px-2 py-1 rounded hover:bg-green-200">Marquer corrigé</button>
-        <button @click="batchAction('ignore')" class="bg-gray-200 text-gray-700 px-2 py-1 rounded hover:bg-gray-300">Ignorer</button>
-        <button @click="batchAction('recheck')" class="bg-blue-100 text-blue-700 px-2 py-1 rounded hover:bg-blue-200">Revérifier</button>
-        <button @click="confirmDelete = true" class="bg-red-100 text-red-700 px-2 py-1 rounded hover:bg-red-200">Supprimer</button>
-        <button @click="selected = []" class="text-gray-400 hover:text-gray-600 ml-auto">✕</button>
-        <span x-show="batchMsg" x-text="batchMsg" class="text-green-600 ml-2"></span>
+        <button @click="batchAction('process')" class="bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300 px-2.5 py-1.5 rounded-lg hover:bg-amber-200 dark:hover:bg-amber-900/50 transition-colors">Traiter</button>
+        <button @click="batchAction('fix')" class="bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300 px-2.5 py-1.5 rounded-lg hover:bg-green-200 dark:hover:bg-green-900/50 transition-colors">Marquer corrigé</button>
+        <button @click="batchAction('ignore')" class="bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 px-2.5 py-1.5 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors">Ignorer</button>
+        <button @click="batchAction('recheck')" class="bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 px-2.5 py-1.5 rounded-lg hover:bg-blue-200 dark:hover:bg-blue-900/50 transition-colors">Revérifier</button>
+        <button @click="confirmDelete = true" class="bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300 px-2.5 py-1.5 rounded-lg hover:bg-red-200 dark:hover:bg-red-900/50 transition-colors">Supprimer</button>
+        <button @click="selected = []" class="text-gray-400 hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-300 ml-auto p-1">✕</button>
+        <span x-show="batchMsg" x-text="batchMsg" class="text-green-600 dark:text-green-400 ml-2"></span>
     </div>
 
-    <div x-show="confirmDelete" class="fixed inset-0 bg-black/40 flex items-center justify-center z-50" @click.self="confirmDelete = false">
-        <div class="bg-white rounded-lg shadow-xl p-6 max-w-sm mx-4">
-            <h3 class="font-semibold text-gray-800 mb-2">Confirmer la suppression</h3>
-            <p class="text-sm text-gray-600 mb-4" x-text="'Supprimer ' + selected.length + ' résultat' + (selected.length > 1 ? 's' : '') + ' ?'"></p>
+    {# === Confirmation modale === #}
+    <div x-show="confirmDelete" class="fixed inset-0 bg-black/40 dark:bg-black/60 flex items-end md:items-center justify-center z-50" @click.self="confirmDelete = false" x-cloak>
+        <div class="bg-white dark:bg-gray-900 rounded-t-2xl md:rounded-2xl shadow-xl p-6 w-full md:max-w-sm md:mx-4 slide-up">
+            <h3 class="font-semibold text-gray-800 dark:text-gray-200 mb-2">Confirmer la suppression</h3>
+            <p class="text-sm text-gray-600 dark:text-gray-400 mb-4" x-text="'Supprimer ' + selected.length + ' résultat' + (selected.length > 1 ? 's' : '') + ' ?'"></p>
             <div class="flex gap-2 justify-end">
-                <button @click="confirmDelete = false" class="bg-gray-200 px-3 py-1.5 rounded text-sm">Annuler</button>
-                <button @click="batchAction('delete'); confirmDelete = false" class="bg-red-600 text-white px-3 py-1.5 rounded text-sm">Confirmer</button>
+                <button @click="confirmDelete = false" class="flex-1 md:flex-none bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 px-4 py-2.5 rounded-lg text-sm font-medium hover:bg-gray-200 dark:hover:bg-gray-700">Annuler</button>
+                <button @click="batchAction('delete'); confirmDelete = false" class="flex-1 md:flex-none bg-red-600 text-white px-4 py-2.5 rounded-lg text-sm font-medium hover:bg-red-700">Confirmer</button>
             </div>
         </div>
     </div>
@@ -89,7 +95,6 @@
 </div>
 
 <script>
-// === Filtres : navigation HTMX ===
 function hxNavFromFilters() {
     const params = new URLSearchParams();
     const src = document.getElementById('filter-source').value;
@@ -107,7 +112,6 @@ function hxNavFromFilters() {
     htmx.ajax('GET', '/results?' + params.toString(), {target: '#results-content', pushUrl: true});
 }
 
-// Afficher/masquer le filtre saison selon la source
 document.getElementById('filter-season').style.display =
     document.getElementById('filter-source').value === 'sonarr' ? '' : 'none';
 document.getElementById('filter-source').addEventListener('change', function() {
@@ -115,7 +119,6 @@ document.getElementById('filter-source').addEventListener('change', function() {
         this.value === 'sonarr' ? '' : 'none';
 });
 
-// === Alpine.js : sélection + batch actions ===
 function resultsApp() {
     return {
         selected: [],

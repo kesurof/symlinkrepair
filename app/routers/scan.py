@@ -3,7 +3,7 @@ from datetime import datetime
 
 from aiosqlite import Connection
 from fastapi import APIRouter, Depends, Request
-from fastapi.responses import HTMLResponse, JSONResponse
+from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
 
 from app.database import get_db
 from app.services import filescanner, scanner
@@ -116,8 +116,8 @@ async def scan_status(source: str):
 
 
 @router.get("/fastscan", response_class=HTMLResponse)
-async def fastscan_page(request: Request):
-    return templates.TemplateResponse(request, "fastscan.html")
+async def fastscan_page():
+    return RedirectResponse(url="/scan?mode=fast", status_code=301)
 
 
 @router.post("/api/fast-scan")

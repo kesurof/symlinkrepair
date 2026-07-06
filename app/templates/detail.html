@@ -3,70 +3,76 @@
 {% block content %}
 <div class="max-w-3xl mx-auto">
     <a href="/results"
-       class="text-blue-600 text-sm hover:underline mb-4 inline-block">&larr; Retour aux résultats</a>
+       class="inline-flex items-center gap-1 text-brand-600 dark:text-brand-400 text-sm font-medium hover:underline mb-4">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M10.5 19.5L3 12m0 0l7.5-7.5M3 12h18"/>
+        </svg>
+        Retour aux résultats
+    </a>
 
-    <div class="bg-white rounded-lg shadow-sm border p-6" x-data="{ processStep: 'initial', processMsg: '' }">
-        <div class="flex items-center justify-between mb-4">
-            <h2 class="text-lg font-semibold text-gray-800">{{ item.media_title or 'Sans titre' }}</h2>
-            <span class="text-xs font-medium px-2 py-0.5 rounded
-                {% if item.source == 'radarr' %}bg-blue-100 text-blue-700{% else %}bg-green-100 text-green-700{% endif %}">
+    <div class="bg-white dark:bg-gray-900 rounded-xl shadow-sm border border-gray-200 dark:border-gray-800 p-6" x-data="{ processStep: 'initial', processMsg: '', confirmSheet: false }">
+        <div class="flex items-center justify-between mb-6">
+            <h2 class="text-lg font-semibold text-gray-800 dark:text-gray-200">{{ item.media_title or 'Sans titre' }}</h2>
+            <span class="inline-flex items-center gap-1 text-xs font-medium px-2.5 py-1 rounded-full
+                {% if item.source == 'radarr' %}bg-blue-100 text-blue-700 dark:bg-blue-900/50 dark:text-blue-300{% else %}bg-green-100 text-green-700 dark:bg-green-900/50 dark:text-green-300{% endif %}">
                 {{ item.source }}
             </span>
         </div>
 
-        <dl class="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
+        <dl class="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
             <div>
-                <dt class="text-gray-500">Type</dt>
-                <dd class="font-medium">{{ item.media_type or '—' }}</dd>
+                <dt class="text-gray-500 dark:text-gray-400 text-xs uppercase tracking-wider">Type</dt>
+                <dd class="font-medium text-gray-800 dark:text-gray-200 mt-0.5">{{ item.media_type or '—' }}</dd>
             </div>
             {% if item.season %}
             <div>
-                <dt class="text-gray-500">Saison</dt>
-                <dd class="font-medium">{{ item.season }}{% if item.episode %} — Épisode {{ item.episode }}{% endif %}</dd>
+                <dt class="text-gray-500 dark:text-gray-400 text-xs uppercase tracking-wider">Saison</dt>
+                <dd class="font-medium text-gray-800 dark:text-gray-200 mt-0.5">{{ item.season }}{% if item.episode %} — Épisode {{ item.episode }}{% endif %}</dd>
             </div>
             {% endif %}
             {% if item.file_id %}
             <div>
-                <dt class="text-gray-500">File ID</dt>
-                <dd class="font-mono text-xs">{{ item.file_id }}</dd>
+                <dt class="text-gray-500 dark:text-gray-400 text-xs uppercase tracking-wider">File ID</dt>
+                <dd class="font-mono text-xs text-gray-600 dark:text-gray-300 mt-0.5">{{ item.file_id }}</dd>
             </div>
             {% endif %}
             <div class="md:col-span-2">
-                <dt class="text-gray-500">Symlink</dt>
-                <dd class="font-mono text-xs break-all bg-gray-50 px-2 py-1 rounded mt-1">{{ item.symlink_path }}</dd>
+                <dt class="text-gray-500 dark:text-gray-400 text-xs uppercase tracking-wider">Symlink</dt>
+                <dd class="font-mono text-xs break-all bg-gray-50 dark:bg-gray-800 text-gray-600 dark:text-gray-300 px-3 py-2 rounded-lg mt-1">{{ item.symlink_path }}</dd>
             </div>
             {% if item.target_path %}
             <div class="md:col-span-2">
-                <dt class="text-gray-500">Cible</dt>
-                <dd class="font-mono text-xs break-all bg-gray-50 px-2 py-1 rounded mt-1">{{ item.target_path }}</dd>
+                <dt class="text-gray-500 dark:text-gray-400 text-xs uppercase tracking-wider">Cible</dt>
+                <dd class="font-mono text-xs break-all bg-gray-50 dark:bg-gray-800 text-gray-600 dark:text-gray-300 px-3 py-2 rounded-lg mt-1">{{ item.target_path }}</dd>
             </div>
             {% endif %}
             <div>
-                <dt class="text-gray-500">Détection</dt>
-                <dd class="font-medium">{{ item.detection }}</dd>
+                <dt class="text-gray-500 dark:text-gray-400 text-xs uppercase tracking-wider">Détection</dt>
+                <dd class="font-medium text-gray-800 dark:text-gray-200 mt-0.5">{{ item.detection }}</dd>
             </div>
             <div>
-                <dt class="text-gray-500">Statut</dt>
-                <dd><span class="text-xs px-2 py-0.5 rounded
-                    {% if item.status in ('détecté','recherche') %}bg-yellow-100 text-yellow-700
-                    {% elif item.status == 'ignoré' %}bg-gray-100 text-gray-600
-                    {% elif item.status in ('réparé','remplacé') %}bg-green-100 text-green-700
-                    {% elif item.status == 'en_attente' %}bg-blue-100 text-blue-700
-                    {% elif item.status in ('non_remplacé','échoué') %}bg-red-100 text-red-700
-                    {% else %}bg-red-100 text-red-700{% endif %}">
-                    {{ item.status }}
-                </span></dd>
+                <dt class="text-gray-500 dark:text-gray-400 text-xs uppercase tracking-wider">Statut</dt>
+                <dd class="mt-0.5">
+                    <span class="inline-flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-full font-medium
+                        {% if item.status in ('détecté','recherche') %}bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300
+                        {% elif item.status == 'ignoré' %}bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400
+                        {% elif item.status in ('réparé','remplacé') %}bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300
+                        {% elif item.status == 'en_attente' %}bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300
+                        {% else %}bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300{% endif %}">
+                        {{ item.status }}
+                    </span>
+                </dd>
             </div>
             {% if item.action %}
             <div>
-                <dt class="text-gray-500">Action</dt>
-                <dd class="font-medium">{{ item.action }}</dd>
+                <dt class="text-gray-500 dark:text-gray-400 text-xs uppercase tracking-wider">Action</dt>
+                <dd class="font-medium text-gray-800 dark:text-gray-200 mt-0.5">{{ item.action }}</dd>
             </div>
             {% endif %}
             {% if item.action_date %}
             <div>
-                <dt class="text-gray-500">Date d'action</dt>
-                <dd class="font-medium">{{ item.action_date }}</dd>
+                <dt class="text-gray-500 dark:text-gray-400 text-xs uppercase tracking-wider">Date d'action</dt>
+                <dd class="font-medium text-gray-800 dark:text-gray-200 mt-0.5">{{ item.action_date }}</dd>
             </div>
             {% endif %}
         </dl>
@@ -75,53 +81,57 @@
             {% if item.status in ('détecté','recherche') %}
             <div x-show="processStep === 'initial'" x-cloak>
                 <button @click="processStep = 'confirm'"
-                        class="bg-red-500 text-white px-3 py-1.5 rounded text-sm hover:bg-red-600">
+                        class="bg-red-500 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-red-600 transition-colors">
                     Nettoyer et rechercher
                 </button>
             </div>
-            <div x-show="processStep === 'confirm'" x-cloak class="flex items-center gap-2 w-full">
-                <span class="text-sm text-red-600 font-medium">
-                    Supprimer le fichier dans {{ item.source|capitalize }}, retirer le symlink,
-                    rafraîchir et lancer une recherche de remplacement ?
-                </span>
-                <button @click="processStep = 'initial'" class="bg-gray-200 px-3 py-1.5 rounded text-sm">Annuler</button>
-                <button hx-post="/api/results/{{ item.id }}/process"
-                        hx-target="closest .bg-white"
-                        hx-swap="innerHTML"
-                        class="bg-red-600 text-white px-3 py-1.5 rounded text-sm">
-                    Confirmer
-                </button>
-                {% if item.source == 'sonarr' and item.season %}
-                <button hx-post="/api/results/{{ item.id }}/process?delete_season=true"
-                        hx-target="closest .bg-white"
-                        hx-swap="innerHTML"
-                        class="bg-orange-600 text-white px-3 py-1.5 rounded text-sm">
-                    Saison entière
-                </button>
-                {% endif %}
+            <div x-show="processStep === 'confirm'" x-cloak class="w-full">
+                <div class="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl p-4">
+                    <p class="text-sm text-red-700 dark:text-red-300 mb-3">
+                        Supprimer le fichier dans {{ item.source|capitalize }}, retirer le symlink,
+                        rafraîchir et lancer une recherche de remplacement ?
+                    </p>
+                    <div class="flex flex-wrap gap-2">
+                        <button @click="processStep = 'initial'" class="bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 px-3 py-1.5 rounded-lg text-sm hover:bg-gray-200 dark:hover:bg-gray-700">Annuler</button>
+                        <button hx-post="/api/results/{{ item.id }}/process"
+                                hx-target="closest .bg-white"
+                                hx-swap="innerHTML"
+                                class="bg-red-600 text-white px-3 py-1.5 rounded-lg text-sm font-medium">
+                            Confirmer
+                        </button>
+                        {% if item.source == 'sonarr' and item.season %}
+                        <button hx-post="/api/results/{{ item.id }}/process?delete_season=true"
+                                hx-target="closest .bg-white"
+                                hx-swap="innerHTML"
+                                class="bg-orange-600 text-white px-3 py-1.5 rounded-lg text-sm font-medium">
+                            Saison entière
+                        </button>
+                        {% endif %}
+                    </div>
+                </div>
             </div>
             <button hx-post="/api/results/{{ item.id }}/fix"
                     hx-target="closest .bg-white"
                     hx-swap="innerHTML"
-                    class="bg-green-100 text-green-700 px-3 py-1.5 rounded text-sm hover:bg-green-200">
+                    class="bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300 px-3 py-2 rounded-lg text-sm font-medium hover:bg-green-200 dark:hover:bg-green-900/50 transition-colors">
                 Marquer corrigé
             </button>
             {% endif %}
             <button hx-post="/api/results/{{ item.id }}/ignore"
                     hx-target="closest .bg-white"
                     hx-swap="innerHTML"
-                    class="bg-gray-200 text-gray-700 px-3 py-1.5 rounded text-sm hover:bg-gray-300">
+                    class="bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 px-3 py-2 rounded-lg text-sm font-medium hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors">
                 Ignorer
             </button>
             <button hx-post="/api/results/{{ item.id }}/recheck"
                     hx-target="closest .bg-white"
                     hx-swap="innerHTML"
-                    class="bg-blue-100 text-blue-700 px-3 py-1.5 rounded text-sm hover:bg-blue-200">
+                    class="bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 px-3 py-2 rounded-lg text-sm font-medium hover:bg-blue-200 dark:hover:bg-blue-900/50 transition-colors">
                 Revérifier
             </button>
         </div>
 
-        <div x-text="processMsg" class="mt-2 text-sm"></div>
+        <div x-text="processMsg" class="mt-2 text-sm text-gray-600 dark:text-gray-400"></div>
     </div>
 </div>
 
