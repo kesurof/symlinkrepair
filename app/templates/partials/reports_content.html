@@ -1,3 +1,10 @@
+<div id="reports-data"
+     data-page="{{ page }}"
+     data-total="{{ total }}"
+     data-total-pages="{{ total_pages }}"
+     data-scan-ids="[{% for scan in scans %}{{ scan.id }}{% if not loop.last %},{% endif %}{% endfor %}]"
+     style="display:none"></div>
+
 {% if scans %}
 <div class="overflow-x-auto">
     <table class="w-full text-sm bg-white rounded-lg shadow-sm border">
@@ -5,7 +12,7 @@
             <tr>
                 <th class="px-3 py-2 w-10">
                     <input type="checkbox" @click="toggleAll($event.target.checked)"
-                           :checked="selected.length === scanIds.length && scanIds.length > 0"
+                           :checked="selected.length > 0 && selected.length === currentScanIds().length"
                            class="rounded">
                 </th>
                 <th class="px-3 py-2 font-medium text-gray-600">#</th>
@@ -58,7 +65,7 @@
         Page {{ page }} / {{ total_pages }}
     </div>
     <div class="flex gap-1">
-        {% set qp = "source=" + active_source + "&status=" + active_status + "&mode=" + active_mode + "&q=" + active_q %}
+        {% set qp = "source=" + active_source + "&status=" + active_status + "&mode=" + active_mode + "&q=" + active_q + "&per_page=" + per_page|string %}
         <button hx-get="/reports?page={{ page - 1 }}&{{ qp }}"
                 hx-target="#reports-content" hx-push-url="true"
                 {% if page <= 1 %}disabled{% endif %}
@@ -84,20 +91,12 @@
         </button>
     </div>
 </div>
+
+<span id="reports-count" hx-swap-oob="true" class="text-sm text-gray-500">{{ total }} scan{% if total > 1 %}s{% endif %}</span>
 {% else %}
 <div class="bg-white rounded-lg shadow-sm border p-8 text-center text-gray-400">
     <p>Aucun scan pour le moment.</p>
 </div>
+
+<span id="reports-count" hx-swap-oob="true" class="text-sm text-gray-500">0 scan</span>
 {% endif %}
-<script>
-(function(){
-    window.dispatchEvent(new CustomEvent('reports-update', {
-        detail: {
-            page: {{ page }},
-            totalPages: {{ total_pages }},
-            total: {{ total }},
-            scanIds: [{% for scan in scans %}{{ scan.id }}{% if not loop.last %},{% endif %}{% endfor %}]
-        }
-    }));
-})();
-</script>

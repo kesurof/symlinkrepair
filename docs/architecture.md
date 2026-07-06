@@ -13,101 +13,83 @@ app/
 ├── main.py                 # Point d'entrée, lifespan, routers
 ├── config.py               # Settings (env vars)
 ├── database.py             # SQLite, init_db, get_db
+├── templates.py            # Instance Jinja2Templates partagée
 ├── logging_config.py       # Logging structuré
 ├── error_handlers.py       # Gestion 404/500
 ├── routers/
-│   ├── web.py              # Pages principales (dashboard, etc.)
-│   ├── health.py           # Health check
-│   ├── config_ui.py        # Page de configuration HTML
-│   ├── scan.py             # Lancement et suivi des scans
-│   ├── results.py          # Résultats et détail
-│   └── reports.py          # Rapports et stats
+│   ├── web.py              # Dashboard (/)
+│   ├── health.py           # Health check (/health)
+│   ├── config_ui.py        # Page de configuration HTML (/config)
+│   ├── scan.py             # Scans (/scan, /fastscan)
+│   ├── results.py          # Résultats (/results, /api/results/*)
+│   ├── reports.py          # Rapports (/reports, /api/stats)
+│   └── api_config.py       # API config (/api/config, /api/browse)
 ├── services/
 │   ├── scanner.py          # Orchestrateur de scan (lock, lifecycle)
+│   ├── filescanner.py      # Scan filesystem (détection symlinks)
 │   ├── radarr.py           # Client API Radarr + DB loader
 │   ├── sonarr.py           # Client API Sonarr + DB loader
-│   ├── filescanner.py      # Scan filesystem (symlinks detection)
+│   ├── cleanup.py          # Actions de nettoyage (DELETE API, refresh, search)
+│   ├── verifier.py         # Vérificateur asynchrone (surveille remplacement)
+│   ├── scheduler.py        # Scans automatiques planifiés
+│   ├── discord.py          # Notifications Discord (webhook)
 │   └── config_service.py   # CRUD config.json + browse sécurisé
 ├── models/
-│   ├── scan.py             # Scan state, ScanTarget
 │   ├── config.py           # Config Pydantic model
-│   └── report.py           # Rapport d'exécution
+│   └── scan.py             # Scan state, Result
 ├── templates/
 │   ├── base.html           # Layout global (nav, header, footer)
 │   ├── index.html          # Dashboard
 │   ├── scan.html           # Page scan
-│   ├── results.html        # Liste éléments
+│   ├── fastscan.html       # Page scan rapide
+│   ├── results.html        # Liste résultats
 │   ├── detail.html         # Détail élément
 │   ├── reports.html        # Rapports
 │   ├── config.html         # Configuration + explorateur dossiers
-│   └── partials/           # Fragments HTMX
-│       ├── scan_status.html
-│       ├── result_card.html
-│       ├── result_table.html
-│       ├── folder_browser.html
-│       └── stats_widget.html
+│   ├── error.html          # Page d'erreur générique
+│   └── partials/
+│       ├── results_content.html  # Tableau résultats (swap HTMX)
+│       └── reports_content.html  # Tableau rapports (swap HTMX)
 └── static/
-    └── css/
-        └── icons.svg       # Icônes SVG inline
+    └── htmx.min.js         # HTMX 2.x (CDN fallback)
 ```
 
-## Cycle de vie d'un scan (async)
+## Cycle de vie d'un scan
 
 ```
-┌─────────────────────────────────────────────────┐
-│                   États                          │
-│                                                  │
-│  idle ──→ running ──→ completed                  │
-│                │                                  │
-│                └──→ error                        │
-│                                                  │
-│  running + idem pour l'autre source = OK         │
-│  (Radarr et Sonarr peuvent tourner en //)        │
-│  running + même source = refusé (Lock)           │
-└─────────────────────────────────────────────────┘
+1. Validation config (library_roots, target_prefixes, api_key)
+2. Scan filesystem (iter_symlinks + inspect_symlink)
+3. Copie DB conteneurs (docker cp)
+4. Chargement MovieFiles / EpisodeFiles
+5. Matching : symlink_path → record Radarr/Sonarr
+6. Enrichissement : titre, saison, tags, ids
+7. Insertion en base (scans + results)
+8. Si mode=clean : process_all_detected (DELETE API)
+9. Notification Discord
 ```
-
-Le scan s'exécute dans un `asyncio.create_task` (pas de thread). Le frontend
-interroge `GET /scan/{id}/status` toutes les 2s via `hx-trigger="every 2s"`.
-
-## Flux type
-
-### Scan
-1. `POST /scan/radarr` → création du scan en DB (`status=running`)
-2. Lancement d'un task asynchrone qui exécute le scan
-3. Le frontend poll `GET /scan/{id}/status` toutes les 2s (fragment HTMX)
-4. À la fin : DB update (`status=completed`), insertion des `results`
-5. Le frontend affiche le résumé et redirige vers `/results?scan_id=X`
-
-### Configuration
-1. `GET /config` → page HTML avec le formulaire
-2. Alpine.js gère l'état local (champs, explorateur)
-3. `POST /api/config` → sauvegarde dans `data/config.json`
-4. `GET /api/browse?path=...` → explorateur de dossiers sécurisé
-
-### Action sur un résultat
-1. `POST /results/{id}/fix` → confirmation → mise à jour du statut
-2. Si réel : appel API Radarr/Sonarr, suppression symlink local (optionnel)
-3. Mise à jour du fragment HTMX pour refléter le nouveau statut
 
 ## Services
 
 | Service | Rôle |
 |---------|------|
-| `config_service.py` | Lire/écrire `data/config.json`, valider, browse sécurisé |
-| `filescanner.py` | Parcourir les LIBRARY_ROOTS, détecter symlinks, vérifier cibles |
+| `filescanner.py` | Parcourir les `library_roots`, détecter symlinks, vérifier cibles |
 | `radarr.py` | Appels API Radarr + copie DB + chargement MovieFiles |
 | `sonarr.py` | Appels API Sonarr + copie DB + chargement EpisodeFiles |
 | `scanner.py` | Orchestrateur : lock, lancement async, lifecycle, matching |
+| `cleanup.py` | Nettoyage réel : DELETE API, suppression symlink, refresh, search |
+| `verifier.py` | Surveillance asynchrone : vérifie si les symlinks sont remplacés |
+| `scheduler.py` | Scans automatiques planifiés à intervalle configurable |
+| `discord.py` | Notifications via webhook Discord |
+| `config_service.py` | Lire/écrire `data/config.json`, valider, browse sécurisé |
 
 ## Routage
 
 | Router | Routes | Format |
 |--------|--------|--------|
-| `web.py` | `/` (dashboard) | HTML |
+| `web.py` | `/` | HTML |
 | `config_ui.py` | `/config` | HTML + fragments |
-| `scan.py` | `/scan`, `/scan/{source}`, `/scan/{id}/status` | HTML + JSON |
-| `results.py` | `/results`, `/results/{id}`, `/results/{id}/action` | HTML + JSON |
-| `reports.py` | `/reports`, `/api/stats` | HTML + JSON |
-| `config_service.py` (routier) | `/api/config`, `/api/browse`, `/api/config/test-*` | JSON |
+| `scan.py` | `/scan`, `/fastscan`, `/api/scan/*`, `/api/fast-scan` | HTML + JSON |
+| `results.py` | `/results`, `/results/{id}`, `/api/results/*` | HTML + JSON |
+| `reports.py` | `/reports`, `/api/stats`, `/api/scans/delete` | HTML + JSON |
+| `api_config.py` | `/api/config`, `/api/browse`, `/api/config/test-*` | JSON |
 | `health.py` | `/health` | JSON |

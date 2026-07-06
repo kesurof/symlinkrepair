@@ -5,31 +5,116 @@ description: Patterns HTMX, Alpine.js et Tailwind CSS
 
 # frontend
 
+## HTMX + Alpine — Règles strictes
+
+### Mise à jour du DOM après un swap HTMX
+- **NE PAS** utiliser Alpine `x-text`, `x-init`, ou des événements custom pour mettre à jour des éléments en dehors de la zone swap
+- **NE PAS** utiliser `htmx:afterSwap`, des callbacks JS, ou des événements dispatcher pour synchroniser Alpine
+- **TOUJOURS** utiliser `hx-swap-oob="true"` dans le partial HTMX pour mettre à jour les éléments du DOM parent
+- Les données de pagination (`total`, `itemIds`, `page`) sont stockées dans des attributs `data-*` sur un div caché dans le partial, pas dans Alpine
+- Alpine est utilisé UNIQUEMENT pour l'interactivité locale (sélection, batch actions, menus, modales), pas pour l'état global de la page
+
+### Pattern OOB (out-of-band)
+1. Dans le template parent : éléments statiques avec `id`, pas de binding Alpine
+2. Dans le partial : mêmes `id` avec `hx-swap-oob="true"` en fin de partial
+3. HTMX extrait les éléments OOB et les swap dans le parent automatiquement
+
+### Exemple
+```html
+{# Parent : élément statique avec id #}
+<span id="results-count" class="text-sm">{{ total }} résultats</span>
+
+{# Partial : OOB qui remplace l'élément parent #}
+<span id="results-count" hx-swap-oob="true" class="text-sm">{{ total }} résultats</span>
+```
+
+### Détection HTMX dans les routes
+```python
+is_htmx = request.headers.get("hx-request") == "true"
+template = "partials/results_content.html" if is_htmx else "results.html"
+```
+
+### Données du contexte accessibles depuis JS
+Stocker les métadonnées dans un div caché avec `data-*` :
+```html
+<div id="results-data"
+     data-total="{{ total }}"
+     data-item-ids="[{% for item in items %}{{ item.id }}{% if not loop.last %},{% endif %}{% endfor %}]"
+     style="display:none"></div>
+```
+
+Lecture depuis Alpine ou JS :
+```javascript
+const data = document.getElementById('results-data');
+const total = parseInt(data.dataset.total);
+const ids = JSON.parse(data.dataset.itemIds);
+```
+
 ## HTMX — interactions dynamiques
 
 ```html
-<!-- Chargement via attributs HTML -->
-<button hx-get="/scans" hx-target="#results" hx-swap="innerHTML">
-  Lancer l'analyse
-</button>
+<!-- Navigation avec filtres -->
+<select onchange="hxNavFromFilters()">
+    <option value="">Tous statuts</option>
+    {% for st in statuses %}
+    <option value="{{ st }}">{{ st }}</option>
+    {% endfor %}
+</select>
 
-<!-- Échanges courants -->
-hx-get="/url"          hx-target="#id"      hx-swap="innerHTML"
-hx-post="/url"         hx-target="#id"      hx-swap="outerHTML"
-hx-delete="/url"       hx-target="#id"      hx-swap="delete"
-hx-trigger="click"     hx-indicator="#spinner"
+<script>
+async function hxNavFromFilters() {
+    const params = new URLSearchParams();
+    const st = document.getElementById('filter-status').value;
+    if (st) params.set('status', st);
+    await htmx.ajax('GET', '/results?' + params.toString(), {
+        target: '#results-content', pushUrl: true
+    });
+}
+</script>
 ```
 
 ## Alpine.js — état UI local
 
-```html
-<div x-data="{ open: false }">
-    <button @click="open = !open">Toggle</button>
-    <div x-show="open">Contenu masqué/affiché</div>
-</div>
+```javascript
+function resultsApp() {
+    return {
+        selected: [],
+        batchMsg: '',
+        confirmDelete: false,
+
+        currentItemIds() {
+            const data = document.querySelector('#results-content #results-data');
+            return data ? JSON.parse(data.dataset.itemIds) : [];
+        },
+
+        toggleAll(checked) {
+            this.selected = checked ? [...this.currentItemIds()] : [];
+        },
+
+        async batchAction(action) {
+            const resp = await fetch('/api/results/batch', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({action, ids: this.selected})
+            });
+            if ((await resp.json()).ok) {
+                this.selected = [];
+                hxNavFromFilters();
+            }
+        }
+    }
+}
 ```
 
-Utiliser Alpine UNIQUEMENT pour les micro-interactions : menus, modales, compteurs, validation légère.
+## Actions batch disponibles
+
+| action | Bouton | Effet |
+|--------|--------|-------|
+| `process` | Traiter | DELETE API Radarr/Sonarr + recherche |
+| `fix` | Marquer corrigé | Flag manuel |
+| `ignore` | Ignorer | Cache le résultat |
+| `recheck` | Revérifier | Remet en file d'attente |
+| `delete` | Supprimer | Supprime la ligne (avec confirmation) |
 
 ## Tailwind CSS
 

@@ -7,15 +7,22 @@
 - [x] Import bases Radarr/Sonarr (docker cp + SQLite queries)
 - [x] Orchestrateur async avec Lock (Radarr et Sonarr en parallèle)
 - [x] Routes scan (POST déclenchement, stockage résultats en base)
-- [x] Actions de nettoyage : DELETE API, suppression symlink, refresh/search
-- [x] Actions : marquer corrigé, ignorer, revérifier
-- [x] Filtres page résultats : source, statut, recherche texte
+- [x] Nettoyage réel : DELETE API Radarr/Sonarr, suppression symlink, refresh/search
+- [x] Actions batch : Traiter (process), Marquer corrigé, Ignorer, Revérifier, Supprimer
+- [x] Filtres page résultats : source, statut, saison, recherche texte
+- [x] Pagination + filtres avancés (25/50/100 par page)
+- [x] Déduplication des résultats (GROUP BY symlink_path + source)
+- [x] Sélection multiple et actions batch
 - [x] Page de scan avec options (mode, limite) + confirmation 2 étapes
+- [x] Scan rapide éphémère (fastscan — filesystem only, sans persistance)
 - [x] Rapports et statistiques de base
-- [x] Dashboard avec stats temps réel (HTMX)
+- [x] Dashboard avec stats temps réel (HTMX via OOB refresh)
 - [x] Pages d'erreur (404, 500) avec fallback HTML/JSON
 - [x] Interface mobile-friendly (cartes vs tableau)
 - [x] Docker compose build + run vérifiés
+- [x] Notifications Discord (webhook configurable, envoi scan + nettoyage)
+- [x] Scans automatiques planifiés (intervalle configurable dans /config)
+- [x] Vérificateur asynchrone (surveille les symlinks en attente de remplacement)
 
 ## Ce qu'il reste à faire
 
@@ -25,6 +32,8 @@
 - Test de l'API config CRUD
 - Test de l'explorateur de dossiers
 - Mock des APIs Radarr/Sonarr pour tests unitaires
+- Test des actions batch (process, fix, ignore, recheck, delete)
+- Test de la déduplication (GROUP BY)
 
 ### 2. Sécurité
 
@@ -34,7 +43,7 @@
 
 ### 3. Améliorations UX
 
-- Pagination sur la page résultats (>100 items)
-- Filtre par saison pour Sonarr
-- Édition des préfixes surveillés dans l'explorateur (actuellement juste sélection)
 - Mode sombre ?
+- Tri des colonnes sur la page résultats
+- Export CSV des résultats filtrés
+- Historique des actions par résultat

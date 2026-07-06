@@ -1,10 +1,10 @@
 {% extends "base.html" %}
 {% block title %}Résultats — SymlinkRepair{% endblock %}
 {% block content %}
-<div x-data="resultsApp()" x-init='init({{ page }}, {{ total }}, {{ total_pages }})'>
+<div x-data="resultsApp()">
     <div class="flex items-center justify-between mb-4">
         <h2 class="text-xl font-semibold text-gray-800">Résultats</h2>
-        <span class="text-sm text-gray-500" x-text="total + ' résultat' + (total > 1 ? 's' : '')"></span>
+        <span id="results-count" class="text-sm text-gray-500">{{ total }} résultat{% if total > 1 %}s{% endif %}</span>
     </div>
 
     <div class="bg-white rounded-lg shadow-sm border p-3 mb-4">
@@ -56,12 +56,13 @@
 
     {% if total > 0 %}
     <div x-show="selected.length > 0 || true" class="bg-blue-50 border border-blue-200 rounded-lg p-2 mb-4 flex items-center gap-2 text-sm">
-        <span class="text-blue-700 font-medium" x-text="selected.length + ' sélectionné' + (selected.length > 1 ? 's' : '')"></span>
-        <template x-if="selected.length < total">
+        <span class="text-blue-700 font-medium" x-text="selected.length + ' sélectionné' + (selected.length > 1 ? 's' : '')">0 sélectionné</span>
+        <template x-if="selected.length < parseInt((document.getElementById('results-total-num')||{}).textContent||'0')">
             <button @click="selectAllPages()" class="text-blue-600 text-xs hover:underline ml-1">
-                Tout sélectionner (<span x-text="total"></span>)
+                Tout sélectionner (<span id="results-total-num">{{ total }}</span>)
             </button>
         </template>
+        <button @click="batchAction('process')" class="bg-amber-100 text-amber-700 px-2 py-1 rounded hover:bg-amber-200">Traiter</button>
         <button @click="batchAction('fix')" class="bg-green-100 text-green-700 px-2 py-1 rounded hover:bg-green-200">Marquer corrigé</button>
         <button @click="batchAction('ignore')" class="bg-gray-200 text-gray-700 px-2 py-1 rounded hover:bg-gray-300">Ignorer</button>
         <button @click="batchAction('recheck')" class="bg-blue-100 text-blue-700 px-2 py-1 rounded hover:bg-blue-200">Revérifier</button>
@@ -88,7 +89,7 @@
 </div>
 
 <script>
-// === Filtres : navigation HTMX sans Alpine (évite les doubles appels) ===
+// === Filtres : navigation HTMX ===
 function hxNavFromFilters() {
     const params = new URLSearchParams();
     const src = document.getElementById('filter-source').value;
@@ -118,18 +119,23 @@ document.getElementById('filter-source').addEventListener('change', function() {
 function resultsApp() {
     return {
         selected: [],
-        itemIds: [],
-        total: 0,
-        page: 1,
-        totalPages: 1,
         batchMsg: '',
         confirmDelete: false,
 
-        init(p, t, tp) {
-            this.page = p;
-            this.total = t;
-            this.totalPages = tp;
-            this.itemIds = [{% for item in items %}{{ item.id }}{% if not loop.last %},{% endif %}{% endfor %}];
+        currentItemIds() {
+            const data = document.querySelector('#results-content #results-data');
+            return data ? JSON.parse(data.dataset.itemIds) : [];
+        },
+
+        toggleAll(checked) {
+            if (checked) { this.selected = [...this.currentItemIds()]; }
+            else { this.selected = []; }
+        },
+
+        toggle(id) {
+            const idx = this.selected.indexOf(id);
+            if (idx === -1) { this.selected.push(id); }
+            else { this.selected.splice(idx, 1); }
         },
 
         async selectAllPages() {
@@ -147,17 +153,6 @@ function resultsApp() {
             const resp = await fetch('/api/results/ids?' + params.toString());
             const data = await resp.json();
             this.selected = data.ids || [];
-        },
-
-        toggle(id) {
-            const idx = this.selected.indexOf(id);
-            if (idx === -1) { this.selected.push(id); }
-            else { this.selected.splice(idx, 1); }
-        },
-
-        toggleAll(checked) {
-            if (checked) { this.selected = [...this.itemIds]; }
-            else { this.selected = []; }
         },
 
         async batchAction(action) {
@@ -181,20 +176,5 @@ function resultsApp() {
         }
     }
 }
-
-document.addEventListener('htmx:afterSwap', function(e) {
-    if (e.detail.target && e.detail.target.id === 'results-content') {
-        const data = document.getElementById('results-data');
-        if (data) {
-            const app = document.querySelector('[x-data="resultsApp()"]')?.__x;
-            if (app) {
-                app.$data.page = parseInt(data.dataset.page);
-                app.$data.totalPages = parseInt(data.dataset.totalPages);
-                app.$data.total = parseInt(data.dataset.total);
-                app.$data.itemIds = JSON.parse(data.dataset.itemIds);
-            }
-        }
-    }
-});
 </script>
 {% endblock %}

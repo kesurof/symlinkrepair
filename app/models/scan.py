@@ -26,6 +26,8 @@ class Result(BaseModel):
     season: int | None = None
     episode: int | None = None
     file_id: int | None = None
+    movie_id: int | None = None
+    series_id: int | None = None
     tags: str | None = None
     detection: str = "broken_symlink"
     status: str = "détecté"

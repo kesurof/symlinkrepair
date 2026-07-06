@@ -4,6 +4,7 @@
      data-total-pages="{{ total_pages }}"
      data-item-ids="[{% for item in items %}{{ item.id }}{% if not loop.last %},{% endif %}{% endfor %}]"
      style="display:none"></div>
+
 {% if items %}
 <div class="hidden md:block overflow-x-auto">
     <table class="w-full text-sm bg-white rounded-lg shadow-sm border">
@@ -11,7 +12,7 @@
             <tr>
                 <th class="px-3 py-2 w-10">
                     <input type="checkbox" @click="toggleAll($event.target.checked)"
-                           :checked="selected.length === itemIds.length && itemIds.length > 0"
+                           :checked="selected.length > 0 && selected.length === currentItemIds().length"
                            class="rounded">
                 </th>
                 <th class="px-3 py-2 font-medium text-gray-600">Source</th>
@@ -133,9 +134,14 @@
         </button>
     </div>
 </div>
+
+<span id="results-count" hx-swap-oob="true" class="text-sm text-gray-500">{{ total }} résultat{% if total > 1 %}s{% endif %}</span>
+<span id="results-total-num" hx-swap-oob="true">{{ total }}</span>
 {% else %}
 <div class="bg-white rounded-lg shadow-sm border p-8 text-center text-gray-400">
     <p>Aucun résultat. Lancez un scan depuis la page <a href="/scan" class="text-blue-600 hover:underline">Scan</a>.</p>
 </div>
-{% endif %}
 
+<span id="results-count" hx-swap-oob="true" class="text-sm text-gray-500">0 résultat</span>
+<span id="results-total-num" hx-swap-oob="true">0</span>
+{% endif %}

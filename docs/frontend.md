@@ -5,7 +5,10 @@
 - Pas de build : CDN pour HTMX, Alpine.js, Tailwind
 - Pages rendues côté serveur (Jinja2)
 - Interactions dynamiques via HTMX (fragments HTML)
-- État UI local via Alpine.js (`x-data`)
+- État UI local uniquement via Alpine.js (`x-data`)
+- Alpine NE stocke PAS l'état provenant du serveur (pagination, totaux, listes d'IDs)
+- Les données serveur sont lues depuis le DOM via des attributs `data-*`
+- Les mises à jour du DOM parent se font via `hx-swap-oob="true"` (pas d'événements custom)
 - Mobile first : cartes sur mobile, tableau sur desktop
 - Icônes SVG inline (pas de dépendance Font Awesome)
 
@@ -13,112 +16,145 @@
 
 ```
 templates/
-├── base.html           # Layout : header, footer, nav
+├── base.html           # Layout : nav, footer
 ├── index.html          # Dashboard
 ├── scan.html           # Page scan
-├── results.html        # Liste éléments
+├── fastscan.html       # Scan rapide
+├── results.html        # Liste résultats
 ├── detail.html         # Détail
 ├── reports.html        # Rapports
 ├── config.html         # Configuration + explorateur dossiers
+├── error.html          # Erreur générique
+├── 404.html            # Page non trouvée
 └── partials/
-    ├── scan_status.html
-    ├── result_card.html
-    ├── result_table.html
-    ├── folder_browser.html
-    └── stats_widget.html
+    ├── results_content.html    # Tableau résultats (swap HTMX)
+    └── reports_content.html    # Tableau rapports (swap HTMX)
 ```
 
 ## Patterns HTMX
 
-### Navigation
+### Navigation avec filtres
 
 ```html
-<nav>
-  <a href="/" hx-get="/" hx-target="#content" hx-push-url="true">Dashboard</a>
-  <a href="/scan" hx-get="/scan" hx-target="#content" hx-push-url="true">Scan</a>
-</nav>
-<main id="content">
-  {% block content %}{% endblock %}
-</main>
+<select id="filter-status" onchange="hxNavFromFilters()">
+    <option value="">Tous statuts</option>
+    {% for st in statuses %}
+    <option value="{{ st }}">{{ st }}</option>
+    {% endfor %}
+</select>
 ```
+
+```javascript
+async function hxNavFromFilters() {
+    const params = new URLSearchParams();
+    // ... lire les filtres depuis le DOM ...
+    await htmx.ajax('GET', '/results?' + params.toString(), {
+        target: '#results-content', pushUrl: true
+    });
+}
+```
+
+### Détection HTMX dans les routes
+
+```python
+is_htmx = request.headers.get("hx-request") == "true"
+template = "partials/results_content.html" if is_htmx else "results.html"
+```
+
+### Mise à jour du DOM parent via OOB
+
+Les données de pagination (total, itemIds) sont stockées dans un div caché avec `data-*` :
+
+```html
+<div id="results-data"
+     data-total="{{ total }}"
+     data-item-ids="[{% for item in items %}{{ item.id }}{% endfor %}]"
+     style="display:none"></div>
+```
+
+Les éléments du DOM parent sont mis à jour via `hx-swap-oob="true"` :
+
+```html
+<span id="results-count" hx-swap-oob="true" class="text-sm">{{ total }} résultats</span>
+```
+
+Lecture depuis Alpine :
+
+```javascript
+currentItemIds() {
+    const data = document.querySelector('#results-content #results-data');
+    return data ? JSON.parse(data.dataset.itemIds) : [];
+}
+```
+
+**Règle :** Ne JAMAIS utiliser Alpine `x-text`, `x-init` ou des événements custom pour synchroniser l'état serveur. Utiliser OOB + `data-*` attributes.
 
 ### Actions avec confirmation
 
 ```html
-<button hx-post="/results/42/process"
-        hx-target="#result-42"
-        hx-confirm="Confirmer le nettoyage réel de cet élément ?"
-        class="bg-red-500 text-white px-3 py-1 rounded">
-  Nettoyer
+<button @click="confirmDelete = true"
+        class="bg-red-100 text-red-700 px-2 py-1 rounded">
+  Supprimer
+</button>
+
+<div x-show="confirmDelete" class="fixed inset-0 bg-black/40 ...">
+    ...
+    <button @click="batchAction('delete'); confirmDelete = false">
+        Confirmer
+    </button>
+</div>
+```
+
+### Pagination
+
+```html
+<button hx-get="/results?page={{ page - 1 }}&{{ qp }}"
+        hx-target="#results-content" hx-push-url="true">
+    ←
 </button>
 ```
 
-### Polling pour scan long
-
-```html
-<div hx-get="/scan/status/{{ scan_id }}"
-     hx-trigger="every 2s"
-     hx-target="#scan-progress"
-     hx-swap="innerHTML">
-</div>
-```
+Les données OOB (`#results-count`, `#results-total-num`) sont incluses dans la réponse du partial et mises à jour automatiquement.
 
 ## Patterns Alpine.js
 
-### Explorateur de dossiers
+Alpine est réservé aux micro-interactions locales :
 
-```html
-<div x-data="folderBrowser()">
-  <template x-for="dir in directories">
-    <div @click="navigate(dir.path)">...</div>
-  </template>
-</div>
+### Sélection + batch actions
+
+```javascript
+function resultsApp() {
+    return {
+        selected: [],
+        batchMsg: '',
+
+        currentItemIds() {
+            const data = document.querySelector('#results-content #results-data');
+            return data ? JSON.parse(data.dataset.itemIds) : [];
+        },
+
+        toggleAll(checked) {
+            if (checked) { this.selected = [...this.currentItemIds()]; }
+            else { this.selected = []; }
+        },
+
+        async batchAction(action) {
+            // POST /api/results/batch avec {action, ids: this.selected}
+        }
+    }
+}
 ```
 
-### Filtres rapides
+### Confirmations
 
 ```html
-<div x-data="{ search: '', source: 'all' }">
-  <input x-model="search" placeholder="Rechercher...">
-  <select x-model="source">
-    <option value="all">Tous</option>
-    <option value="radarr">Radarr</option>
-    <option value="sonarr">Sonarr</option>
-  </select>
-  <!-- HTMX prend le relais pour la soumission -->
-  <button hx-get="/results"
-          hx-vals='{"q": search, "source": source}'
-          hx-target="#results">
-    Filtrer
-  </button>
-</div>
-```
-
-### Confirmation en 2 étapes pour actions destructives
-
-```html
-<div x-data="{ step: 'initial' }">
-  <template x-if="step === 'initial'">
-    <button @click="step = 'confirm'" class="bg-orange-500 text-white px-3 py-1 rounded">
-      Nettoyage réel
-    </button>
-  </template>
-  <template x-if="step === 'confirm'">
-    <div class="flex gap-2">
-      <span class="text-sm text-red-600">Confirmer ?</span>
-      <button @click="step = 'initial'" class="bg-gray-300 px-2 py-1 rounded text-sm">Annuler</button>
-      <button hx-post="/scan/radarr?mode=clean"
-              hx-target="#scan-results"
-              class="bg-red-600 text-white px-2 py-1 rounded text-sm">
-        Confirmer
-      </button>
-    </div>
-  </template>
+<div x-data="{ confirmDelete: false }">
+    <button @click="confirmDelete = true">Supprimer</button>
+    <div x-show="confirmDelete">...</div>
 </div>
 ```
 
 ## Responsive
 
-- `<table>` remplacé par des `<div class="card">` sur mobile
-- Classe `hidden md:table-cell` pour colonnes masquées
-- Navigation en hamburger menu sur mobile (`x-data="{ menuOpen: false }"`)
+- `<table>` remplacé par des `<div class="card">` sur mobile (`hidden md:block` / `md:hidden`)
+- Navigation en hamburger menu sur mobile (`x-data="{ mobileMenu: false }"`)

@@ -73,7 +73,7 @@ def browse_directory(path_str: str, allowed_roots: list[str]) -> dict | None:
     path = Path(path_str).resolve()
     allowed = [Path(r).resolve() for r in allowed_roots]
 
-    if not any(str(path).startswith(str(a)) for a in allowed):
+    if not any(path == a or a in path.parents for a in allowed):
         return None
 
     if not path.is_dir():
@@ -96,7 +96,9 @@ def browse_directory(path_str: str, allowed_roots: list[str]) -> dict | None:
         directories = []
 
     parent = str(path.parent) if path.parent != path else ""
-    can_go_up = bool(parent) and any(str(parent).startswith(str(a)) for a in allowed)
+    can_go_up = bool(parent) and any(
+        path.parent == a or a in path.parent.parents for a in allowed
+    )
 
     return {
         "current": str(path),

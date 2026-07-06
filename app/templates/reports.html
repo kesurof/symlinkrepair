@@ -1,35 +1,41 @@
 {% extends "base.html" %}
 {% block title %}Rapports — SymlinkRepair{% endblock %}
 {% block content %}
-<div x-data="reportsApp()" x-init='init({{ page }}, {{ total }}, {{ total_pages }})'>
+<div x-data="reportsApp()">
     <div class="flex items-center justify-between mb-4">
         <h2 class="text-xl font-semibold text-gray-800">Rapports d'exécution</h2>
-        <span class="text-sm text-gray-500" x-text="total + ' scan' + (total > 1 ? 's' : '')"></span>
+        <span id="reports-count" class="text-sm text-gray-500">{{ total }} scan{% if total > 1 %}s{% endif %}</span>
     </div>
 
     <div class="bg-white rounded-lg shadow-sm border p-3 mb-4">
         <div class="flex flex-wrap gap-2">
-            <select x-model="src" class="border rounded px-2 py-1 text-sm" @change="hxNav(1)">
+            <select id="filter-source"
+                    class="border rounded px-2 py-1 text-sm"
+                    onchange="hxNav(1)">
                 <option value="">Toutes sources</option>
                 {% for s in sources %}
                 <option value="{{ s }}" {% if s == active_source %}selected{% endif %}>{{ s }}</option>
                 {% endfor %}
             </select>
-            <select x-model="st" class="border rounded px-2 py-1 text-sm" @change="hxNav(1)">
+            <select id="filter-status"
+                    class="border rounded px-2 py-1 text-sm"
+                    onchange="hxNav(1)">
                 <option value="">Tous statuts</option>
                 {% for st in statuses %}
                 <option value="{{ st }}" {% if st == active_status %}selected{% endif %}>{{ st }}</option>
                 {% endfor %}
             </select>
-            <select x-model="md" class="border rounded px-2 py-1 text-sm" @change="hxNav(1)">
+            <select id="filter-mode"
+                    class="border rounded px-2 py-1 text-sm"
+                    onchange="hxNav(1)">
                 <option value="">Tous modes</option>
                 {% for m in modes %}
                 <option value="{{ m }}" {% if m == active_mode %}selected{% endif %}>{{ m }}</option>
                 {% endfor %}
             </select>
-            <input type="text" x-model="q" placeholder="Rechercher..."
+            <input type="text" id="filter-q" placeholder="Rechercher..."
                    class="border rounded px-2 py-1 text-sm flex-1 min-w-[200px]"
-                   @keydown.enter="hxNav(1)">
+                   onkeydown="if(event.key==='Enter') hxNav(1)">
         </div>
     </div>
 
@@ -56,35 +62,40 @@
 </div>
 
 <script>
+function hxNav(p) {
+    const params = new URLSearchParams();
+    const src = document.getElementById('filter-source').value;
+    const st = document.getElementById('filter-status').value;
+    const md = document.getElementById('filter-mode').value;
+    const q = document.getElementById('filter-q').value;
+    if (src) params.set('source', src);
+    if (st) params.set('status', st);
+    if (md) params.set('mode', md);
+    if (q) params.set('q', q);
+    if (p > 1) params.set('page', p);
+    htmx.ajax('GET', '/reports?' + params.toString(), {target: '#reports-content', pushUrl: true});
+}
+
+// === Alpine.js : sélection + batch actions ===
 function reportsApp() {
     return {
-        page: 1, totalPages: 1, total: 0, src: '', st: '', md: '', q: '',
-        selected: [], confirmDelete: false, scanIds: [],
+        selected: [],
+        confirmDelete: false,
 
-        init(p, t, tp) {
-            this.page = p; this.total = t; this.totalPages = tp;
-            this.scanIds = [{% for scan in scans %}{{ scan.id }}{% if not loop.last %},{% endif %}{% endfor %}];
+        currentScanIds() {
+            const data = document.querySelector('#reports-content #reports-data');
+            return data ? JSON.parse(data.dataset.scanIds) : [];
         },
 
-        hxNav(p) {
-            const params = new URLSearchParams();
-            if (this.src) params.set('source', this.src);
-            if (this.st) params.set('status', this.st);
-            if (this.md) params.set('mode', this.md);
-            if (this.q) params.set('q', this.q);
-            if (p > 1) params.set('page', p);
-            htmx.ajax('GET', '/reports?' + params.toString(), {target: '#reports-content', pushUrl: true});
+        toggleAll(checked) {
+            if (checked) { this.selected = [...this.currentScanIds()]; }
+            else { this.selected = []; }
         },
 
         toggle(id) {
             const idx = this.selected.indexOf(id);
             if (idx === -1) { this.selected.push(id); }
             else { this.selected.splice(idx, 1); }
-        },
-
-        toggleAll(checked) {
-            if (checked) { this.selected = [...this.scanIds]; }
-            else { this.selected = []; }
         },
 
         async batchDelete() {
@@ -102,16 +113,5 @@ function reportsApp() {
         }
     }
 }
-
-document.body.addEventListener('reports-update', function(e) {
-    const d = e.detail;
-    const app = document.querySelector('[x-data="reportsApp()"]')?.__x;
-    if (app) {
-        app.$data.page = d.page;
-        app.$data.totalPages = d.totalPages;
-        app.$data.total = d.total;
-        app.$data.scanIds = d.scanIds;
-    }
-});
 </script>
 {% endblock %}

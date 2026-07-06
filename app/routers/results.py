@@ -1,3 +1,4 @@
+import asyncio
 import logging
 
 from aiosqlite import Connection
@@ -250,24 +251,52 @@ async def batch_action(request: Request, db: Connection = Depends(get_db)):
             f" action_date = datetime('now') WHERE id IN ({','.join('?' for _ in ids)})",
             ids,
         )
+        await db.commit()
+        affected = len(ids)
     elif action == "fix":
         await db.execute(
             f"UPDATE results SET status = 'réparé', action = 'manual_fix',"
             f" action_date = datetime('now') WHERE id IN ({','.join('?' for _ in ids)})",
             ids,
         )
+        await db.commit()
+        affected = len(ids)
     elif action == "recheck":
         await db.execute(
             f"UPDATE results SET status = 'recherche',"
             f" action = NULL, action_date = NULL WHERE id IN ({','.join('?' for _ in ids)})",
             ids,
         )
+        await db.commit()
+        affected = len(ids)
     elif action == "delete":
         placeholders = ",".join("?" for _ in ids)
         await db.execute(f"DELETE FROM results WHERE id IN ({placeholders})", ids)
+        await db.commit()
+        affected = len(ids)
+    elif action == "process":
+        config = load_config()
+        ok_count = 0
+        for rid in ids:
+            cursor = await db.execute("SELECT * FROM results WHERE id = ?", (rid,))
+            row = await cursor.fetchone()
+            if not row:
+                continue
+            result = dict(row)
+            outcome = await process_single(result)
+            if outcome["ok"]:
+                ok_count += 1
+                await db.execute(
+                    "UPDATE results SET status = 'en_attente', action = 'api_delete',"
+                    " action_date = datetime('now') WHERE id = ?",
+                    (rid,),
+                )
+                await db.commit()
+                await notify_cleanup(config, result, outcome.get("actions", {}))
+            await asyncio.sleep(0.1)
+        affected = ok_count
     else:
         return JSONResponse({"ok": False, "error": f"Action inconnue: {action}"}, status_code=400)
 
-    await db.commit()
-    logger.info("Batch %s: %d results affected", action, len(ids))
-    return {"ok": True, "affected": len(ids)}
+    logger.info("Batch %s: %d results affected", action, affected)
+    return {"ok": True, "affected": affected}

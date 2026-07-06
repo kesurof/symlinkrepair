@@ -66,9 +66,12 @@ async def reports_page(
     cursor_md = await db.execute("SELECT DISTINCT mode FROM scans")
     modes = [r[0] for r in await cursor_md.fetchall()]
 
+    is_htmx = request.headers.get("hx-request") == "true"
+    template = "partials/reports_content.html" if is_htmx else "reports.html"
+
     return templates.TemplateResponse(
         request,
-        "reports.html",
+        template,
         {
             "scans": scans,
             "sources": sources,
