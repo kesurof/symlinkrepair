@@ -2,19 +2,23 @@ services:
   app:
     build: .
     ports:
-      - "8000:8000"
+      - "${PORT:-8000}:8000"
+    restart: unless-stopped
     volumes:
       - ./data:/app/data
-      - /home/kesurof:/home/kesurof
+      # Montez ici les dossiers contenant vos bibliothèques médias
+      # (library_roots configurés dans l'interface Paramètres)
+      # Exemple :
+      #   - /mnt:/mnt
+      #   - /home/<user>/medias:/home/<user>/medias
       - /mnt:/mnt
       - /var/run/docker.sock:/var/run/docker.sock
+    env_file: .env
     environment:
       - DATABASE_URL=sqlite+aiosqlite:///data/symlinkrepair.db
       - DATA_DIR=/app/data
-      - LOG_FORMAT=pretty
-    networks:
-      - traefik_proxy
-
-networks:
-  traefik_proxy:
-    external: true
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
