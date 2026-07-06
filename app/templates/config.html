@@ -1,11 +1,18 @@
 {% extends "base.html" %}
 {% block title %}Paramètres — SymlinkRepair{% endblock %}
 {% block content %}
-<div x-data="configApp()" x-init="loadConfig()" class="max-w-4xl mx-auto pb-24 md:pb-0">
+<div x-data="configApp()" x-init="loadConfig()" class="pb-24 md:pb-0">
     <div class="flex items-center justify-between mb-6">
         <h2 class="text-lg font-semibold text-gray-800 dark:text-gray-200">Paramètres</h2>
+        <button @click="helpOpen = !helpOpen"
+                class="w-7 h-7 rounded-full border border-gray-300 dark:border-gray-600 text-gray-400 hover:text-brand-600 dark:hover:text-brand-400 hover:border-brand-600 dark:hover:border-brand-400 flex items-center justify-center transition-colors shrink-0"
+                title="Aide">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M9.879 7.519c1.171-1.025 3.071-1.025 4.242 0 1.172 1.025 1.172 2.687 0 3.712-.203.179-.43.326-.67.442-.745.361-1.45.999-1.45 1.827v.75M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-9 5.25h.008v.008H12v-.008z"/>
+            </svg>
+        </button>
         <button @click="wizardStep = 1"
-                class="text-xs font-medium text-brand-600 dark:text-brand-400 hover:underline flex items-center gap-1">
+                class="inline-flex items-center gap-1.5 bg-brand-100 dark:bg-brand-900/30 text-brand-700 dark:text-brand-300 px-3 py-1.5 rounded-lg text-sm font-medium hover:bg-brand-200 dark:hover:bg-brand-900/50 hover:shadow-sm transition-all">
             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
                 <path stroke-linecap="round" stroke-linejoin="round" d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09zM18.259 8.715L18 9.75l-.259-1.035a3.375 3.375 0 00-2.455-2.456L14.25 6l1.036-.259a3.375 3.375 0 002.455-2.456L18 2.25l.259 1.035a3.375 3.375 0 002.455 2.456L21.75 6l-1.036.259a3.375 3.375 0 00-2.455 2.456z"/>
             </svg>
@@ -293,6 +300,28 @@
                         Vérifie si les symlinks traités ont été remplacés. Au bout de la durée max, une recherche forcée est déclenchée.
                     </p>
                 </div>
+                <div class="border-t border-gray-100 dark:border-gray-800 pt-4">
+                    <h4 class="text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">Re-tentatives automatiques</h4>
+                    <label class="flex items-center gap-2 cursor-pointer">
+                        <input type="checkbox" x-model="cfg.retryer.enabled" class="rounded border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800">
+                        <span class="text-sm text-gray-700 dark:text-gray-300">Re-tenter les éléments non remplacés</span>
+                    </label>
+                    <div x-show="cfg.retryer.enabled" class="mt-3 ml-6 space-y-3">
+                        <div>
+                            <label class="block text-sm text-gray-500 dark:text-gray-400 mb-1">Intervalle (minutes)</label>
+                            <input type="number" x-model="cfg.retryer.interval_minutes" min="10" max="1440"
+                                   class="w-24 border border-gray-200 dark:border-gray-700 rounded-lg px-3 py-2 text-sm bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-200">
+                        </div>
+                        <div>
+                            <label class="block text-sm text-gray-500 dark:text-gray-400 mb-1">Max tentatives par jour</label>
+                            <input type="number" x-model="cfg.retryer.max_daily_retries" min="1" max="24"
+                                   class="w-24 border border-gray-200 dark:border-gray-700 rounded-lg px-3 py-2 text-sm bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-200">
+                        </div>
+                    </div>
+                    <p class="text-xs text-gray-400 dark:text-gray-500 mt-2">
+                        Relance automatiquement une recherche pour les éléments non remplacés.
+                    </p>
+                </div>
             </div>
         </section>
 
@@ -572,6 +601,7 @@ function configApp() {
                defaults: { limit: 50, rescan: true, search: true, keep_symlinks: false },
                scheduler: { radarr_enabled: false, radarr_interval_hours: 3, sonarr_enabled: false, sonarr_interval_hours: 3 },
                verifier: { enabled: true, interval_minutes: 3, max_duration_minutes: 60 },
+               retryer: { enabled: false, interval_minutes: 60, max_daily_retries: 3 },
                browse_roots: ['/home', '/mnt', '/data'] },
         showRadarrKey: false,
         showSonarrKey: false,
@@ -724,4 +754,50 @@ function configApp() {
     }
 }
 </script>
+
+{% endblock %}
+{% block help_modal %}
+<div x-show="helpOpen" class="fixed inset-0 bg-black/40 dark:bg-black/60 flex items-end md:items-center justify-center z-50" @click.self="helpOpen = false" x-cloak>
+    <div class="bg-white dark:bg-gray-900 rounded-t-2xl md:rounded-2xl shadow-xl w-full md:max-w-lg md:mx-4 max-h-[80vh] overflow-y-auto slide-up">
+        <div class="sticky top-0 bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-800 px-6 py-4 flex items-center gap-3 z-10">
+            <div class="w-8 h-8 rounded-full bg-brand-100 dark:bg-brand-900/50 flex items-center justify-center">
+                <svg class="w-5 h-5 text-brand-600 dark:text-brand-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.5">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M9.594 3.94c.09-.542.56-.94 1.11-.94h2.593c.55 0 1.02.398 1.11.94l.213 1.281c.063.374.313.686.645.87.074.04.147.083.22.127.324.196.72.257 1.075.124l1.217-.456a1.125 1.125 0 011.37.49l1.296 2.247a1.125 1.125 0 01-.26 1.431l-1.003.827c-.293.24-.438.613-.431.992a6.759 6.759 0 010 .255c-.007.378.138.75.43.99l1.005.828c.424.35.534.954.26 1.43l-1.298 2.247a1.125 1.125 0 01-1.369.491l-1.217-.456c-.355-.133-.75-.072-1.076.124a6.57 6.57 0 01-.22.128c-.331.183-.581.495-.644.869l-.213 1.28c-.09.543-.56.941-1.11.941h-2.594c-.55 0-1.02-.398-1.11-.94l-.213-1.281c-.062-.374-.312-.686-.644-.87a6.52 6.52 0 01-.22-.127c-.325-.196-.72-.257-1.076-.124l-1.217.456a1.125 1.125 0 01-1.369-.49l-1.297-2.247a1.125 1.125 0 01.26-1.431l1.004-.827c.292-.24.437-.613.43-.992a6.932 6.932 0 010-.255c.007-.378-.138-.75-.43-.99l-1.004-.828a1.125 1.125 0 01-.26-1.43l1.297-2.247a1.125 1.125 0 011.37-.491l1.216.456c.356.133.751.072 1.076-.124.072-.044.146-.087.22-.128.332-.183.582-.495.644-.869l.214-1.281z"/>
+                </svg>
+            </div>
+            <h3 class="font-semibold text-gray-800 dark:text-gray-200">Configuration</h3>
+            <button @click="helpOpen = false" class="ml-auto text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 p-1 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800">✕</button>
+        </div>
+        <div class="px-6 py-4 space-y-4 text-sm text-gray-600 dark:text-gray-400 leading-relaxed">
+            <div class="flex gap-3 p-3 bg-brand-50 dark:bg-brand-900/10 rounded-lg">
+                <div class="w-6 h-6 rounded-full bg-brand-500 text-white flex items-center justify-center shrink-0 text-xs font-bold">1</div>
+                <div>
+                    <span class="font-medium text-gray-800 dark:text-gray-200">Connexion aux applications</span>
+                    <p class="mt-1">Renseignez les adresses et clés API de vos serveurs Radarr et Sonarr. Vous pouvez aussi choisir les dossiers où chercher les fichiers.</p>
+                </div>
+            </div>
+            <div class="flex gap-3 p-3 bg-blue-50 dark:bg-blue-900/10 rounded-lg">
+                <div class="w-6 h-6 rounded-full bg-blue-500 text-white flex items-center justify-center shrink-0 text-xs font-bold">2</div>
+                <div>
+                    <span class="font-medium text-gray-800 dark:text-gray-200">Scans automatiques</span>
+                    <p class="mt-1">Planifiez des analyses régulières pour surveiller automatiquement vos bibliothèques sans intervention manuelle.</p>
+                </div>
+            </div>
+            <div class="flex gap-3 p-3 bg-green-50 dark:bg-green-900/10 rounded-lg">
+                <div class="w-6 h-6 rounded-full bg-green-500 text-white flex items-center justify-center shrink-0 text-xs font-bold">3</div>
+                <div>
+                    <span class="font-medium text-gray-800 dark:text-gray-200">Vérification et re-tentatives</span>
+                    <p class="mt-1">Le vérifieur surveille les fichiers traités et attend leur remplacement. Les re-tentatives automatiques relancent la recherche pour les fichiers non remplacés.</p>
+                </div>
+            </div>
+            <div class="flex gap-3 p-3 bg-amber-50 dark:bg-amber-900/10 rounded-lg">
+                <div class="w-6 h-6 rounded-full bg-amber-500 text-white flex items-center justify-center shrink-0 text-xs font-bold">4</div>
+                <div>
+                    <span class="font-medium text-gray-800 dark:text-gray-200">Notifications</span>
+                    <p class="mt-1">Recevez un message sur Discord après chaque nettoyage pour suivre l'activité à distance.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
 {% endblock %}

@@ -200,7 +200,7 @@ async def process_season(result: dict, db: Connection, scan_id: int) -> dict:
             actions["symlink_removed"] = actions["symlink_removed"] or outcome["symlink_removed"]
             await db.execute(
                 "UPDATE results SET status = 'en_attente', action = 'api_delete',"
-                " action_date = datetime('now')"
+                " search_count = search_count + 1, action_date = datetime('now')"
                 " WHERE scan_id = ? AND source = 'sonarr' AND series_id = ?"
                 " AND season = ? AND file_id = ?",
                 (scan_id, series_id, season, target.get("file_id")),

@@ -10,6 +10,8 @@ from app.database import init_db
 from app.error_handlers import general_error_handler, not_found_handler
 from app.logging_config import setup_logging
 from app.routers import api_config, config_ui, health, reports, results, scan, web
+from app.services.retryer import start as start_retryer
+from app.services.retryer import stop as stop_retryer
 from app.services.scheduler import start as start_scheduler
 from app.services.scheduler import stop as stop_scheduler
 from app.services.verifier import start as start_verifier
@@ -26,9 +28,11 @@ async def lifespan(app: FastAPI):
     await init_db()
     start_scheduler()
     start_verifier()
+    start_retryer()
     logger.info("SymlinkRepair started")
     yield
     logger.info("SymlinkRepair shutting down")
+    stop_retryer()
     stop_verifier()
     stop_scheduler()
 

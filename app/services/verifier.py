@@ -59,6 +59,32 @@ def pending_count() -> int:
     return len(_pending)
 
 
+def get_status(symlink_path: str) -> dict | None:
+    meta = _pending.get(symlink_path)
+    if not meta:
+        return None
+    now = datetime.now(timezone.utc)
+    elapsed = (now - meta["cycle_start"]).total_seconds()
+    return {
+        "pending": True,
+        "added_at": meta["added_at"].isoformat(),
+        "cycle_start": meta["cycle_start"].isoformat(),
+        "search_done": meta["search_done"],
+        "elapsed_seconds": int(elapsed),
+        "remaining_seconds": max(0, int(_max_duration - elapsed)),
+        "interval_seconds": int(_interval),
+        "max_duration_seconds": int(_max_duration),
+    }
+
+
+def remove(symlink_path: str) -> bool:
+    if symlink_path in _pending:
+        _pending.pop(symlink_path)
+        logger.info("Verifier removed: %s", symlink_path)
+        return True
+    return False
+
+
 def _check_exists(symlink_path: str) -> bool:
     try:
         if os.path.islink(symlink_path):

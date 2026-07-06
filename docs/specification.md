@@ -50,7 +50,7 @@ Par élément, sélection, film, série ou saison entière.
 | Action | Effet | Statut résultant |
 |--------|-------|------------------|
 | **Traiter** | DELETE API Radarr/Sonarr + recherche | `en_attente` |
-| **Marquer corrigé** | Flag manuel | `remplacé` |
+| **Marquer remplacé** | Flag manuel | `remplacé` |
 | **Ignorer** | Cache le résultat | `ignoré` |
 | **Revérifier** | Remet en file d'attente | `recherche` |
 | **Supprimer** | Supprime la ligne en base | — |

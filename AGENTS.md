@@ -77,10 +77,11 @@ make docker
 
 ### Actions résultats
 - `POST /api/results/{id}/ignore` — Ignorer un résultat
-- `POST /api/results/{id}/recheck` — Revérifier un résultat
 - `POST /api/results/{id}/fix` — Marquer manuellement comme corrigé
 - `POST /api/results/{id}/process` — Traitement réel : DELETE API + recherche
-- `POST /api/results/batch` — Action groupée (process/fix/ignore/recheck/delete)
+- `GET /api/results/{id}/verifier` — Statut du cycle de vérification
+- `POST /api/results/{id}/stop-verifier` — Arrêter le cycle de vérification (→ `non_remplacé` / `abandon`)
+- `POST /api/results/batch` — Action groupée (process/fix/ignore/delete)
 - `GET /api/results/ids` — IDs filtrés (pour selectAll batch)
 
 ### Configuration
@@ -92,6 +93,7 @@ make docker
 
 ### Statistiques
 - `GET /api/stats` — Statistiques globales
+- `GET /api/scans/ids` — IDs filtrés des scans (pour selectAll batch)
 - `POST /api/scans/delete` — Supprimer des scans et leurs résultats
 
 ## Base de données
@@ -100,13 +102,12 @@ make docker
 - Tables : `scans`, `results` (avec index sur scan_id, status, created_at)
 
 ## Statuts des résultats
-`détecté` → `recherche` → `en_attente` → `remplacé` / `non_remplacé` / `ignoré` / `échoué`
+`détecté` → `en_attente` → `remplacé` / `non_remplacé` / `ignoré` / `échoué`
 
 ## Actions batch disponibles
 - **Traiter** (`process`) — DELETE API Radarr/Sonarr + recherche auto
-- **Marquer corrigé** (`fix`) — Flag manuel (symlink marqué comme remplacé)
+- **Marquer remplacé** (`fix`) — Flag manuel (symlink marqué comme remplacé)
 - **Ignorer** (`ignore`) — Cache le résultat
-- **Revérifier** (`recheck`) — Remet en file d'attente de vérification
 - **Supprimer** (`delete`) — Supprime la ligne en base
 
 ## Sécurité
@@ -130,5 +131,5 @@ make docker
 - [x] Notifications Discord (webhook configurable, envoi scan + nettoyage)
 - [x] Scans automatiques planifiés (intervalle configurable dans /config)
 - [x] Vérificateur asynchrone (surveille remplacement des symlinks)
-- [x] Sélection multiple et actions batch (process, fix, ignore, recheck, delete)
+- [x] Sélection multiple et actions batch (process, fix, ignore, delete)
 - [x] **Refonte UI** : sidebar desktop + bottom nav mobile, dark mode, mobile-first, Heroicons

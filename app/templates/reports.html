@@ -7,9 +7,16 @@
 <div x-data="reportsApp()">
     <div class="flex items-center justify-between mb-4">
         <h2 class="text-lg font-semibold text-gray-800 dark:text-gray-200">Rapports d'exécution</h2>
+        <button @click="helpOpen = !helpOpen"
+                class="w-7 h-7 rounded-full border border-gray-300 dark:border-gray-600 text-gray-400 hover:text-brand-600 dark:hover:text-brand-400 hover:border-brand-600 dark:hover:border-brand-400 flex items-center justify-center transition-colors shrink-0"
+                title="Aide">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M9.879 7.519c1.171-1.025 3.071-1.025 4.242 0 1.172 1.025 1.172 2.687 0 3.712-.203.179-.43.326-.67.442-.745.361-1.45.999-1.45 1.827v.75M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-9 5.25h.008v.008H12v-.008z"/>
+            </svg>
+        </button>
         <div class="flex items-center gap-3">
             <span id="reports-count" class="text-sm text-gray-500 dark:text-gray-400">{{ total }} scan{% if total > 1 %}s{% endif %}</span>
-            <button @click="showBatch = !showBatch"
+            <button @click="showBatch = !showBatch; if(!showBatch) selected = []"
                     class="text-xs font-medium text-brand-600 dark:text-brand-400 hover:underline"
                     x-text="showBatch ? 'Annuler' : 'Sélectionner'">
             </button>
@@ -50,14 +57,32 @@
                        class="w-full border border-gray-200 dark:border-gray-700 rounded-lg pl-9 pr-3 py-2 text-sm bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-200 placeholder-gray-400 dark:placeholder-gray-500"
                        onkeydown="if(event.key==='Enter') hxNav(1)">
             </div>
+            <select id="filter-perpage"
+                    class="border border-gray-200 dark:border-gray-700 rounded-lg px-3 py-2 text-sm bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-200"
+                    onchange="hxNav(1)">
+                <option value="25" {% if per_page == 25 %}selected{% endif %}>25 / page</option>
+                <option value="50" {% if per_page == 50 %}selected{% endif %}>50 / page</option>
+                <option value="100" {% if per_page == 100 %}selected{% endif %}>100 / page</option>
+            </select>
         </div>
     </div>
 
-    {# === Batch bar === #}
-    <div x-show="showBatch && selected.length > 0" class="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl p-3 mb-4 flex items-center gap-2 text-sm" x-cloak>
-        <span class="text-red-700 dark:text-red-300 font-medium" x-text="selected.length + ' sélectionné' + (selected.length > 1 ? 's' : '')"></span>
-        <button @click="confirmDelete = true" class="bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300 px-2.5 py-1.5 rounded-lg hover:bg-red-200 dark:hover:bg-red-900/50 transition-colors">Supprimer</button>
-        <button @click="selected = []; showBatch = false" class="text-gray-400 hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-300 ml-auto p-1">✕</button>
+    {# === Barre batch sticky (bas) === #}
+    <div x-show="showBatch && selected.length > 0"
+         class="fixed bottom-0 left-0 right-0 z-40 bg-white dark:bg-gray-900 border-t border-gray-200 dark:border-gray-800 shadow-lg py-[0.9rem] safe-bottom"
+         :class="$store.app.sidebarOpen ? 'md:ml-56' : 'md:ml-16'" x-cloak>
+        <div class="max-w-7xl mx-auto flex items-center gap-2 text-sm px-4">
+            <span class="text-brand-700 dark:text-brand-300 font-medium shrink-0" x-text="selected.length + ' sélectionné' + (selected.length > 1 ? 's' : '')"></span>
+            <template x-if="selected.length < parseInt((document.getElementById('reports-total-num')||{}).textContent||'0')">
+                <button @click="selectAllPages()" class="text-brand-600 dark:text-brand-400 text-xs hover:underline shrink-0">
+                    Tout sélectionner
+                </button>
+            </template>
+            <div class="flex gap-1.5 flex-wrap ml-2">
+                <button @click="confirmDelete = true" class="bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300 px-2.5 py-1.5 rounded-lg hover:bg-red-200 dark:hover:bg-red-900/50 transition-colors text-xs font-medium">Supprimer</button>
+            </div>
+            <button @click="selected = []" class="text-gray-400 hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-300 ml-auto p-1 shrink-0">✕</button>
+        </div>
     </div>
 
     {# === Confirmation modale === #}
@@ -84,10 +109,12 @@ function hxNav(p) {
     const st = document.getElementById('filter-status').value;
     const md = document.getElementById('filter-mode').value;
     const q = document.getElementById('filter-q').value;
+    const pp = document.getElementById('filter-perpage').value;
     if (src) params.set('source', src);
     if (st) params.set('status', st);
     if (md) params.set('mode', md);
     if (q) params.set('q', q);
+    if (pp !== '25') params.set('per_page', pp);
     if (p > 1) params.set('page', p);
     htmx.ajax('GET', '/reports?' + params.toString(), {target: '#reports-content', pushUrl: true});
 }
@@ -114,6 +141,21 @@ function reportsApp() {
             else { this.selected.splice(idx, 1); }
         },
 
+        async selectAllPages() {
+            const params = new URLSearchParams();
+            const src = document.getElementById('filter-source').value;
+            const st = document.getElementById('filter-status').value;
+            const md = document.getElementById('filter-mode').value;
+            const q = document.getElementById('filter-q').value;
+            if (src) params.set('source', src);
+            if (st) params.set('status', st);
+            if (md) params.set('mode', md);
+            if (q) params.set('q', q);
+            const resp = await fetch('/api/scans/ids?' + params.toString());
+            const data = await resp.json();
+            this.selected = data.ids || [];
+        },
+
         async batchDelete() {
             const resp = await fetch('/api/scans/delete', {
                 method: 'POST',
@@ -130,4 +172,36 @@ function reportsApp() {
     }
 }
 </script>
+
+{% endblock %}
+{% block help_modal %}
+<div x-show="helpOpen" class="fixed inset-0 bg-black/40 dark:bg-black/60 flex items-end md:items-center justify-center z-50" @click.self="helpOpen = false" x-cloak>
+    <div class="bg-white dark:bg-gray-900 rounded-t-2xl md:rounded-2xl shadow-xl w-full md:max-w-lg md:mx-4 max-h-[80vh] overflow-y-auto slide-up">
+        <div class="sticky top-0 bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-800 px-6 py-4 flex items-center gap-3 z-10">
+            <div class="w-8 h-8 rounded-full bg-brand-100 dark:bg-brand-900/50 flex items-center justify-center">
+                <svg class="w-5 h-5 text-brand-600 dark:text-brand-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.5">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M3 13.125C3 12.504 3.504 12 4.125 12h2.25c.621 0 1.125.504 1.125 1.125v6.75C7.5 20.496 6.996 21 6.375 21h-2.25A1.125 1.125 0 013 19.875v-6.75zM9.75 8.625c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125v11.25c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V8.625z"/>
+                </svg>
+            </div>
+            <h3 class="font-semibold text-gray-800 dark:text-gray-200">Historique des analyses</h3>
+            <button @click="helpOpen = false" class="ml-auto text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 p-1 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800">✕</button>
+        </div>
+        <div class="px-6 py-4 space-y-4 text-sm text-gray-600 dark:text-gray-400 leading-relaxed">
+            <div class="flex gap-3 p-3 bg-brand-50 dark:bg-brand-900/10 rounded-lg">
+                <div class="w-6 h-6 rounded-full bg-brand-500 text-white flex items-center justify-center shrink-0 text-xs font-bold">1</div>
+                <div>
+                    <span class="font-medium text-gray-800 dark:text-gray-200">Lire l'historique</span>
+                    <p class="mt-1">Chaque scan effectué est enregistré dans cette page. Vous pouvez voir la date, le type d'analyse et les résultats obtenus.</p>
+                </div>
+            </div>
+            <div class="flex gap-3 p-3 bg-amber-50 dark:bg-amber-900/10 rounded-lg">
+                <div class="w-6 h-6 rounded-full bg-amber-500 text-white flex items-center justify-center shrink-0 text-xs font-bold">2</div>
+                <div>
+                    <span class="font-medium text-gray-800 dark:text-gray-200">Comprendre les chiffres</span>
+                    <p class="mt-1">Symlinks : nombre total de liens analysés. Cassés : liens brisés détectés. Traités : liens qui ont pu être associés à un fichier Radarr ou Sonarr.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
 {% endblock %}

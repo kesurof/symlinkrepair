@@ -6,6 +6,13 @@
 <div x-data="scanApp('{{ active_tab }}', {{ default_limit }})">
     <div class="flex items-center justify-between mb-6">
         <h2 class="text-lg font-semibold text-gray-800 dark:text-gray-200">Lancer un scan</h2>
+        <button @click="helpOpen = !helpOpen"
+                class="w-7 h-7 rounded-full border border-gray-300 dark:border-gray-600 text-gray-400 hover:text-brand-600 dark:hover:text-brand-400 hover:border-brand-600 dark:hover:border-brand-400 flex items-center justify-center transition-colors shrink-0"
+                title="Aide">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M9.879 7.519c1.171-1.025 3.071-1.025 4.242 0 1.172 1.025 1.172 2.687 0 3.712-.203.179-.43.326-.67.442-.745.361-1.45.999-1.45 1.827v.75M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-9 5.25h.008v.008H12v-.008z"/>
+            </svg>
+        </button>
     </div>
 
     {# === Tabs === #}
@@ -413,4 +420,43 @@ function scanApp(initialTab, defaultLimit) {
     };
 }
 </script>
+
+{% endblock %}
+{% block help_modal %}
+<div x-show="helpOpen" class="fixed inset-0 bg-black/40 dark:bg-black/60 flex items-end md:items-center justify-center z-50" @click.self="helpOpen = false" x-cloak>
+    <div class="bg-white dark:bg-gray-900 rounded-t-2xl md:rounded-2xl shadow-xl w-full md:max-w-lg md:mx-4 max-h-[80vh] overflow-y-auto slide-up">
+        <div class="sticky top-0 bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-800 px-6 py-4 flex items-center gap-3 z-10">
+            <div class="w-8 h-8 rounded-full bg-brand-100 dark:bg-brand-900/50 flex items-center justify-center">
+                <svg class="w-5 h-5 text-brand-600 dark:text-brand-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.5">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z"/>
+                </svg>
+            </div>
+            <h3 class="font-semibold text-gray-800 dark:text-gray-200">Lancer une analyse</h3>
+            <button @click="helpOpen = false" class="ml-auto text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 p-1 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800">✕</button>
+        </div>
+        <div class="px-6 py-4 space-y-4 text-sm text-gray-600 dark:text-gray-400 leading-relaxed">
+            <div class="flex gap-3 p-3 bg-brand-50 dark:bg-brand-900/10 rounded-lg">
+                <div class="w-6 h-6 rounded-full bg-brand-500 text-white flex items-center justify-center shrink-0 text-xs font-bold">1</div>
+                <div>
+                    <span class="font-medium text-gray-800 dark:text-gray-200">Scanner vos bibliothèques</span>
+                    <p class="mt-1">Lancez un scan complet pour détecter les symlinks cassés dans vos bibliothèques Radarr et Sonarr. L'analyse compare les fichiers présents sur le disque avec ceux enregistrés dans vos applications.</p>
+                </div>
+            </div>
+            <div class="flex gap-3 p-3 bg-amber-50 dark:bg-amber-900/10 rounded-lg">
+                <div class="w-6 h-6 rounded-full bg-amber-500 text-white flex items-center justify-center shrink-0 text-xs font-bold">2</div>
+                <div>
+                    <span class="font-medium text-gray-800 dark:text-gray-200">Mode simulation</span>
+                    <p class="mt-1">Par défaut, le scan fonctionne en mode simulation : il liste les problèmes sans rien modifier. Activez le mode réel seulement quand vous êtes prêt à nettoyer automatiquement.</p>
+                </div>
+            </div>
+            <div class="flex gap-3 p-3 bg-blue-50 dark:bg-blue-900/10 rounded-lg">
+                <div class="w-6 h-6 rounded-full bg-blue-500 text-white flex items-center justify-center shrink-0 text-xs font-bold">3</div>
+                <div>
+                    <span class="font-medium text-gray-800 dark:text-gray-200">Scan rapide</span>
+                    <p class="mt-1">Pour une vérification express sans enregistrement dans l'historique. Les résultats disparaissent au prochain rechargement.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
 {% endblock %}
