@@ -68,17 +68,11 @@ def _create_radarr_db(path: str):
             Id INTEGER PRIMARY KEY, Title TEXT, Year INTEGER
         )
     """)
+    conn.execute("INSERT INTO MovieMetadata (Id, Title, Year) VALUES (1, 'Test Movie', 2024)")
     conn.execute(
-        "INSERT INTO MovieMetadata (Id, Title, Year) VALUES (1, 'Test Movie', 2024)"
+        "INSERT INTO Movies (Id, Path, Tags, MovieMetadataId) VALUES (1, '/movies/Test', '[]', 1)"
     )
-    conn.execute(
-        "INSERT INTO Movies (Id, Path, Tags, MovieMetadataId)"
-        " VALUES (1, '/movies/Test', '[]', 1)"
-    )
-    conn.execute(
-        "INSERT INTO MovieFiles (Id, MovieId, RelativePath)"
-        " VALUES (10, 1, 'test.mkv')"
-    )
+    conn.execute("INSERT INTO MovieFiles (Id, MovieId, RelativePath) VALUES (10, 1, 'test.mkv')")
     conn.commit()
     conn.close()
 

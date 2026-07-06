@@ -63,12 +63,16 @@ def scan_library_roots(
                     if limit and len(results) >= limit:
                         logger.info(
                             "Scan finished (limit): %d symlinks, %d broken on %s",
-                            total, broken, root_short,
+                            total,
+                            broken,
+                            root_short,
                         )
                         return results, total, matching, broken
 
     logger.info(
         "Scan finished: %d symlinks, %d broken, %d matching",
-        total, broken, matching,
+        total,
+        broken,
+        matching,
     )
     return results, total, matching, broken

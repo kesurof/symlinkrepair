@@ -97,7 +97,10 @@ async def _delete_one(result: dict, config, delete_season: bool = False) -> dict
         title = result.get("media_title") or "?"
         logger.info(
             "Deleted %s file_id=%d title=%s path=%s",
-            source, file_id, title, symlink_path,
+            source,
+            file_id,
+            title,
+            symlink_path,
         )
         verifier_add(
             symlink_path=symlink_path,
@@ -132,8 +135,10 @@ async def process_single(result: dict) -> dict:
         await asyncio.sleep(COMMAND_DELAY)
         if result.get("source") == "radarr" and result.get("movie_id"):
             action["search"] = await search_movies(cfg.url, cfg.api_key, [result["movie_id"]])
-        elif result.get("source") == "sonarr" and result.get("series_id") and (
-            result.get("season") is not None
+        elif (
+            result.get("source") == "sonarr"
+            and result.get("series_id")
+            and (result.get("season") is not None)
         ):
             action["search"] = await search_season(
                 cfg.url,
@@ -188,9 +193,7 @@ async def process_season(result: dict, db: Connection, scan_id: int) -> dict:
 
     deleted = 0
     actions = {"api_delete": False, "symlink_removed": False, "refresh": False, "search": False}
-    logger.info(
-        "Season cleanup: series=%s season=%s targets=%d", series_id, season, len(targets)
-    )
+    logger.info("Season cleanup: series=%s season=%s targets=%d", series_id, season, len(targets))
     for target in targets:
         outcome = await _delete_one(target, config, delete_season=True)
         if outcome["api_delete"]:
@@ -235,7 +238,10 @@ async def process_season(result: dict, db: Connection, scan_id: int) -> dict:
 
     logger.info(
         "Season cleanup done: series=%s season=%s deleted=%d total=%d",
-        series_id, season, deleted, len(targets),
+        series_id,
+        season,
+        deleted,
+        len(targets),
     )
     return {
         "ok": deleted > 0,
@@ -256,7 +262,9 @@ async def process_all_detected(source: str, db: Connection, scan_id: int) -> dic
     rows = [dict(row) for row in await cursor.fetchall()]
     logger.info(
         "Batch cleanup starting: source=%s scan_id=%d results=%d",
-        source, scan_id, len(rows),
+        source,
+        scan_id,
+        len(rows),
     )
 
     deleted = 0
@@ -313,7 +321,8 @@ async def process_all_detected(source: str, db: Connection, scan_id: int) -> dic
             await search_movies(config.radarr.url, config.radarr.api_key, affected_movies)
             logger.info(
                 "Search triggered for %d Radarr movies: %s",
-                len(affected_movies), affected_movies,
+                len(affected_movies),
+                affected_movies,
             )
         elif source == "sonarr":
             for series_id, season in sorted(affected_seasons):
@@ -322,6 +331,10 @@ async def process_all_detected(source: str, db: Connection, scan_id: int) -> dic
 
     logger.info(
         "Batch cleanup done: source=%s scan_id=%d deleted=%d failed=%d total=%d",
-        source, scan_id, deleted, failed, len(rows),
+        source,
+        scan_id,
+        deleted,
+        failed,
+        len(rows),
     )
     return {"deleted": deleted, "failed": failed, "total": len(rows)}

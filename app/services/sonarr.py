@@ -78,7 +78,8 @@ async def delete_episode_file(url: str, api_key: str, file_id: int) -> bool:
             else:
                 logger.warning(
                     "Failed to delete episode file %d: HTTP %d",
-                    file_id, resp.status_code,
+                    file_id,
+                    resp.status_code,
                 )
             return ok
     except Exception as e:
@@ -100,7 +101,8 @@ async def rescan_series(url: str, api_key: str, series_id: int) -> bool:
             else:
                 logger.warning(
                     "Rescan command failed for series %d: HTTP %d",
-                    series_id, resp.status_code,
+                    series_id,
+                    resp.status_code,
                 )
             return ok
     except Exception as e:
@@ -126,7 +128,9 @@ async def search_season(url: str, api_key: str, series_id: int, season: int) -> 
             else:
                 logger.warning(
                     "Search command failed for season %d/%d: HTTP %d",
-                    series_id, season, resp.status_code,
+                    series_id,
+                    season,
+                    resp.status_code,
                 )
             return ok
     except Exception as e:

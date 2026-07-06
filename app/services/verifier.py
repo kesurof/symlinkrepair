@@ -48,7 +48,10 @@ def add(
     }
     logger.info(
         "Verifier scheduled: %s (%s) check every %.0fs for %.0fs",
-        symlink_path, media_title or "?", _interval, _max_duration,
+        symlink_path,
+        media_title or "?",
+        _interval,
+        _max_duration,
     )
 
 
@@ -107,7 +110,8 @@ async def _check_loop():
     global _heartbeat_count
     logger.info(
         "Verifier loop started (interval=%.0fs, max_duration=%.0fs)",
-        _interval, _max_duration,
+        _interval,
+        _max_duration,
     )
     while True:
         try:
@@ -135,7 +139,8 @@ async def _check_loop():
                     if exists:
                         logger.info(
                             "Replaced: %s (%s)",
-                            path, meta.get("media_title", "?"),
+                            path,
+                            meta.get("media_title", "?"),
                         )
                         await _update_db_status(path, "remplacé", "verifier_ok")
                         _pending.pop(path, None)
@@ -146,14 +151,15 @@ async def _check_loop():
                             meta["search_done"] = True
                             meta["cycle_start"] = now
                             logger.info(
-                                "Verifier: search triggered for %s (%s), "
-                                "new cycle started",
-                                path, meta.get("media_title", "?"),
+                                "Verifier: search triggered for %s (%s), new cycle started",
+                                path,
+                                meta.get("media_title", "?"),
                             )
                         else:
                             logger.warning(
                                 "Not replaced: %s (%s) — marking as not_replaced",
-                                path, meta.get("media_title", "?"),
+                                path,
+                                meta.get("media_title", "?"),
                             )
                             await _update_db_status(path, "non_remplacé", "verifier_fail")
                             _pending.pop(path, None)

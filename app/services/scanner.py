@@ -53,7 +53,10 @@ async def _run_scan(source: str, mode: str, limit: int = 0) -> dict:
     )
     logger.info(
         "Filesystem scan done: source=%s total=%d matching=%d broken=%d",
-        source, total, matching, broken,
+        source,
+        total,
+        matching,
+        broken,
     )
 
     db_path = db_copy_fn(cfg.container)
@@ -104,7 +107,10 @@ async def _run_scan(source: str, mode: str, limit: int = 0) -> dict:
 
     logger.info(
         "Scan completed: source=%s broken=%d matched=%d affected_titles=%d",
-        source, broken, len(targets), len(affected_titles),
+        source,
+        broken,
+        len(targets),
+        len(affected_titles),
     )
 
     return {

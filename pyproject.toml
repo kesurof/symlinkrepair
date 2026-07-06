@@ -23,6 +23,7 @@ dev = [
 [tool.ruff]
 line-length = 100
 target-version = "py311"
+exclude = ["docs/scripts"]
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "W"]

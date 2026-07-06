@@ -65,7 +65,9 @@ async def _trigger_scan(source: str):
             await db.commit()
             logger.info(
                 "%s scan done: %d broken, %d results",
-                source, result.get("broken", 0), len(result.get("targets", [])),
+                source,
+                result.get("broken", 0),
+                len(result.get("targets", [])),
             )
         finally:
             await db.close()

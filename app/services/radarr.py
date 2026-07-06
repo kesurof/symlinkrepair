@@ -98,7 +98,8 @@ async def refresh_movie(url: str, api_key: str, movie_id: int) -> bool:
             else:
                 logger.warning(
                     "Refresh command failed for movie %d: HTTP %d",
-                    movie_id, resp.status_code,
+                    movie_id,
+                    resp.status_code,
                 )
             return ok
     except Exception as e:
@@ -120,7 +121,8 @@ async def search_movies(url: str, api_key: str, movie_ids: list[int]) -> bool:
             else:
                 logger.warning(
                     "Search command failed for movies %s: HTTP %d",
-                    movie_ids, resp.status_code,
+                    movie_ids,
+                    resp.status_code,
                 )
             return ok
     except Exception as e:

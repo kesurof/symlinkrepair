@@ -139,8 +139,7 @@ async def ignore_result(result_id: int, db: Connection = Depends(get_db)):
 @router.post("/api/results/{result_id}/recheck")
 async def recheck_result(result_id: int, db: Connection = Depends(get_db)):
     await db.execute(
-        "UPDATE results SET status = 'recherche',"
-        " action = NULL, action_date = NULL WHERE id = ?",
+        "UPDATE results SET status = 'recherche', action = NULL, action_date = NULL WHERE id = ?",
         (result_id,),
     )
     await db.commit()
@@ -190,7 +189,10 @@ async def process_single_result(
 
     logger.info(
         "Result %d processed: ok=%s error=%s delete_season=%s",
-        result_id, outcome.get("ok"), outcome.get("error", ""), delete_season,
+        result_id,
+        outcome.get("ok"),
+        outcome.get("error", ""),
+        delete_season,
     )
     return outcome
 

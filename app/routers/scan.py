@@ -1,11 +1,12 @@
 import logging
+from datetime import datetime
 
 from aiosqlite import Connection
 from fastapi import APIRouter, Depends, Request
 from fastapi.responses import HTMLResponse, JSONResponse
 
 from app.database import get_db
-from app.services import scanner
+from app.services import filescanner, scanner
 from app.services.cleanup import process_all_detected
 from app.services.config_service import load_config
 from app.services.discord import notify_scan
@@ -87,10 +88,13 @@ async def trigger_scan(
     await notify_scan(config, source, result)
 
     logger.info(
-        "Scan completed: source=%s mode=%s total=%d broken=%d "
-        "processed=%d cleanup_deleted=%d",
-        source, mode, result.get("total", 0), result.get("broken", 0),
-        result.get("matching", 0), cleanup_stats.get("deleted", 0),
+        "Scan completed: source=%s mode=%s total=%d broken=%d processed=%d cleanup_deleted=%d",
+        source,
+        mode,
+        result.get("total", 0),
+        result.get("broken", 0),
+        result.get("matching", 0),
+        cleanup_stats.get("deleted", 0),
     )
     return {
         "ok": True,
@@ -109,3 +113,40 @@ async def trigger_scan(
 async def scan_status(source: str):
     status = await scanner.get_scan_status(source)
     return status
+
+
+@router.get("/fastscan", response_class=HTMLResponse)
+async def fastscan_page(request: Request):
+    return templates.TemplateResponse(request, "fastscan.html")
+
+
+@router.post("/api/fast-scan")
+async def trigger_fast_scan(limit: int = 0):
+    config = load_config()
+    all_results = []
+    total_all = broken_all = 0
+
+    for source_name, cfg in [("radarr", config.radarr), ("sonarr", config.sonarr)]:
+        if not cfg.library_roots or not cfg.target_prefixes:
+            continue
+        results, total, matching, broken = filescanner.scan_library_roots(
+            cfg.library_roots, cfg.target_prefixes, limit
+        )
+        for r in results:
+            r["source"] = source_name
+        all_results.extend(results)
+        total_all += total
+        broken_all += broken
+
+    logger.info(
+        "Fast scan done: total=%d broken=%d",
+        total_all,
+        broken_all,
+    )
+    return {
+        "ok": True,
+        "scanned_at": datetime.now().isoformat(),
+        "total": total_all,
+        "broken": broken_all,
+        "results": all_results,
+    }
