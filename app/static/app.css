@@ -1,16 +1,4 @@
 /* === Transitions HTMX === */
-.htmx-swapping {
-  opacity: 0;
-  transition: opacity 200ms ease-in;
-}
-
-.htmx-added {
-  opacity: 0;
-}
-
-.htmx-settling {
-  opacity: 0;
-}
 
 /* === Fade in === */
 .fade-in {
