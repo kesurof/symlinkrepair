@@ -66,6 +66,7 @@ def public_config() -> dict:
         sonarr["api_key"] = mask_secret(sonarr["api_key"])
     if discord.get("webhook"):
         discord["webhook"] = mask_secret(discord["webhook"])
+    cfg["browse_roots"] = raw.get("browse_roots", cfg.get("browse_roots", []))
     return cfg
 
 

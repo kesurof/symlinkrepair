@@ -43,6 +43,18 @@ async def default_browse_roots():
     return {"roots": load_config().browse_roots}
 
 
+@router.post("/api/browse/validate")
+async def validate_browse_path(request: Request):
+    body = await request.json()
+    path_str = body.get("path", "")
+    config = load_config()
+    from app.services.config_service import browse_directory
+    result = browse_directory(path_str, config.browse_roots)
+    if result is None:
+        return JSONResponse({"ok": False, "error": "Chemin non autorisé ou invalide"})
+    return {"ok": True, "path": result["current"]}
+
+
 @router.post("/api/config/test-radarr")
 async def test_radarr(request: Request):
     body = await request.json()
