@@ -60,6 +60,20 @@ services:
 4. Ajoutez les dossiers de vos bibliothèques
 5. Sauvegardez
 
+## Aperçu
+
+| Dashboard | Scan |
+|---|---|
+| ![dashboard](docs/screenshots/dashboard.png) | ![scan](docs/screenshots/scan.png) |
+
+| Résultats | Rapports |
+|---|---|
+| ![results](docs/screenshots/results.png) | ![reports](docs/screenshots/reports.png) |
+
+| Configuration |
+|---|
+| ![config](docs/screenshots/config.png) |
+
 ## Utilisation
 
 | Page | À quoi ça sert |
