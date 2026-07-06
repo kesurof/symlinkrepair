@@ -26,12 +26,31 @@ docker compose up --build -d
 Ouvrez **http://localhost:8000**.
 
 > Les dossiers contenant vos médias doivent être accessibles depuis le conteneur.
-> Éditez `docker-compose.yml` pour ajouter les montages nécessaires dans la section `volumes` :
-> ```yaml
-> volumes:
->   - /mnt:/mnt
->   - /home/votreuser/medias:/home/votreuser/medias
-> ```
+> Éditez la section `volumes` du `docker-compose.yml` pour ajouter vos montages :
+
+```yaml
+services:
+  app:
+    build: .
+    ports:
+      - "${PORT:-8000}:8000"
+    restart: unless-stopped
+    volumes:
+      - ./data:/app/data
+      # Remplacez /mnt par le chemin de vos bibliothèques médias :
+      - /mnt:/mnt
+      # - /home/votreuser/medias:/home/votreuser/medias
+      - /var/run/docker.sock:/var/run/docker.sock
+    env_file: .env
+    environment:
+      - DATABASE_URL=sqlite+aiosqlite:///data/symlinkrepair.db
+      - DATA_DIR=/app/data
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+```
 
 ## Configuration initiale
 
