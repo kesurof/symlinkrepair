@@ -1,4 +1,5 @@
 import logging
+from datetime import datetime, timedelta
 
 from aiosqlite import Connection
 from fastapi import APIRouter, Depends, Request
@@ -99,8 +100,86 @@ async def stats(db: Connection = Depends(get_db)):
         " (SELECT COALESCE(SUM(CASE WHEN status IN ('réparé','remplacé','en_attente','ignoré')"
         "  THEN 1 ELSE 0 END), 0) FROM results) AS fixed"
     )
-    row = await cursor.fetchone()
-    return dict(row)
+    row = dict(await cursor.fetchone())
+
+    cursor2 = await db.execute(
+        "SELECT id, source, mode, status, total, broken, processed, created_at"
+        " FROM scans ORDER BY id DESC LIMIT 1"
+    )
+    last = await cursor2.fetchone()
+    row["last_scan"] = dict(last) if last else None
+
+    cursor3 = await db.execute("""
+        SELECT
+         (SELECT COUNT(*) FROM results
+          WHERE source='radarr' AND status IN ('détecté','recherche')) AS br,
+         (SELECT COUNT(*) FROM results
+          WHERE source='sonarr' AND status IN ('détecté','recherche')) AS bs,
+         (SELECT COUNT(*) FROM results WHERE source='radarr') AS tr,
+         (SELECT COUNT(*) FROM results WHERE source='sonarr') AS ts,
+         (SELECT COUNT(*) FROM scans WHERE DATE(created_at)=DATE('now')) AS st
+    """)
+    extra = dict(await cursor3.fetchone())
+    row["broken_radarr"] = extra["br"]
+    row["broken_sonarr"] = extra["bs"]
+    row["total_radarr"] = extra["tr"]
+    row["total_sonarr"] = extra["ts"]
+    row["scans_today"] = extra["st"]
+    return row
+
+
+@router.get("/api/stats/history")
+async def stats_history(db: Connection = Depends(get_db), days: int = 30):
+    cursor = await db.execute(
+        "SELECT DATE(s.created_at) as day, COUNT(*) as detected"
+        " FROM results r JOIN scans s ON r.scan_id = s.id"
+        " WHERE s.created_at >= DATE('now', ? || ' days')"
+        " GROUP BY DATE(s.created_at) ORDER BY day",
+        (f"-{days}",),
+    )
+    detected_by_day = {r[0]: r[1] for r in await cursor.fetchall()}
+
+    cursor = await db.execute(
+        "SELECT DATE(action_date) as day,"
+        "  SUM(CASE WHEN status = 'réparé' THEN 1 ELSE 0 END) as repaired,"
+        "  SUM(CASE WHEN status = 'remplacé' THEN 1 ELSE 0 END) as replaced"
+        " FROM results"
+        " WHERE action_date IS NOT NULL AND status IN ('réparé','remplacé')"
+        "  AND action_date >= DATE('now', ? || ' days')"
+        " GROUP BY DATE(action_date) ORDER BY day",
+        (f"-{days}",),
+    )
+    action_by_day = {r[0]: {"repaired": r[1], "replaced": r[2]} for r in await cursor.fetchall()}
+
+    today = datetime.now().date()
+    days_list = []
+    detected_series = []
+    repaired_series = []
+    replaced_series = []
+    cumulative_list = []
+    running = 0
+
+    for i in range(days - 1, -1, -1):
+        day = (today - timedelta(days=i)).isoformat()
+        d = detected_by_day.get(day, 0)
+        r = action_by_day.get(day, {}).get("repaired", 0)
+        p = action_by_day.get(day, {}).get("replaced", 0)
+        running += d - r - p
+        days_list.append(day)
+        detected_series.append(d)
+        repaired_series.append(r)
+        replaced_series.append(p)
+        cumulative_list.append(max(0, running))
+
+    return {
+        "days": days_list,
+        "series": {
+            "detected": detected_series,
+            "repaired": repaired_series,
+            "replaced": replaced_series,
+            "cumulative": cumulative_list,
+        },
+    }
 
 
 @router.post("/api/scans/delete")

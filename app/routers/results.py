@@ -154,6 +154,17 @@ async def results_ids(
     return {"ids": [r[0] for r in rows]}
 
 
+@router.get("/api/results/recent")
+async def recent_results(db: Connection = Depends(get_db), limit: int = 5):
+    cursor = await db.execute(
+        "SELECT id, source, media_title, symlink_path, status"
+        " FROM results WHERE status IN ('détecté','recherche')"
+        " ORDER BY id DESC LIMIT ?",
+        (limit,),
+    )
+    return {"results": [dict(r) for r in await cursor.fetchall()]}
+
+
 @router.get("/results/{result_id}", response_class=HTMLResponse)
 async def result_detail(request: Request, result_id: int, db: Connection = Depends(get_db)):
     cursor = await db.execute("SELECT * FROM results WHERE id = ?", (result_id,))
