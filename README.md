@@ -20,7 +20,7 @@ SymlinkRepair scanne vos bibliothèques, détecte les symlinks cassés, et vous 
 ## Démarrage rapide
 
 ```bash
-docker compose up --build -d
+docker compose up -d
 ```
 
 Ouvrez **http://localhost:8000**.
@@ -31,7 +31,7 @@ Ouvrez **http://localhost:8000**.
 ```yaml
 services:
   app:
-    build: .
+    image: ghcr.io/kesurof/symlinkrepair:latest
     ports:
       - "${PORT:-8000}:8000"
     restart: unless-stopped
