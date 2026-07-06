@@ -100,11 +100,11 @@ make docker
 - Tables : `scans`, `results` (avec index sur scan_id, status, created_at)
 
 ## Statuts des résultats
-`détecté` → `recherche` → `en_attente` → `réparé` / `remplacé` / `non_remplacé` / `ignoré` / `échoué`
+`détecté` → `recherche` → `en_attente` → `remplacé` / `non_remplacé` / `ignoré` / `échoué`
 
 ## Actions batch disponibles
 - **Traiter** (`process`) — DELETE API Radarr/Sonarr + recherche auto
-- **Marquer corrigé** (`fix`) — Flag manuel (symlink réparé à la main)
+- **Marquer corrigé** (`fix`) — Flag manuel (symlink marqué comme remplacé)
 - **Ignorer** (`ignore`) — Cache le résultat
 - **Revérifier** (`recheck`) — Remet en file d'attente de vérification
 - **Supprimer** (`delete`) — Supprime la ligne en base

@@ -82,8 +82,7 @@ async def list_results(db: Connection = Depends(get_db)):
 | `détecté` | Détecté par un scan, en attente d'action |
 | `recherche` | En cours de revérification |
 | `en_attente` | DELETE API envoyé, en attente |
-| `réparé` | Marqué manuellement comme corrigé |
-| `remplacé` | Vérifié : symlink remplacé |
+| `remplacé` | Symlink remplacé ou marqué manuellement comme corrigé |
 | `non_remplacé` | Vérifié : symlink non remplacé |
 | `ignoré` | Ignoré par l'utilisateur |
 | `échoué` | L'action API a échoué |
@@ -93,7 +92,7 @@ async def list_results(db: Connection = Depends(get_db)):
 | action | Déclencheur | Statut |
 |--------|-------------|--------|
 | `process` | Traiter (DELETE API) | `en_attente` |
-| `fix` | Marquer corrigé | `réparé` |
+| `fix` | Marquer corrigé | `remplacé` |
 | `ignore` | Ignorer | `ignoré` |
 | `recheck` | Revérifier | `recherche` |
 | `delete` | Supprimer | — (DELETE row) |

@@ -73,9 +73,11 @@ async def delete_movie_file(url: str, api_key: str, file_id: int) -> bool:
                 f"{url.rstrip('/')}/api/v3/moviefile/{file_id}?deleteFile=false",
                 headers={"X-Api-Key": api_key},
             )
-            ok = resp.status_code == 200
-            if ok:
+            ok = resp.status_code in (200, 404)
+            if resp.status_code == 200:
                 logger.info("Deleted movie file %d", file_id)
+            elif resp.status_code == 404:
+                logger.info("Movie file %d already deleted (HTTP 404)", file_id)
             else:
                 logger.warning("Failed to delete movie file %d: HTTP %d", file_id, resp.status_code)
             return ok

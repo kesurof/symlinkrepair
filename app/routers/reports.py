@@ -102,7 +102,7 @@ async def stats(db: Connection = Depends(get_db)):
         " (SELECT COUNT(*) FROM scans) AS total_scans,"
         " (SELECT COUNT(*) FROM results) AS total_results,"
         " (SELECT COUNT(*) FROM results WHERE status IN ('détecté','recherche')) AS broken,"
-        " (SELECT COALESCE(SUM(CASE WHEN status IN ('réparé','remplacé','en_attente','ignoré')"
+        " (SELECT COALESCE(SUM(CASE WHEN status IN ('remplacé','en_attente','ignoré')"
         "  THEN 1 ELSE 0 END), 0) FROM results) AS fixed"
     )
     row = dict(await cursor.fetchone())
@@ -146,20 +146,18 @@ async def stats_history(db: Connection = Depends(get_db), days: int = 30):
 
     cursor = await db.execute(
         "SELECT DATE(action_date) as day,"
-        "  SUM(CASE WHEN status = 'réparé' THEN 1 ELSE 0 END) as repaired,"
         "  SUM(CASE WHEN status = 'remplacé' THEN 1 ELSE 0 END) as replaced"
         " FROM results"
-        " WHERE action_date IS NOT NULL AND status IN ('réparé','remplacé')"
+        " WHERE action_date IS NOT NULL AND status = 'remplacé'"
         "  AND action_date >= DATE('now', ? || ' days')"
         " GROUP BY DATE(action_date) ORDER BY day",
         (f"-{days}",),
     )
-    action_by_day = {r[0]: {"repaired": r[1], "replaced": r[2]} for r in await cursor.fetchall()}
+    action_by_day = {r[0]: {"replaced": r[1]} for r in await cursor.fetchall()}
 
     today = datetime.now().date()
     days_list = []
     detected_series = []
-    repaired_series = []
     replaced_series = []
     cumulative_list = []
     running = 0
@@ -167,12 +165,10 @@ async def stats_history(db: Connection = Depends(get_db), days: int = 30):
     for i in range(days - 1, -1, -1):
         day = (today - timedelta(days=i)).isoformat()
         d = detected_by_day.get(day, 0)
-        r = action_by_day.get(day, {}).get("repaired", 0)
         p = action_by_day.get(day, {}).get("replaced", 0)
-        running += d - r - p
+        running += d - p
         days_list.append(day)
         detected_series.append(d)
-        repaired_series.append(r)
         replaced_series.append(p)
         cumulative_list.append(max(0, running))
 
@@ -180,7 +176,6 @@ async def stats_history(db: Connection = Depends(get_db), days: int = 30):
         "days": days_list,
         "series": {
             "detected": detected_series,
-            "repaired": repaired_series,
             "replaced": replaced_series,
             "cumulative": cumulative_list,
         },

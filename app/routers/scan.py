@@ -20,13 +20,11 @@ router = APIRouter()
 async def scan_page(request: Request, db: Connection = Depends(get_db)):
     config = load_config()
     cursor = await db.execute(
-        "SELECT id, source, mode, status, broken, created_at"
-        " FROM scans ORDER BY id DESC LIMIT 5"
+        "SELECT id, source, mode, status, broken, created_at FROM scans ORDER BY id DESC LIMIT 5"
     )
     recent_scans = [dict(r) for r in await cursor.fetchall()]
     return templates.TemplateResponse(
-        request, "scan.html",
-        {"default_limit": config.defaults.limit, "recent_scans": recent_scans}
+        request, "scan.html", {"default_limit": config.defaults.limit, "recent_scans": recent_scans}
     )
 
 

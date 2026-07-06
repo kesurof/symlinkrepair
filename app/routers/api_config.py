@@ -49,6 +49,7 @@ async def validate_browse_path(request: Request):
     path_str = body.get("path", "")
     config = load_config()
     from app.services.config_service import browse_directory
+
     result = browse_directory(path_str, config.browse_roots)
     if result is None:
         return JSONResponse({"ok": False, "error": "Chemin non autorisé ou invalide"})

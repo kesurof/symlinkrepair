@@ -97,9 +97,7 @@ def browse_directory(path_str: str, allowed_roots: list[str]) -> dict | None:
         directories = []
 
     parent = str(path.parent) if path.parent != path else ""
-    can_go_up = bool(parent) and any(
-        path.parent == a or a in path.parent.parents for a in allowed
-    )
+    can_go_up = bool(parent) and any(path.parent == a or a in path.parent.parents for a in allowed)
 
     return {
         "current": str(path),
