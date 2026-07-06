@@ -67,6 +67,9 @@ async def reports_page(
     cursor_md = await db.execute("SELECT DISTINCT mode FROM scans")
     modes = [r[0] for r in await cursor_md.fetchall()]
 
+    today_str = datetime.now().strftime("%Y-%m-%d")
+    yesterday_str = (datetime.now() - timedelta(days=1)).strftime("%Y-%m-%d")
+
     is_htmx = request.headers.get("hx-request") == "true"
     template = "partials/reports_content.html" if is_htmx else "reports.html"
 
@@ -86,6 +89,8 @@ async def reports_page(
             "per_page": per_page,
             "total": total,
             "total_pages": total_pages,
+            "today": today_str,
+            "yesterday": yesterday_str,
         },
     )
 

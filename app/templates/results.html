@@ -3,9 +3,25 @@
 {% block content %}
 <div x-data="resultsApp()">
     <div class="flex items-center justify-between mb-4">
-        <h2 class="text-lg font-semibold text-gray-800 dark:text-gray-200">Résultats</h2>
+        <h2 class="text-lg font-semibold text-gray-800 dark:text-gray-200">
+            {% if scan_info %}
+            Résultats du scan #{{ scan_info.id }}
+            {% else %}
+            Résultats
+            {% endif %}
+        </h2>
         <span id="results-count" class="text-sm text-gray-500 dark:text-gray-400">{{ total }} résultat{% if total > 1 %}s{% endif %}</span>
     </div>
+
+    {% if scan_info %}
+    <div class="bg-brand-50 dark:bg-brand-900/20 border border-brand-200 dark:border-brand-800 rounded-xl p-3 mb-4 flex items-center gap-2 text-sm">
+        <span class="inline-flex items-center gap-1 text-xs font-medium px-2 py-0.5 rounded-full {{ 'bg-blue-100 text-blue-700 dark:bg-blue-900/50 dark:text-blue-300' if scan_info.source == 'radarr' else 'bg-green-100 text-green-700 dark:bg-green-900/50 dark:text-green-300' }}">
+            {{ scan_info.source }}
+        </span>
+        <span class="text-gray-600 dark:text-gray-400">{{ scan_info.mode }} · {{ scan_info.created_at }}</span>
+        <a href="/results" class="ml-auto text-xs text-brand-600 dark:text-brand-400 hover:underline font-medium">&times; Voir tous les résultats</a>
+    </div>
+    {% endif %}
 
     <div class="bg-white dark:bg-gray-900 rounded-xl shadow-sm border border-gray-200 dark:border-gray-800 p-3 mb-4">
         <div class="flex flex-wrap gap-2">
@@ -56,6 +72,9 @@
                        class="rounded border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800">
                 <span>Masquer les doublons</span>
             </label>
+            {% if active_scan_id %}
+            <input type="hidden" id="filter-scan-id" value="{{ active_scan_id }}">
+            {% endif %}
         </div>
     </div>
 
@@ -103,12 +122,14 @@ function hxNavFromFilters() {
     const q = document.getElementById('filter-q').value;
     const pp = document.getElementById('filter-perpage').value;
     const dd = document.getElementById('filter-dedup');
+    const si = document.getElementById('filter-scan-id');
     if (src) params.set('source', src);
     if (st) params.set('status', st);
     if (sn) params.set('season', sn);
     if (q) params.set('q', q);
     if (pp !== '50') params.set('per_page', pp);
     if (dd && !dd.checked) params.set('dedup', '0');
+    if (si && si.value) params.set('scan_id', si.value);
     htmx.ajax('GET', '/results?' + params.toString(), {target: '#results-content', pushUrl: true});
 }
 
@@ -148,11 +169,13 @@ function resultsApp() {
             const sn = document.getElementById('filter-season').value;
             const q = document.getElementById('filter-q').value;
             const dd = document.getElementById('filter-dedup');
+            const si = document.getElementById('filter-scan-id');
             if (src) params.set('source', src);
             if (st) params.set('status', st);
             if (sn) params.set('season', sn);
             if (q) params.set('q', q);
             if (dd && !dd.checked) params.set('dedup', '0');
+            if (si && si.value) params.set('scan_id', si.value);
             const resp = await fetch('/api/results/ids?' + params.toString());
             const data = await resp.json();
             this.selected = data.ids || [];

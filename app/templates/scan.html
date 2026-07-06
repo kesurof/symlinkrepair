@@ -3,13 +3,17 @@
 {% block content %}
 {% set active_tab = request.query_params.get('mode', 'full') %}
 
-<div x-data="{ tab: '{{ active_tab }}', mode: 'simulate', limit: {{ default_limit }} }"
-     x-init="$watch('limit', v => window._scanLimit = v); window._scanLimit = limit">
+<div x-data="scanApp('{{ active_tab }}', {{ default_limit }})">
+    <div class="flex items-center justify-between mb-6">
+        <h2 class="text-lg font-semibold text-gray-800 dark:text-gray-200">Lancer un scan</h2>
+    </div>
+
+    {# === Tabs === #}
     <div class="flex items-center gap-1 mb-6 p-1 bg-gray-100 dark:bg-gray-800 rounded-lg w-fit">
         <button @click="tab = 'full'"
                 class="px-4 py-2 text-sm font-medium rounded-md transition-colors duration-150"
                 :class="tab === 'full' ? 'bg-white dark:bg-gray-900 text-gray-800 dark:text-gray-100 shadow-sm' : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'">
-            <span class="hidden sm:inline">Scan </span>complet
+            Scan complet
         </button>
         <button @click="tab = 'fast'"
                 class="px-4 py-2 text-sm font-medium rounded-md transition-colors duration-150"
@@ -20,23 +24,6 @@
 
     {# === SCAN COMPLET === #}
     <div x-show="tab === 'full'" x-cloak>
-        <div class="bg-white dark:bg-gray-900 rounded-xl shadow-sm border border-gray-200 dark:border-gray-800 p-4 mb-4">
-            <h3 class="font-medium text-gray-700 dark:text-gray-300 mb-3">Options</h3>
-            <div class="flex flex-wrap gap-4">
-                <div>
-                    <label class="block text-sm text-gray-500 dark:text-gray-400 mb-1">Mode</label>
-                    <select x-model="mode" class="border border-gray-200 dark:border-gray-700 rounded-lg px-3 py-2 text-sm bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-200">
-                        <option value="simulate">Simulation</option>
-                        <option value="clean">Nettoyage réel</option>
-                    </select>
-                </div>
-                <div>
-                    <label class="block text-sm text-gray-500 dark:text-gray-400 mb-1">Limite fichiers (0 = illimité)</label>
-                    <input type="number" x-model="limit" min="0" max="500" class="border border-gray-200 dark:border-gray-700 rounded-lg px-3 py-2 text-sm w-24 bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-200">
-                </div>
-            </div>
-        </div>
-
         <div class="grid md:grid-cols-2 gap-4">
             <div class="bg-white dark:bg-gray-900 rounded-xl shadow-sm border border-gray-200 dark:border-gray-800 p-5">
                 <div class="flex items-center gap-2 mb-1">
@@ -46,38 +33,17 @@
                     <h3 class="font-medium text-gray-800 dark:text-gray-200">Radarr</h3>
                 </div>
                 <p class="text-sm text-gray-500 dark:text-gray-400 mb-4 ml-7">Films</p>
-                <div x-show="mode === 'simulate'" x-cloak>
-                    <button hx-post="/api/scan/radarr?mode=simulate"
-                            hx-vals='js:{limit: window._scanLimit || 0}'
-                            hx-target="#radarr-result"
-                            hx-indicator="#radarr-spinner"
-                            class="bg-brand-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-brand-700 transition-colors">
-                        Lancer la simulation
+                <div class="flex flex-wrap gap-2">
+                    <button @click="runScan('radarr', 'simulate')" :disabled="scanning"
+                            class="bg-brand-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-brand-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
+                        <span x-show="!scanning">Lancer la simulation</span>
+                        <span x-show="scanning" x-cloak>Scan en cours...</span>
+                    </button>
+                    <button @click="confirmClean = 'radarr'"
+                            class="bg-red-500 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-red-600 transition-colors">
+                        Nettoyage réel
                     </button>
                 </div>
-                <div x-show="mode === 'clean'" x-cloak>
-                    <div x-data="{ confirm: false }">
-                        <div x-show="!confirm" x-cloak>
-                            <button @click="confirm = true"
-                                    class="bg-red-500 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-red-600 transition-colors">
-                                Nettoyage réel
-                            </button>
-                        </div>
-                        <div x-show="confirm" x-cloak class="flex flex-wrap items-center gap-2">
-                            <span class="text-sm text-red-600 dark:text-red-400 font-medium">Confirmer ?</span>
-                            <button @click="confirm = false" class="bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 px-3 py-1.5 rounded-lg text-sm hover:bg-gray-200 dark:hover:bg-gray-700">Annuler</button>
-                            <button hx-post="/api/scan/radarr?mode=clean"
-                                    hx-vals='js:{limit: window._scanLimit || 0}'
-                                    hx-target="#radarr-result"
-                                    hx-indicator="#radarr-spinner"
-                                    class="bg-red-600 text-white px-3 py-1.5 rounded-lg text-sm font-medium">
-                                Confirmer
-                            </button>
-                        </div>
-                    </div>
-                </div>
-                <span id="radarr-spinner" class="htmx-indicator text-sm text-gray-500 ml-2">Scan en cours...</span>
-                <div id="radarr-result" class="mt-3"></div>
             </div>
 
             <div class="bg-white dark:bg-gray-900 rounded-xl shadow-sm border border-gray-200 dark:border-gray-800 p-5">
@@ -88,88 +54,187 @@
                     <h3 class="font-medium text-gray-800 dark:text-gray-200">Sonarr</h3>
                 </div>
                 <p class="text-sm text-gray-500 dark:text-gray-400 mb-4 ml-7">Séries</p>
-                <div x-show="mode === 'simulate'" x-cloak>
-                    <button hx-post="/api/scan/sonarr?mode=simulate"
-                            hx-vals='js:{limit: window._scanLimit || 0}'
-                            hx-target="#sonarr-result"
-                            hx-indicator="#sonarr-spinner"
-                            class="bg-brand-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-brand-700 transition-colors">
-                        Lancer la simulation
+                <div class="flex flex-wrap gap-2">
+                    <button @click="runScan('sonarr', 'simulate')" :disabled="scanning"
+                            class="bg-brand-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-brand-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
+                        <span x-show="!scanning">Lancer la simulation</span>
+                        <span x-show="scanning" x-cloak>Scan en cours...</span>
+                    </button>
+                    <button @click="confirmClean = 'sonarr'"
+                            class="bg-red-500 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-red-600 transition-colors">
+                        Nettoyage réel
                     </button>
                 </div>
-                <div x-show="mode === 'clean'" x-cloak>
-                    <div x-data="{ confirm: false }">
-                        <div x-show="!confirm" x-cloak>
-                            <button @click="confirm = true"
-                                    class="bg-red-500 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-red-600 transition-colors">
-                                Nettoyage réel
-                            </button>
-                        </div>
-                        <div x-show="confirm" x-cloak class="flex flex-wrap items-center gap-2">
-                            <span class="text-sm text-red-600 dark:text-red-400 font-medium">Confirmer ?</span>
-                            <button @click="confirm = false" class="bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 px-3 py-1.5 rounded-lg text-sm hover:bg-gray-200 dark:hover:bg-gray-700">Annuler</button>
-                            <button hx-post="/api/scan/sonarr?mode=clean"
-                                    hx-vals='js:{limit: window._scanLimit || 0}'
-                                    hx-target="#sonarr-result"
-                                    hx-indicator="#sonarr-spinner"
-                                    class="bg-red-600 text-white px-3 py-1.5 rounded-lg text-sm font-medium">
-                                Confirmer
-                            </button>
-                        </div>
-                    </div>
-                </div>
-                <span id="sonarr-spinner" class="htmx-indicator text-sm text-gray-500 ml-2">Scan en cours...</span>
-                <div id="sonarr-result" class="mt-3"></div>
             </div>
         </div>
+
+        {# === Modal confirmation nettoyage === #}
+        <div x-show="confirmClean" class="fixed inset-0 bg-black/40 dark:bg-black/60 flex items-end md:items-center justify-center z-50" @click.self="confirmClean = false" x-cloak>
+            <div class="bg-white dark:bg-gray-900 rounded-t-2xl md:rounded-2xl shadow-xl p-6 w-full md:max-w-sm md:mx-4 slide-up">
+                <h3 class="font-semibold text-gray-800 dark:text-gray-200 mb-2">Nettoyage réel</h3>
+                <p class="text-sm text-gray-600 dark:text-gray-400 mb-4">
+                    Supprimer les fichiers cassés dans <strong x-text="confirmClean"></strong> et lancer une recherche de remplacement ?
+                </p>
+                <div class="flex gap-2 justify-end">
+                    <button @click="confirmClean = false" class="flex-1 md:flex-none bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 px-4 py-2.5 rounded-lg text-sm font-medium hover:bg-gray-200 dark:hover:bg-gray-700">Annuler</button>
+                    <button @click="runScan(confirmClean, 'clean'); confirmClean = false" class="flex-1 md:flex-none bg-red-600 text-white px-4 py-2.5 rounded-lg text-sm font-medium hover:bg-red-700">Confirmer</button>
+                </div>
+            </div>
+        </div>
+
+        {# === Indicateur de progression === #}
+        <div x-show="scanning" x-cloak class="mt-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-xl p-4 flex items-center gap-3">
+            <svg class="w-5 h-5 animate-spin text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0l3.181 3.183a8.25 8.25 0 0013.803-3.7M4.031 9.865a8.25 8.25 0 0113.803-3.7l3.181 3.182"/>
+            </svg>
+            <div class="text-sm text-blue-700 dark:text-blue-300">
+                <span class="font-medium" x-text="'Scan ' + scanningSource + ' en cours...'"></span>
+                <span class="text-blue-500 dark:text-blue-400 ml-2" x-text="elapsed()"></span>
+            </div>
+        </div>
+
+        {# === Rapports des scans === #}
+        <template x-for="(report, i) in scanReports" :key="report.scan_id">
+            <div class="mt-4 bg-white dark:bg-gray-900 rounded-xl shadow-sm border border-gray-200 dark:border-gray-800 overflow-hidden"
+                 x-show="tab === 'full'">
+                <div class="p-5">
+                    <div class="flex items-start justify-between mb-4">
+                        <div class="flex items-center gap-2">
+                            <template x-if="report.ok">
+                                <svg class="w-6 h-6 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                                </svg>
+                            </template>
+                            <template x-if="!report.ok">
+                                <svg class="w-6 h-6 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m9-.75a9 9 0 11-18 0 9 9 0 0118 0zm-9 3.75h.008v.008H12v-.008z"/>
+                                </svg>
+                            </template>
+                            <h3 class="font-medium text-gray-800 dark:text-gray-200" x-text="'Scan ' + report.source"></h3>
+                            <span class="inline-flex items-center gap-1 text-xs font-medium px-2 py-0.5 rounded-full"
+                                  :class="report.source === 'radarr' ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/50 dark:text-blue-300' : 'bg-green-100 text-green-700 dark:bg-green-900/50 dark:text-green-300'"
+                                  x-text="report.source"></span>
+                        </div>
+                        <a :href="'/results?source=' + report.source"
+                           class="text-xs text-brand-600 dark:text-brand-400 hover:underline font-medium shrink-0">
+                            Voir les résultats →
+                        </a>
+                    </div>
+
+                    <div class="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm mb-4">
+                        <div class="bg-gray-50 dark:bg-gray-800 rounded-lg p-3 text-center">
+                            <div class="text-lg font-bold text-gray-800 dark:text-gray-200" x-text="report.total ?? 0"></div>
+                            <div class="text-xs text-gray-500 dark:text-gray-400">Symlinks</div>
+                        </div>
+                        <div class="bg-gray-50 dark:bg-gray-800 rounded-lg p-3 text-center">
+                            <div class="text-lg font-bold" :class="(report.broken ?? 0) > 0 ? 'text-amber-600 dark:text-amber-400' : 'text-green-600 dark:text-green-400'"
+                                 x-text="report.broken ?? 0"></div>
+                            <div class="text-xs text-gray-500 dark:text-gray-400">Cassés</div>
+                        </div>
+                        <div class="bg-gray-50 dark:bg-gray-800 rounded-lg p-3 text-center">
+                            <div class="text-lg font-bold text-gray-800 dark:text-gray-200" x-text="report.processed ?? 0"></div>
+                            <div class="text-xs text-gray-500 dark:text-gray-400">Traités</div>
+                        </div>
+                        <div class="bg-gray-50 dark:bg-gray-800 rounded-lg p-3 text-center">
+                            <div class="text-lg font-bold text-gray-800 dark:text-gray-200" x-text="report.duration || '—'"></div>
+                            <div class="text-xs text-gray-500 dark:text-gray-400">Secondes</div>
+                        </div>
+                    </div>
+
+                    <div class="flex flex-wrap gap-1.5 text-xs text-gray-500 dark:text-gray-400">
+                        <span class="bg-gray-100 dark:bg-gray-800 px-2 py-1 rounded font-medium" x-text="report.mode"></span>
+                        <span class="bg-gray-100 dark:bg-gray-800 px-2 py-1 rounded" x-text="report.status"></span>
+                        <span x-show="report.cleanup?.deleted > 0" class="bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300 px-2 py-1 rounded font-medium"
+                              x-text="report.cleanup.deleted + ' supprimés'"></span>
+                        <span x-show="report.cleanup?.failed > 0" class="bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300 px-2 py-1 rounded font-medium"
+                              x-text="report.cleanup.failed + ' échecs'"></span>
+                    </div>
+
+                    <template x-if="report.broken > 0 && report.results">
+                        <div class="mt-4">
+                            <button @click="report._expanded = !report._expanded"
+                                    class="text-xs text-brand-600 dark:text-brand-400 hover:underline font-medium">
+                                <span x-text="report._expanded ? 'Masquer les détails' : 'Afficher les ' + report.broken + ' cassés'"></span>
+                            </button>
+                            <div x-show="report._expanded" x-cloak class="mt-2 overflow-x-auto rounded-lg border border-gray-200 dark:border-gray-700">
+                                <table class="w-full text-xs">
+                                    <thead class="bg-gray-50 dark:bg-gray-800 text-left">
+                                        <tr>
+                                            <th class="px-3 py-2 font-medium text-gray-600 dark:text-gray-400">Titre</th>
+                                            <th class="px-3 py-2 font-medium text-gray-600 dark:text-gray-400">Type</th>
+                                            <th class="px-3 py-2 font-medium text-gray-600 dark:text-gray-400">Chemin</th>
+                                            <th class="px-3 py-2 font-medium text-gray-600 dark:text-gray-400">Statut</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <template x-for="item in report.results" :key="item.symlink_path || item.file_id">
+                                            <tr class="border-t border-gray-100 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800/50">
+                                                <td class="px-3 py-2 font-medium text-gray-800 dark:text-gray-200" x-text="item.media_title || '—'"></td>
+                                                <td class="px-3 py-2 text-gray-500 dark:text-gray-400" x-text="item.media_type || '—'"></td>
+                                                <td class="px-3 py-2 text-gray-500 dark:text-gray-400 font-mono max-w-[200px] truncate" x-text="item.symlink_path"></td>
+                                                <td class="px-3 py-2">
+                                                    <span class="inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full font-medium"
+                                                          :class="item.status === 'détecté' ? 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300' : 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300'">
+                                                        <span class="w-1.5 h-1.5 rounded-full" :class="item.status === 'détecté' ? 'bg-amber-500' : 'bg-blue-500'"></span>
+                                                        <span x-text="item.status"></span>
+                                                    </span>
+                                                </td>
+                                            </tr>
+                                        </template>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </template>
+                </div>
+            </div>
+        </template>
     </div>
 
     {# === SCAN RAPIDE === #}
-    <div x-show="tab === 'fast'" x-cloak x-data="fastScan()">
+    <div x-show="tab === 'fast'" x-cloak>
         <div class="bg-white dark:bg-gray-900 rounded-xl shadow-sm border border-gray-200 dark:border-gray-800 p-5">
             <p class="text-sm text-gray-500 dark:text-gray-400 mb-4">
                 Scan filesystem uniquement — sans appel à Sonarr/Radarr. Résultats non persistés.
             </p>
-            <button @click="run()" :disabled="running"
-                    class="bg-brand-600 text-white px-5 py-2.5 rounded-lg text-sm font-medium hover:bg-brand-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                    x-text="running ? 'Scan en cours...' : 'Lancer le scan rapide'">
+            <button @click="runFastScan()" :disabled="scanning"
+                    class="bg-brand-600 text-white px-5 py-2.5 rounded-lg text-sm font-medium hover:bg-brand-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
+                <span x-show="!scanning">Lancer le scan rapide</span>
+                <span x-show="scanning" x-cloak>Scan en cours...</span>
             </button>
 
-            <template x-if="results">
+            <template x-if="fastResults">
             <div class="mt-6 space-y-4">
                 <div class="grid grid-cols-2 gap-4 max-w-xs">
                     <div class="bg-gray-50 dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-4 text-center">
-                        <div class="text-2xl font-bold text-gray-800 dark:text-gray-200" x-text="results.total"></div>
+                        <div class="text-2xl font-bold text-gray-800 dark:text-gray-200" x-text="fastResults.total"></div>
                         <div class="text-xs text-gray-500 dark:text-gray-400">Symlinks</div>
                     </div>
                     <div class="bg-gray-50 dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-4 text-center">
-                        <div class="text-2xl font-bold text-amber-600 dark:text-amber-400" x-text="results.broken"></div>
+                        <div class="text-2xl font-bold text-amber-600 dark:text-amber-400" x-text="fastResults.broken"></div>
                         <div class="text-xs text-gray-500 dark:text-gray-400">Cassés</div>
                     </div>
                 </div>
 
-                <template x-if="results.broken > 0">
+                <template x-if="fastResults.broken > 0">
                     <div class="overflow-x-auto rounded-lg border border-gray-200 dark:border-gray-700">
                         <table class="w-full text-sm">
                             <thead class="bg-gray-50 dark:bg-gray-800 text-left">
                                 <tr>
                                     <th class="px-3 py-2 font-medium text-gray-600 dark:text-gray-400">Source</th>
                                     <th class="px-3 py-2 font-medium text-gray-600 dark:text-gray-400">Symlink</th>
-                                    <th class="px-3 py-2 font-medium text-gray-600 dark:text-gray-400">Cible</th>
                                     <th class="px-3 py-2 font-medium text-gray-600 dark:text-gray-400">Statut</th>
                                 </tr>
                             </thead>
                             <tbody>
-                                <template x-for="item in results.results" :key="item.symlink_path">
+                                <template x-for="item in fastResults.results" :key="item.symlink_path">
                                     <tr class="border-t border-gray-100 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800/50">
                                         <td class="px-3 py-2">
                                             <span class="text-xs font-medium px-2 py-0.5 rounded"
                                                   :class="item.source === 'radarr' ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/50 dark:text-blue-300' : 'bg-green-100 text-green-700 dark:bg-green-900/50 dark:text-green-300'"
-                                                  x-text="item.source">
-                                            </span>
+                                                  x-text="item.source"></span>
                                         </td>
                                         <td class="px-3 py-2 text-gray-500 dark:text-gray-400 font-mono text-xs max-w-xs truncate" x-text="item.symlink_path"></td>
-                                        <td class="px-3 py-2 text-gray-500 dark:text-gray-400 font-mono text-xs max-w-xs truncate" x-text="item.target_path"></td>
                                         <td class="px-3 py-2">
                                             <span class="text-xs px-2 py-0.5 rounded bg-amber-100 text-amber-700 dark:bg-amber-900/50 dark:text-amber-300">cassé</span>
                                         </td>
@@ -180,7 +245,7 @@
                     </div>
                 </template>
 
-                <template x-if="results.broken === 0">
+                <template x-if="fastResults.broken === 0">
                     <div class="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg p-4 text-sm text-green-700 dark:text-green-400">
                         Aucun symlink cassé trouvé.
                     </div>
@@ -190,38 +255,162 @@
         </div>
     </div>
 
-    <div id="scan-redirect" class="mt-4"></div>
+    {# === Derniers scans === #}
+    <div x-show="tab === 'full'" x-cloak class="mt-8 bg-white dark:bg-gray-900 rounded-xl shadow-sm border border-gray-200 dark:border-gray-800 p-5">
+        <div class="flex items-center justify-between mb-4">
+            <div class="flex items-center gap-2">
+                <svg class="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.5">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                </svg>
+                <h3 class="font-medium text-gray-800 dark:text-gray-200">Derniers scans</h3>
+            </div>
+            <a href="/reports" class="text-xs text-brand-600 dark:text-brand-400 hover:underline font-medium">Voir tout →</a>
+        </div>
+
+        {% if recent_scans %}
+        <div class="hidden md:block overflow-x-auto rounded-lg border border-gray-200 dark:border-gray-700">
+            <table class="w-full text-sm">
+                <thead class="bg-gray-50 dark:bg-gray-800 text-left">
+                    <tr>
+                        <th class="px-4 py-2.5 font-medium text-gray-600 dark:text-gray-400 text-xs uppercase tracking-wider">#</th>
+                        <th class="px-4 py-2.5 font-medium text-gray-600 dark:text-gray-400 text-xs uppercase tracking-wider">Source</th>
+                        <th class="px-4 py-2.5 font-medium text-gray-600 dark:text-gray-400 text-xs uppercase tracking-wider">Mode</th>
+                        <th class="px-4 py-2.5 font-medium text-gray-600 dark:text-gray-400 text-xs uppercase tracking-wider">Statut</th>
+                        <th class="px-4 py-2.5 font-medium text-gray-600 dark:text-gray-400 text-xs uppercase tracking-wider">Cassés</th>
+                        <th class="px-4 py-2.5 font-medium text-gray-600 dark:text-gray-400 text-xs uppercase tracking-wider">Date</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for scan in recent_scans %}
+                    <tr class="border-t border-gray-100 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800/30 transition-colors">
+                        <td class="px-4 py-2.5 text-gray-500 dark:text-gray-400">{{ scan.id }}</td>
+                        <td class="px-4 py-2.5">
+                            <span class="inline-flex items-center gap-1 text-xs font-medium px-2 py-0.5 rounded-full {{ 'bg-blue-100 text-blue-700 dark:bg-blue-900/50 dark:text-blue-300' if scan.source == 'radarr' else 'bg-green-100 text-green-700 dark:bg-green-900/50 dark:text-green-300' }}">
+                                {{ scan.source }}
+                            </span>
+                        </td>
+                        <td class="px-4 py-2.5 text-gray-500 dark:text-gray-400">{{ scan.mode }}</td>
+                        <td class="px-4 py-2.5">
+                            <span class="inline-flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-full font-medium
+                                {% if scan.status == 'completed' %}bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300
+                                {% elif scan.status == 'running' %}bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300
+                                {% elif scan.status == 'error' %}bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300
+                                {% else %}bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400{% endif %}">
+                                <span class="w-1.5 h-1.5 rounded-full
+                                    {% if scan.status == 'completed' %}bg-green-500
+                                    {% elif scan.status == 'running' %}bg-blue-500
+                                    {% elif scan.status == 'error' %}bg-red-500
+                                    {% else %}bg-gray-400{% endif %}">
+                                </span>
+                                {{ scan.status }}
+                            </span>
+                        </td>
+                        <td class="px-4 py-2.5 font-medium {{ 'text-amber-600 dark:text-amber-400' if scan.broken > 0 else 'text-gray-700 dark:text-gray-300' }}">{{ scan.broken }}</td>
+                        <td class="px-4 py-2.5 text-gray-500 dark:text-gray-400 text-xs">{{ scan.created_at }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        <div class="md:hidden space-y-2">
+            {% for scan in recent_scans %}
+            <div class="flex items-center gap-3 py-2.5 border-b border-gray-100 dark:border-gray-800 last:border-b-0">
+                <span class="text-xs text-gray-400 dark:text-gray-500 shrink-0">#{{ scan.id }}</span>
+                <span class="inline-flex items-center gap-1 text-xs font-medium px-2 py-0.5 rounded-full shrink-0 {{ 'bg-blue-100 text-blue-700 dark:bg-blue-900/50 dark:text-blue-300' if scan.source == 'radarr' else 'bg-green-100 text-green-700 dark:bg-green-900/50 dark:text-green-300' }}">
+                    {{ scan.source }}
+                </span>
+                <div class="flex-1 min-w-0 text-sm text-gray-600 dark:text-gray-400">
+                    <span class="font-medium text-gray-800 dark:text-gray-200">{{ scan.mode }}</span>
+                    <span class="ml-2">{{ scan.created_at }}</span>
+                </div>
+                <span class="inline-flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-full font-medium shrink-0
+                    {% if scan.status == 'completed' %}bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300
+                    {% elif scan.status == 'running' %}bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300
+                    {% elif scan.status == 'error' %}bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300
+                    {% else %}bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400{% endif %}">
+                    <span class="w-1.5 h-1.5 rounded-full
+                        {% if scan.status == 'completed' %}bg-green-500
+                        {% elif scan.status == 'running' %}bg-blue-500
+                        {% elif scan.status == 'error' %}bg-red-500
+                        {% else %}bg-gray-400{% endif %}">
+                    </span>
+                    {{ scan.status }}
+                </span>
+            </div>
+            {% endfor %}
+        </div>
+        {% else %}
+        <div class="text-sm text-gray-400 dark:text-gray-500 text-center py-4">Aucun scan pour le moment.</div>
+        {% endif %}
+    </div>
 </div>
 
 <script>
-function fastScan() {
+function scanApp(initialTab, defaultLimit) {
     return {
-        running: false,
-        results: null,
-        run() {
-            this.running = true;
-            fetch('/api/fast-scan', { method: 'POST' })
-                .then(r => r.json())
-                .then(data => {
-                    this.results = data;
-                    this.running = false;
-                })
-                .catch(() => { this.running = false; });
+        tab: initialTab,
+        mode: 'simulate',
+        limit: defaultLimit,
+        scanning: false,
+        scanningSource: '',
+        scanStart: 0,
+        scanReports: [],
+        confirmClean: false,
+        fastResults: null,
+        _elapsedTimer: null,
+        _now: Date.now(),
+
+        async runScan(source, mode) {
+            this.scanning = true;
+            this.scanningSource = source;
+            this.scanStart = Date.now();
+            this._now = Date.now();
+            this._elapsedTimer = setInterval(() => { this._now = Date.now(); }, 1000);
+
+            try {
+                const resp = await fetch(`/api/scan/${source}?mode=${mode}&limit=${this.limit}`, {
+                    method: 'POST',
+                });
+                const data = await resp.json();
+                data.source = source;
+                data.duration = ((Date.now() - this.scanStart) / 1000).toFixed(1);
+                data._expanded = data.broken > 0 && data.broken <= 20;
+                this.scanReports.unshift(data);
+            } catch (e) {
+                this.scanReports.unshift({
+                    ok: false,
+                    source: source,
+                    mode: mode,
+                    status: 'error',
+                    error: e.message || 'Erreur réseau',
+                    duration: ((Date.now() - this.scanStart) / 1000).toFixed(1),
+                    total: 0, broken: 0, processed: 0,
+                });
+            }
+            this.scanning = false;
+            this.scanningSource = '';
+            clearInterval(this._elapsedTimer);
+        },
+
+        async runFastScan() {
+            this.scanning = true;
+            this.scanningSource = 'rapide';
+            try {
+                const resp = await fetch('/api/fast-scan', { method: 'POST' });
+                this.fastResults = await resp.json();
+            } catch (e) {
+                this.fastResults = { ok: false, total: 0, broken: 0, results: [] };
+            }
+            this.scanning = false;
+            this.scanningSource = '';
+        },
+
+        elapsed() {
+            if (!this.scanStart) return '';
+            const s = Math.floor((this._now - this.scanStart) / 1000);
+            return s + 's';
         },
     };
 }
-
-document.body.addEventListener('htmx:afterRequest', function(evt) {
-    if (evt.detail.target && (evt.detail.target.id === 'radarr-result' || evt.detail.target.id === 'sonarr-result')) {
-        try {
-            const data = JSON.parse(evt.detail.xhr.responseText);
-            if (data.ok && data.scan_id) {
-                setTimeout(function() {
-                    window.location.href = '/results';
-                }, 1500);
-            }
-        } catch(e) {}
-    }
-});
 </script>
 {% endblock %}

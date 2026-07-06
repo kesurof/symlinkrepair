@@ -120,7 +120,7 @@
         Page {{ page }} / {{ total_pages }}
     </div>
     <div class="flex gap-1">
-        {% set qp = "source=" + active_source + "&status=" + active_status + "&season=" + active_season + "&q=" + active_q + "&per_page=" + per_page|string + ("&dedup=0" if show_duplicates else "") %}
+        {% set qp = "source=" + active_source + "&status=" + active_status + "&season=" + active_season + "&q=" + active_q + "&per_page=" + per_page|string + ("&dedup=0" if show_duplicates else "") + ("&scan_id=" + active_scan_id|string if active_scan_id else "") %}
         <button hx-get="/results?page={{ page - 1 }}&{{ qp }}"
                 hx-target="#results-content" hx-push-url="true"
                 {% if page <= 1 %}disabled{% endif %}

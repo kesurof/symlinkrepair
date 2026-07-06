@@ -26,6 +26,7 @@ async def results_page(
     page: int = 1,
     per_page: int = 50,
     dedup: bool = True,
+    scan_id: int = 0,
 ):
     if page < 1:
         page = 1
@@ -35,6 +36,9 @@ async def results_page(
     where = "WHERE 1=1"
     params = []
 
+    if scan_id:
+        where += " AND scan_id = ?"
+        params.append(scan_id)
     if source:
         where += " AND source = ?"
         params.append(source)
@@ -48,6 +52,16 @@ async def results_page(
         where += " AND (media_title LIKE ? OR symlink_path LIKE ?)"
         like = f"%{q}%"
         params.extend([like, like])
+
+    scan_info = None
+    if scan_id:
+        cursor = await db.execute(
+            "SELECT id, source, mode, status, created_at FROM scans WHERE id = ?",
+            (scan_id,),
+        )
+        row = await cursor.fetchone()
+        if row:
+            scan_info = dict(row)
 
     if dedup:
         count_cursor = await db.execute(
@@ -109,6 +123,8 @@ async def results_page(
             "active_status": status,
             "active_season": season,
             "active_q": q,
+            "active_scan_id": scan_id,
+            "scan_info": scan_info,
             "page": page,
             "per_page": per_page,
             "total": total,
@@ -126,9 +142,13 @@ async def results_ids(
     season: str = "",
     q: str = "",
     dedup: bool = True,
+    scan_id: int = 0,
 ):
     where = "WHERE 1=1"
     params = []
+    if scan_id:
+        where += " AND scan_id = ?"
+        params.append(scan_id)
     if source:
         where += " AND source = ?"
         params.append(source)
