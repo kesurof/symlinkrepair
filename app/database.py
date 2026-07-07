@@ -87,5 +87,16 @@ async def init_db():
         await db.execute("UPDATE results SET status = 'remplacé' WHERE status = 'réparé'")
         await db.execute("UPDATE results SET status = 'détecté' WHERE status = 'recherche'")
 
+        cursor = await db.execute(
+            "UPDATE results SET status = 'ignoré', action = 'cleaned_duplicate',"
+            " action_date = datetime('now')"
+            " WHERE status = 'détecté' AND (symlink_path, source) IN ("
+            "   SELECT symlink_path, source FROM results"
+            "   WHERE status = 'remplacé'"
+            " )"
+        )
+        if cursor.rowcount:
+            logger.info("Cleaned up %d historical duplicate results", cursor.rowcount)
+
         await db.commit()
     logger.info("Database initialized at %s", DATABASE_PATH)

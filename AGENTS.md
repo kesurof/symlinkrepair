@@ -79,6 +79,7 @@ make docker
 - `POST /api/results/{id}/ignore` — Ignorer un résultat
 - `POST /api/results/{id}/fix` — Marquer manuellement comme corrigé
 - `POST /api/results/{id}/recheck` — Remettre en file d'attente (`recherche`)
+- `POST /api/results/{id}/verify-fs` — Vérifier le symlink sur le filesystem (→ `remplacé` si valide)
 - `POST /api/results/{id}/process` — Traitement réel : DELETE API + recherche
 - `GET /api/results/{id}/verifier` — Statut du cycle de vérification
 - `POST /api/results/{id}/stop-verifier` — Arrêter le cycle de vérification (→ `non_remplacé` / `abandon`)

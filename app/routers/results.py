@@ -19,6 +19,19 @@ logger = logging.getLogger(__name__)
 router = APIRouter()
 
 
+async def _sync_siblings(db: Connection, result: dict, new_status: str, new_action: str):
+    symlink_path = result.get("symlink_path", "")
+    source = result.get("source", "")
+    if not symlink_path or not source:
+        return
+    await db.execute(
+        "UPDATE results SET status = ?, action = ?, action_date = datetime('now')"
+        " WHERE symlink_path = ? AND source = ? AND id != ?"
+        " AND status IN ('détecté', 'recherche', 'en_attente')",
+        (new_status, new_action, symlink_path, source, result.get("id", 0)),
+    )
+
+
 @router.get("/results", response_class=HTMLResponse)
 async def results_page(
     request: Request,
@@ -213,11 +226,19 @@ async def result_detail(request: Request, result_id: int, db: Connection = Depen
 
 @router.post("/api/results/{result_id}/ignore")
 async def ignore_result(result_id: int, db: Connection = Depends(get_db)):
+    cursor = await db.execute(
+        "SELECT id, symlink_path, source FROM results WHERE id = ?", (result_id,)
+    )
+    row = await cursor.fetchone()
+    if not row:
+        return JSONResponse({"ok": False, "error": "Résultat introuvable"}, status_code=404)
+    result = dict(row)
     await db.execute(
         "UPDATE results SET status = 'ignoré', action = 'ignored',"
         " action_date = datetime('now') WHERE id = ?",
         (result_id,),
     )
+    await _sync_siblings(db, result, "ignoré", "ignored_sibling")
     await db.commit()
     logger.info("Result %d ignored", result_id)
     return {"ok": True}
@@ -225,11 +246,19 @@ async def ignore_result(result_id: int, db: Connection = Depends(get_db)):
 
 @router.post("/api/results/{result_id}/recheck")
 async def recheck_result(result_id: int, db: Connection = Depends(get_db)):
+    cursor = await db.execute(
+        "SELECT id, symlink_path, source FROM results WHERE id = ?", (result_id,)
+    )
+    row = await cursor.fetchone()
+    if not row:
+        return JSONResponse({"ok": False, "error": "Résultat introuvable"}, status_code=404)
+    result = dict(row)
     await db.execute(
         "UPDATE results SET status = 'recherche', action = 'recheck',"
         " action_date = datetime('now') WHERE id = ?",
         (result_id,),
     )
+    await _sync_siblings(db, result, "recherche", "recheck_sibling")
     await db.commit()
     logger.info("Result %d recheck scheduled", result_id)
     return {"ok": True}
@@ -237,11 +266,19 @@ async def recheck_result(result_id: int, db: Connection = Depends(get_db)):
 
 @router.post("/api/results/{result_id}/fix")
 async def fix_result(result_id: int, db: Connection = Depends(get_db)):
+    cursor = await db.execute(
+        "SELECT id, symlink_path, source FROM results WHERE id = ?", (result_id,)
+    )
+    row = await cursor.fetchone()
+    if not row:
+        return JSONResponse({"ok": False, "error": "Résultat introuvable"}, status_code=404)
+    result = dict(row)
     await db.execute(
         "UPDATE results SET status = 'remplacé', action = 'manual_fix',"
         " action_date = datetime('now') WHERE id = ?",
         (result_id,),
     )
+    await _sync_siblings(db, result, "remplacé", "manual_fix_sibling")
     await db.commit()
     logger.info("Result %d fixed (manual)", result_id)
     return {"ok": True}
@@ -261,17 +298,21 @@ async def verifier_status(result_id: int, db: Connection = Depends(get_db)):
 
 @router.post("/api/results/{result_id}/stop-verifier")
 async def stop_verifier(result_id: int, db: Connection = Depends(get_db)):
-    cursor = await db.execute("SELECT symlink_path FROM results WHERE id = ?", (result_id,))
+    cursor = await db.execute(
+        "SELECT id, symlink_path, source FROM results WHERE id = ?", (result_id,)
+    )
     row = await cursor.fetchone()
     if not row:
         return JSONResponse({"ok": False, "error": "Résultat introuvable"}, status_code=404)
-    removed = verifier_remove(row["symlink_path"])
+    result = dict(row)
+    removed = verifier_remove(result["symlink_path"])
     if removed:
         await db.execute(
             "UPDATE results SET status = 'non_remplacé', action = 'abandon',"
             " action_date = datetime('now') WHERE id = ?",
             (result_id,),
         )
+        await _sync_siblings(db, result, "non_remplacé", "abandon_sibling")
         await db.commit()
         logger.info("Result %d verifier stopped (abandon)", result_id)
     return {"ok": True}
@@ -316,6 +357,7 @@ async def verify_filesystem(result_id: int, db: Connection = Depends(get_db)):
             " action_date = datetime('now') WHERE id = ?",
             (result_id,),
         )
+        await _sync_siblings(db, result, "remplacé", "verify_fs_sibling")
         await db.commit()
         logger.info("Result %d: verified on filesystem, marked as replaced", result_id)
         return {"ok": True, "valid": True, "status_updated": True, "status": "remplacé"}
@@ -351,6 +393,7 @@ async def process_single_result(
                 " action_date = datetime('now') WHERE id = ?",
                 (result_id,),
             )
+            await _sync_siblings(db, result, "remplacé", "auto_fix_sibling")
             await db.commit()
             logger.info("Result %d auto-fixed (symlink already valid)", result_id)
         elif outcome["ok"]:
@@ -359,6 +402,7 @@ async def process_single_result(
                 " search_count = search_count + 1, action_date = datetime('now') WHERE id = ?",
                 (result_id,),
             )
+            await _sync_siblings(db, result, "en_attente", "api_delete_sibling")
             await db.commit()
 
     config = load_config()
@@ -384,18 +428,38 @@ async def batch_action(request: Request, db: Connection = Depends(get_db)):
         return JSONResponse({"ok": False, "error": "Aucun ID fourni"}, status_code=400)
 
     if action == "ignore":
+        placeholders = ",".join("?" for _ in ids)
         await db.execute(
             f"UPDATE results SET status = 'ignoré', action = 'ignored',"
-            f" action_date = datetime('now') WHERE id IN ({','.join('?' for _ in ids)})",
+            f" action_date = datetime('now') WHERE id IN ({placeholders})",
             ids,
+        )
+        await db.execute(
+            f"UPDATE results SET status = 'ignoré', action = 'ignored_sibling',"
+            f" action_date = datetime('now')"
+            f" WHERE (symlink_path, source) IN ("
+            f"   SELECT symlink_path, source FROM results WHERE id IN ({placeholders})"
+            f" ) AND id NOT IN ({placeholders})"
+            f" AND status IN ('détecté','recherche','en_attente')",
+            ids + ids + ids,
         )
         await db.commit()
         affected = len(ids)
     elif action == "fix":
+        placeholders = ",".join("?" for _ in ids)
         await db.execute(
             f"UPDATE results SET status = 'remplacé', action = 'manual_fix',"
-            f" action_date = datetime('now') WHERE id IN ({','.join('?' for _ in ids)})",
+            f" action_date = datetime('now') WHERE id IN ({placeholders})",
             ids,
+        )
+        await db.execute(
+            f"UPDATE results SET status = 'remplacé', action = 'manual_fix_sibling',"
+            f" action_date = datetime('now')"
+            f" WHERE (symlink_path, source) IN ("
+            f"   SELECT symlink_path, source FROM results WHERE id IN ({placeholders})"
+            f" ) AND id NOT IN ({placeholders})"
+            f" AND status IN ('détecté','recherche','en_attente')",
+            ids + ids + ids,
         )
         await db.commit()
         affected = len(ids)
@@ -432,6 +496,7 @@ async def batch_action(request: Request, db: Connection = Depends(get_db)):
                     " action_date = datetime('now') WHERE id = ?",
                     (rid,),
                 )
+                await _sync_siblings(db, result, "remplacé", "auto_fix_sibling")
                 await db.commit()
             elif outcome.get("ok"):
                 ok_count += 1
@@ -440,15 +505,26 @@ async def batch_action(request: Request, db: Connection = Depends(get_db)):
                     " search_count = search_count + 1, action_date = datetime('now') WHERE id = ?",
                     (rid,),
                 )
+                await _sync_siblings(db, result, "en_attente", "api_delete_sibling")
                 await db.commit()
                 await notify_cleanup(config, result, outcome.get("actions", {}))
             await asyncio.sleep(0.1)
         affected = ok_count
     elif action == "recheck":
+        placeholders = ",".join("?" for _ in ids)
         await db.execute(
             f"UPDATE results SET status = 'recherche', action = 'recheck',"
-            f" action_date = datetime('now') WHERE id IN ({','.join('?' for _ in ids)})",
+            f" action_date = datetime('now') WHERE id IN ({placeholders})",
             ids,
+        )
+        await db.execute(
+            f"UPDATE results SET status = 'recherche', action = 'recheck_sibling',"
+            f" action_date = datetime('now')"
+            f" WHERE (symlink_path, source) IN ("
+            f"   SELECT symlink_path, source FROM results WHERE id IN ({placeholders})"
+            f" ) AND id NOT IN ({placeholders})"
+            f" AND status IN ('détecté','recherche','en_attente')",
+            ids + ids + ids,
         )
         await db.commit()
         affected = len(ids)

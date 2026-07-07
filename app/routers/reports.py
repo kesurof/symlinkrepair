@@ -95,18 +95,24 @@ async def reports_page(
     )
 
 
+_LATEST_DEDUP = (
+    "SELECT status, source FROM results"
+    " WHERE id IN (SELECT MAX(id) FROM results GROUP BY symlink_path, source)"
+)
+
+
 @router.get("/api/stats")
 async def stats(db: Connection = Depends(get_db)):
-    cursor = await db.execute(
-        "SELECT"
-        " (SELECT COUNT(*) FROM scans) AS total_scans,"
-        " (SELECT COUNT(*) FROM results) AS total_results,"
-        " (SELECT COUNT(*) FROM results WHERE status = 'remplacé') AS replaced,"
-        " (SELECT COUNT(*) FROM results"
-        "  WHERE status IN ('non_remplacé','en_attente')) AS not_replaced,"
-        " (SELECT COUNT(*) FROM results WHERE status = 'échoué') AS failed,"
-        " (SELECT COUNT(*) FROM results WHERE status = 'ignoré') AS ignored"
-    )
+    cursor = await db.execute(f"""
+        SELECT
+         (SELECT COUNT(*) FROM scans) AS total_scans,
+         (SELECT COUNT(*) FROM ({_LATEST_DEDUP})) AS total_results,
+         (SELECT COUNT(*) FROM ({_LATEST_DEDUP}) WHERE status = 'remplacé') AS replaced,
+         (SELECT COUNT(*) FROM ({_LATEST_DEDUP})
+          WHERE status IN ('non_remplacé','en_attente')) AS not_replaced,
+         (SELECT COUNT(*) FROM ({_LATEST_DEDUP}) WHERE status = 'échoué') AS failed,
+         (SELECT COUNT(*) FROM ({_LATEST_DEDUP}) WHERE status = 'ignoré') AS ignored
+    """)
     row = dict(await cursor.fetchone())
 
     cursor2 = await db.execute(
@@ -116,18 +122,20 @@ async def stats(db: Connection = Depends(get_db)):
     last = await cursor2.fetchone()
     row["last_scan"] = dict(last) if last else None
 
-    cursor3 = await db.execute("""
+    cursor3 = await db.execute(f"""
         SELECT
-         (SELECT COUNT(*) FROM results
+         (SELECT COUNT(*) FROM ({_LATEST_DEDUP})
           WHERE source='radarr' AND status = 'remplacé') AS rr,
-         (SELECT COUNT(*) FROM results
+         (SELECT COUNT(*) FROM ({_LATEST_DEDUP})
           WHERE source='sonarr' AND status = 'remplacé') AS rs,
-         (SELECT COUNT(*) FROM results
+         (SELECT COUNT(*) FROM ({_LATEST_DEDUP})
           WHERE source='radarr' AND status IN ('non_remplacé','en_attente')) AS nr,
-         (SELECT COUNT(*) FROM results
+         (SELECT COUNT(*) FROM ({_LATEST_DEDUP})
           WHERE source='sonarr' AND status IN ('non_remplacé','en_attente')) AS ns,
-         (SELECT COUNT(*) FROM results WHERE source='radarr') AS tr,
-         (SELECT COUNT(*) FROM results WHERE source='sonarr') AS ts,
+         (SELECT COUNT(*) FROM ({_LATEST_DEDUP})
+          WHERE source='radarr') AS tr,
+         (SELECT COUNT(*) FROM ({_LATEST_DEDUP})
+          WHERE source='sonarr') AS ts,
          (SELECT COUNT(*) FROM scans WHERE DATE(created_at)=DATE('now')) AS st
     """)
     extra = dict(await cursor3.fetchone())
