@@ -88,7 +88,7 @@ make deploy
 - `GET /api/results/{id}/verifier` — Statut du cycle de vérification
 - `POST /api/results/{id}/stop-verifier` — Arrêter le cycle de vérification (→ `non_remplacé` / `abandon`)
 - `POST /api/results/{id}/verify-fs` — Vérifier le symlink sur le filesystem (→ `remplacé` si valide)
-- `POST /api/results/batch` — Action groupée (process/fix/ignore/delete/recheck)
+- `POST /api/results/batch` — Action groupée (process/fix/ignore/delete/recheck/process_season)
 - `GET /api/results/ids` — IDs filtrés (pour selectAll batch)
 - `GET /api/results/recent` — Résultats récents pour le dashboard
 
@@ -114,6 +114,7 @@ make deploy
 
 ## Actions batch disponibles
 - **Traiter** (`process`) — DELETE API Radarr/Sonarr + recherche auto (supporte `delete_season` pour Sonarr)
+- **Traiter une saison** (`process_season`) — DELETE API Sonarr + recherche de tous les épisodes d'une saison d'un coup (nécessite `series_id` + `season` dans le body)
 - **Marquer remplacé** (`fix`) — Flag manuel (symlink marqué comme remplacé)
 - **Ignorer** (`ignore`) — Cache le résultat
 - **Revérifier** (`recheck`) — Remet en file d'attente (`recherche`)
@@ -159,7 +160,8 @@ make deploy
 - [x] Notifications Discord (webhook configurable, envoi scan + nettoyage)
 - [x] Scans automatiques planifiés (intervalle configurable dans /config)
 - [x] Vérificateur asynchrone (surveille remplacement des symlinks)
-- [x] Sélection multiple et actions batch (process, fix, ignore, delete)
+- [x] Sélection multiple et actions batch (process, fix, ignore, delete, process_season)
+- [x] **Groupement par saison** : Sonarr groupé par (series_id, season) avec accordéon, barre de progression, bouton "Traiter la saison", vérification individuelle conservée
 - [x] **Refonte UI** : sidebar desktop + bottom nav mobile, dark mode, mobile-first, Heroicons
 - [x] **Gestion de version** : `/api/version`, affichage sidebar, `VERSION` file en Docker
 - [x] **Déduplication** doublons : migration nettoyage + `_sync_siblings` + stats dédupliquées

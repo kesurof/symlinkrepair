@@ -1,6 +1,6 @@
 ---
 name: coherence
-description: Vérifie la cohérence entre le code et la documentation avant commit
+description: Vérifie la cohérence entre le code et la documentation avant commit. Utilise aussi quand l'utilisateur demande une vérification complète, un test global, une validation de cohérence, ou un audit de documentation.
 ---
 
 # coherence
