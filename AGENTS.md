@@ -119,6 +119,9 @@ make deploy
 - **Revérifier** (`recheck`) — Remet en file d'attente (`recherche`)
 - **Supprimer** (`delete`) — Supprime la ligne en base
 
+## Statuts des résultats
+`détecté` / `recherche` → `en_attente` → `remplacé` / `non_remplacé` / `ignoré` / `échoué`
+
 ## Actions des résultats (results.action)
 | Action | Déclencheur |
 |--------|-------------|
@@ -132,6 +135,7 @@ make deploy
 | `verify_fs` | Vérification filesystem manuelle |
 | `recheck` | Action "Revérifier" |
 | `cleaned_duplicate` | Migration : doublon nettoyé |
+| `api_error` | Échec de l'API Radarr/Sonarr |
 | `*_sibling` | Synchronisation d'un doublon frère |
 
 ## Sécurité
