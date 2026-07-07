@@ -86,20 +86,18 @@
                        class="rounded border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800">
                 <span>Masquer les doublons</span>
             </label>
-            <label class="flex items-center gap-1.5 text-sm cursor-pointer select-none text-gray-600 dark:text-gray-400">
-                <input type="checkbox" id="filter-group-season"
-                       {% if group_season %}checked{% endif %}
-                       onchange="hxNavFromFilters()"
-                       class="rounded border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800">
-                <span>Grouper par saison</span>
-            </label>
             {% if active_scan_id %}
             <input type="hidden" id="filter-scan-id" value="{{ active_scan_id }}">
             {% endif %}
         </div>
     </div>
 
-    {# === Contenu principal (partiel HTMX) === #}
+    {# === Notification toast (hors batch) === #}
+    <div x-show="batchMsg" x-cloak
+         class="fixed top-4 right-4 z-50 bg-green-600 text-white px-4 py-2.5 rounded-xl shadow-lg text-sm font-medium slide-up"
+         x-text="batchMsg"
+         x-transition:leave.duration.500ms>
+    </div>
     <div id="results-content">
         {% include "partials/results_content.html" %}
     </div>
@@ -165,7 +163,6 @@ function hxNavFromFilters() {
     const q = document.getElementById('filter-q').value;
     const pp = document.getElementById('filter-perpage').value;
     const dd = document.getElementById('filter-dedup');
-    const gs = document.getElementById('filter-group-season');
     const si = document.getElementById('filter-scan-id');
     if (src) params.set('source', src);
     if (st) params.set('status', st);
@@ -173,7 +170,6 @@ function hxNavFromFilters() {
     if (q) params.set('q', q);
     if (pp !== '50') params.set('per_page', pp);
     if (dd && !dd.checked) params.set('dedup', '0');
-    if (gs && !gs.checked) params.set('group_season', '0');
     if (si && si.value) params.set('scan_id', si.value);
     htmx.ajax('GET', '/results?' + params.toString(), {target: '#results-content', pushUrl: true});
 }
@@ -230,11 +226,14 @@ function resultsApp() {
             });
             const data = await resp.json();
             if (data.ok) {
+                let msg;
                 if (action === 'verify') {
-                    this.batchMsg = data.verified + '/' + data.total + ' vérifié' + (data.verified > 1 ? 's' : '');
+                    msg = data.verified + '/' + data.total + ' vérifié' + (data.verified > 1 ? 's' : '');
                 } else {
-                    this.batchMsg = data.affected + ' épisode' + (data.affected > 1 ? 's' : '') + ' traité' + (data.affected > 1 ? 's' : '');
+                    msg = data.affected + ' traité' + (data.affected > 1 ? 's' : '');
                 }
+                this.batchMsg = msg;
+                this.selected = [];
                 setTimeout(() => { this.batchMsg = ''; hxNavFromFilters(); }, 1500);
             } else {
                 alert('Erreur: ' + (data.error || 'inconnue'));
@@ -248,14 +247,12 @@ function resultsApp() {
             const sn = document.getElementById('filter-season').value;
             const q = document.getElementById('filter-q').value;
             const dd = document.getElementById('filter-dedup');
-            const gs = document.getElementById('filter-group-season');
             const si = document.getElementById('filter-scan-id');
             if (src) params.set('source', src);
             if (st) params.set('status', st);
             if (sn) params.set('season', sn);
             if (q) params.set('q', q);
             if (dd && !dd.checked) params.set('dedup', '0');
-            if (gs && !gs.checked) params.set('group_season', '0');
             if (si && si.value) params.set('scan_id', si.value);
             const resp = await fetch('/api/results/ids?' + params.toString());
             const data = await resp.json();
