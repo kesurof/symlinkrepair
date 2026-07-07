@@ -27,13 +27,25 @@ jobs:
           registry: ${{ env.REGISTRY }}
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Set tags
+        id: tags
+        run: |
+          BRANCH="${{ github.ref_name }}"
+          VER="${{ inputs.version }}"
+          if [ "$BRANCH" = "main" ]; then
+            TAGS="${{ env.IMAGE_NAME }}:${VER},${{ env.IMAGE_NAME }}:latest"
+          elif [ "$BRANCH" = "dev" ]; then
+            TAGS="${{ env.IMAGE_NAME }}:${VER}-dev,${{ env.IMAGE_NAME }}:dev"
+          else
+            TAGS="${{ env.IMAGE_NAME }}:${VER}-${BRANCH}"
+          fi
+          echo "tags=$TAGS" >> "$GITHUB_OUTPUT"
+
       - uses: docker/build-push-action@v6
         with:
           push: true
           platforms: linux/amd64,linux/arm64/v8
-          tags: |
-            ${{ env.IMAGE_NAME }}:${{ inputs.version }}
-            ${{ env.IMAGE_NAME }}:latest
+          tags: ${{ steps.tags.outputs.tags }}
           build-args: VERSION=${{ inputs.version }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
