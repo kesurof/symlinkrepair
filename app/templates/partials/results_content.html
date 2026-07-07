@@ -146,43 +146,41 @@
                     {% else %}bg-red-500{% endif %}">
                 </div>
 
-                <div class="flex-1 min-w-0">
-                    <div class="flex items-center gap-2 flex-wrap">
-                        <span class="inline-flex items-center gap-1 text-xs font-medium px-2 py-0.5 rounded-full shrink-0 {{ 'bg-blue-100 text-blue-700 dark:bg-blue-900/50 dark:text-blue-300' if item.source == 'radarr' else 'bg-green-100 text-green-700 dark:bg-green-900/50 dark:text-green-300' }}">
-                            {{ item.source }}
-                        </span>
-                        <a href="/results/{{ item.id }}" @click.stop
-                           class="font-medium text-sm sm:text-base text-gray-800 dark:text-gray-200 hover:text-brand-600 dark:hover:text-brand-400 truncate max-w-full">
-                            {{ item.media_title or '—' }}
-                        </a>
-                        <button @click.stop="
-                            clipboardCopy($el.getAttribute('data-title'));
-                            $el.innerHTML = '<svg class=\'w-4 h-4 text-green-500 shrink-0\' fill=\'none\' stroke=\'currentColor\' viewBox=\'0 0 24 24\' stroke-width=\'2\'><path stroke-linecap=\'round\' stroke-linejoin=\'round\' d=\'M4.5 12.75l6 6 9-13.5\'/></svg>';
-                            setTimeout(() => $el.innerHTML = copyIcon, 1500);
-                        " data-title="{{ item.media_title }}"
-                                class="p-1 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors shrink-0"
-                                title="Copier le titre" type="button">
-                            {{ copy_icon|safe }}
-                        </button>
-                        {% set dup = item.total_count|default(0) %}
-                        {% if dup > 1 %}
-                        <span class="text-xs text-gray-400 dark:text-gray-500">(+{{ dup - 1 }})</span>
-                        {% endif %}
-                    </div>
-                    <div class="flex items-center gap-2 mt-0.5 text-xs text-gray-500 dark:text-gray-400">
-                        <span class="shrink-0">{{ item.media_type or '—' }}{% if item.season %} S{{ item.season }}{% endif %}</span>
-                        <span class="shrink-0">·</span>
-                        <span class="font-mono truncate max-w-[120px] sm:max-w-[200px]">{{ item.symlink_path }}</span>
-                        <button @click.stop="
-                            clipboardCopy($el.getAttribute('data-path'));
-                            $el.innerHTML = '<svg class=\'w-3.5 h-3.5 text-green-500 shrink-0\' fill=\'none\' stroke=\'currentColor\' viewBox=\'0 0 24 24\' stroke-width=\'2\'><path stroke-linecap=\'round\' stroke-linejoin=\'round\' d=\'M4.5 12.75l6 6 9-13.5\'/></svg>';
-                            setTimeout(() => $el.innerHTML = copyIcon, 1500);
-                        " data-path="{{ item.symlink_path }}"
-                                class="p-0.5 rounded hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors shrink-0"
-                                title="Copier le chemin" type="button">
-                            {{ copy_icon|safe }}
-                        </button>
-                    </div>
+                <div class="flex-1 min-w-0 flex items-center gap-1.5 min-h-[2.5rem]">
+                    <span class="inline-flex items-center gap-1 text-xs font-medium px-2 py-0.5 rounded-full shrink-0 {{ 'bg-blue-100 text-blue-700 dark:bg-blue-900/50 dark:text-blue-300' if item.source == 'radarr' else 'bg-green-100 text-green-700 dark:bg-green-900/50 dark:text-green-300' }}">
+                        {{ item.source }}
+                    </span>
+                    <a href="/results/{{ item.id }}" @click.stop
+                       class="font-medium text-sm text-gray-800 dark:text-gray-200 hover:text-brand-600 dark:hover:text-brand-400 truncate max-w-[35%] shrink">
+                        {{ item.media_title or '—' }}
+                    </a>
+                    <button @click.stop="
+                        clipboardCopy($el.getAttribute('data-title'));
+                        $el.innerHTML = '<svg class=\'w-4 h-4 text-green-500 shrink-0\' fill=\'none\' stroke=\'currentColor\' viewBox=\'0 0 24 24\' stroke-width=\'2\'><path stroke-linecap=\'round\' stroke-linejoin=\'round\' d=\'M4.5 12.75l6 6 9-13.5\'/></svg>';
+                        setTimeout(() => $el.innerHTML = copyIcon, 1500);
+                    " data-title="{{ item.media_title }}"
+                            class="p-0.5 rounded hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors shrink-0"
+                            title="Copier le titre" type="button">
+                        {{ copy_icon|safe }}
+                    </button>
+                    {% set dup = item.total_count|default(0) %}
+                    {% if dup > 1 %}
+                    <span class="text-xs text-gray-400 dark:text-gray-500 shrink-0">(+{{ dup - 1 }})</span>
+                    {% endif %}
+                    <span class="text-[10px] text-gray-300 dark:text-gray-600 shrink-0">·</span>
+                    <span class="font-mono text-[11px] text-gray-500 dark:text-gray-400 truncate max-w-[30%] shrink-0"
+                          style="direction:rtl;text-align:left;unicode-bidi:plaintext">{{ item.symlink_path }}</span>
+                    <button @click.stop="
+                        clipboardCopy($el.getAttribute('data-path'));
+                        $el.innerHTML = '<svg class=\'w-3.5 h-3.5 text-green-500 shrink-0\' fill=\'none\' stroke=\'currentColor\' viewBox=\'0 0 24 24\' stroke-width=\'2\'><path stroke-linecap=\'round\' stroke-linejoin=\'round\' d=\'M4.5 12.75l6 6 9-13.5\'/></svg>';
+                        setTimeout(() => $el.innerHTML = copyIcon, 1500);
+                    " data-path="{{ item.symlink_path }}"
+                            class="p-0.5 rounded hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors shrink-0"
+                            title="Copier le chemin" type="button">
+                        {{ copy_icon|safe }}
+                    </button>
+                    <span class="text-[10px] text-gray-300 dark:text-gray-600 shrink-0">·</span>
+                    <span class="shrink-0 text-xs text-gray-500 dark:text-gray-400">{{ item.media_type or '—' }}{% if item.season %} S{{ item.season }}{% endif %}</span>
                 </div>
 
                 <div class="flex items-center gap-1 shrink-0">

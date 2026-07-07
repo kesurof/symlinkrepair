@@ -263,7 +263,12 @@ function resultsApp() {
             const resp = await fetch(`/api/results/${id}/${action}`, { method: 'POST' });
             const data = await resp.json();
             if (data.ok) {
-                hxNavFromFilters();
+                if (action === 'verify-fs') {
+                    this.batchMsg = data.valid ? '✓ Symlink valide' : (data.reason || 'Non vérifié');
+                    setTimeout(() => { this.batchMsg = ''; hxNavFromFilters(); }, 1500);
+                } else {
+                    hxNavFromFilters();
+                }
             } else {
                 alert('Erreur: ' + (data.error || 'inconnue'));
             }
