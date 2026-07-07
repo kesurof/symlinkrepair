@@ -64,7 +64,7 @@
                 <option value="{{ i }}">Saison {{ i }}</option>
                 {% endfor %}
             </select>
-            <div class="relative flex-1 min-w-[200px]">
+            <div class="relative flex-1 min-w-[140px] sm:min-w-[200px]">
                 <svg class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.5">
                     <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z"/>
                 </svg>
@@ -114,11 +114,11 @@
                 </button>
             </template>
             <div class="flex gap-1.5 flex-wrap ml-2">
-                <button @click="batchAction('process')" class="bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300 px-2.5 py-1.5 rounded-lg hover:bg-amber-200 dark:hover:bg-amber-900/50 transition-colors text-xs font-medium">Traiter</button>
-                <button @click="batchAction('fix')" class="bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300 px-2.5 py-1.5 rounded-lg hover:bg-green-200 dark:hover:bg-green-900/50 transition-colors text-xs font-medium">Remplacé</button>
-                <button @click="batchAction('ignore')" class="bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 px-2.5 py-1.5 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors text-xs font-medium">Ignorer</button>
-                <button @click="batchAction('recheck')" class="bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300 px-2.5 py-1.5 rounded-lg hover:bg-amber-200 dark:hover:bg-amber-900/50 transition-colors text-xs font-medium">Revérifier</button>
-                <button @click="confirmDelete = true" class="bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300 px-2.5 py-1.5 rounded-lg hover:bg-red-200 dark:hover:bg-red-900/50 transition-colors text-xs font-medium">Suppr.</button>
+                <button @click="batchAction('process')" class="bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300 px-2 py-1 rounded-lg hover:bg-amber-200 dark:hover:bg-amber-900/50 transition-colors text-xs font-medium">Traiter</button>
+                <button @click="batchAction('fix')" class="bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300 px-2 py-1 rounded-lg hover:bg-green-200 dark:hover:bg-green-900/50 transition-colors text-xs font-medium">Remplacé</button>
+                <button @click="batchAction('ignore')" class="bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 px-2 py-1 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors text-xs font-medium">Ignorer</button>
+                <button @click="batchAction('recheck')" class="bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300 px-2 py-1 rounded-lg hover:bg-amber-200 dark:hover:bg-amber-900/50 transition-colors text-xs font-medium">Revérifier</button>
+                <button @click="confirmDelete = true" class="bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300 px-2 py-1 rounded-lg hover:bg-red-200 dark:hover:bg-red-900/50 transition-colors text-xs font-medium">Suppr.</button>
             </div>
             <button @click="selected = []" class="text-gray-400 hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-300 ml-auto p-1 shrink-0">✕</button>
             <span x-show="batchMsg" x-text="batchMsg" class="text-green-600 dark:text-green-400 ml-2 text-xs"></span>
