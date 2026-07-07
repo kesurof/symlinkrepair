@@ -143,10 +143,22 @@ async def results_page(
                 1 for e in g["episodes"] if e["status"] in ("détecté", "recherche")
             )
             g["episodes"].sort(key=lambda e: e.get("episode") or 0)
+            for idx, e in enumerate(g["episodes"]):
+                if e.get("episode") is None:
+                    e["episode"] = (
+                        idx + 1 if idx == 0 else g["episodes"][idx - 1].get("episode", idx) + 1
+                    )
             display_items.append({"type": "group", **g})
 
         for s in singles:
             display_items.append({"type": "single", "item": s})
+
+        display_items.sort(
+            key=lambda d: (
+                max(e["id"] for e in d["episodes"]) if d["type"] == "group" else d["item"]["id"]
+            ),
+            reverse=True,
+        )
 
         total = len(display_items)
         total_pages = max(1, (total + per_page - 1) // per_page)
@@ -555,6 +567,13 @@ async def batch_action(request: Request, db: Connection = Depends(get_db)):
                     )
                     verified += 1
             await db.commit()
+            logger.info(
+                "Season verify: series=%s season=%s verified=%d total=%d",
+                series_id,
+                season_num,
+                verified,
+                len(all_rows),
+            )
             return {"ok": True, "verified": verified, "total": len(all_rows)}
 
     if not ids:
