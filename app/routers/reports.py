@@ -205,6 +205,33 @@ async def stats_history(db: Connection = Depends(get_db), days: int = 30):
     }
 
 
+@router.get("/api/stats/top-affected")
+async def top_affected(
+    db: Connection = Depends(get_db),
+    source: str = "",
+    limit: int = 10,
+):
+    where = "WHERE r.status NOT IN ('remplacé', 'ignoré')"
+    params: list = []
+    if source:
+        where += " AND r.source = ?"
+        params.append(source)
+    cursor = await db.execute(
+        f"SELECT r.media_title, r.source, r.season, COUNT(*) as count"
+        f" FROM results r"
+        f" INNER JOIN ("
+        f"   SELECT MAX(id) as max_id FROM results"
+        f"   GROUP BY symlink_path, source"
+        f" ) latest ON r.id = latest.max_id"
+        f" {where}"
+        f" GROUP BY r.media_title, r.source, r.season"
+        f" ORDER BY count DESC LIMIT ?",
+        params + [limit],
+    )
+    rows = await cursor.fetchall()
+    return {"items": [dict(r) for r in rows]}
+
+
 @router.get("/api/scans/ids")
 async def scans_ids(
     db: Connection = Depends(get_db),

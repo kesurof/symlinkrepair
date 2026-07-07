@@ -9,7 +9,7 @@ from fastapi.responses import HTMLResponse, JSONResponse
 from app.database import get_db
 from app.services.cleanup import process_season, process_single
 from app.services.config_service import load_config
-from app.services.discord import notify_cleanup
+from app.services.discord import notify_cleanup, notify_season_cleanup
 from app.services.filescanner import inspect_symlink
 from app.services.verifier import get_status as verifier_get_status
 from app.services.verifier import remove as verifier_remove
@@ -493,7 +493,16 @@ async def process_single_result(
             await db.commit()
 
     config = load_config()
-    await notify_cleanup(config, result, outcome.get("actions", {}))
+    if delete_season and result.get("source") == "sonarr":
+        await notify_season_cleanup(
+            config,
+            series_title=result.get("media_title", "?"),
+            season=result.get("season", 0),
+            source="sonarr",
+            outcome=outcome,
+        )
+    else:
+        await notify_cleanup(config, result, outcome.get("actions", {}))
 
     logger.info(
         "Result %d processed: ok=%s error=%s delete_season=%s",
@@ -533,6 +542,14 @@ async def batch_action(request: Request, db: Connection = Depends(get_db)):
         if action == "process_season":
             result_ps = dict(row_ps)
             outcome_ps = await process_season(result_ps, db, result_ps.get("scan_id", 0))
+            config = load_config()
+            await notify_season_cleanup(
+                config,
+                series_title=result_ps.get("media_title", "?"),
+                season=season_num,
+                source="sonarr",
+                outcome=outcome_ps,
+            )
             return {
                 "ok": outcome_ps.get("ok", False),
                 "affected": outcome_ps.get("processed", 0),

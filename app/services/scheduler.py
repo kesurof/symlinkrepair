@@ -8,7 +8,7 @@ from app.database import DATABASE_PATH
 from app.services import scanner
 from app.services.cleanup import process_all_detected
 from app.services.config_service import load_config
-from app.services.discord import notify_cleanup, notify_scan
+from app.services.discord import notify_cleanup, notify_scan, notify_season_cleanup
 
 logger = logging.getLogger(__name__)
 
@@ -105,20 +105,39 @@ async def _trigger_scan(source: str):
             config = load_config()
             await notify_scan(config, source, result)
             if cleanup_stats.get("deleted"):
-                for target in result.get("targets", []):
-                    title = target.get("media_title") or ""
-                    if title:
-                        action_log = {
-                            "api_delete": True,
-                            "symlink_removed": True,
-                            "refresh": config.defaults.rescan,
-                            "search": config.defaults.search,
-                        }
-                        fake_result = {
-                            "source": source,
-                            "media_title": title,
-                        }
-                        await notify_cleanup(config, fake_result, action_log)
+                if source == "sonarr":
+                    sonarr_seasons = {}
+                    for target in result.get("targets", []):
+                        if target.get("series_id") and target.get("season") is not None:
+                            key = (target["series_id"], target["season"])
+                            if key not in sonarr_seasons:
+                                sonarr_seasons[key] = {
+                                    "title": target.get("media_title", ""),
+                                    "processed": 0,
+                                    "total": 0,
+                                }
+                            sonarr_seasons[key]["total"] += 1
+                            sonarr_seasons[key]["processed"] += 1
+                    for (sid, snum), info in sonarr_seasons.items():
+                        await notify_season_cleanup(
+                            config,
+                            series_title=info["title"],
+                            season=snum,
+                            source="sonarr",
+                            outcome={"processed": info["processed"], "total": info["total"]},
+                        )
+                else:
+                    for target in result.get("targets", []):
+                        title = target.get("media_title") or ""
+                        if title:
+                            action_log = {
+                                "api_delete": True,
+                                "symlink_removed": True,
+                                "refresh": config.defaults.rescan,
+                                "search": config.defaults.search,
+                            }
+                            fake_result = {"source": source, "media_title": title}
+                            await notify_cleanup(config, fake_result, action_log)
 
             logger.info(
                 "%s scan done: %d broken, %d new, %d deleted, %d failed",
