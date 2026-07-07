@@ -3,7 +3,8 @@
       x-data="{
         darkMode: localStorage.getItem('darkMode') === 'true' ||
                   (localStorage.getItem('darkMode') === null && window.matchMedia('(prefers-color-scheme: dark)').matches),
-        helpOpen: false
+        helpOpen: false,
+        helpVersion: false
       }"
       x-init="
         $store.app.sidebarOpen = window.innerWidth >= 768;
@@ -115,13 +116,62 @@
                      <span x-show="$store.app.sidebarOpen" x-text="darkMode ? 'Mode clair' : 'Mode sombre'"></span>
                 </button>
             </div>
-            <div x-data="{ v: '' }" x-init="fetch('/api/version').then(r=>r.json()).then(d=>v=d.version).catch(()=>v='')"
+            <div x-data="{ vi: {} }"
+                 x-init="fetch('/api/version').then(r=>r.json()).then(d=>vi=d).catch(()=>vi={version:''})"
                  class="px-3 py-2 border-t border-gray-200 dark:border-gray-800">
-                <span x-show="$store.app.sidebarOpen" x-text="v"
-                      class="text-[10px] text-gray-400 dark:text-gray-600 font-mono"></span>
+                <div class="flex items-center gap-2">
+                    <button @click="helpVersion = true"
+                            class="shrink-0 text-gray-400 hover:text-brand-500 dark:text-gray-500 dark:hover:text-brand-400 transition-colors p-0.5 rounded"
+                            :class="$store.app.sidebarOpen ? '' : 'mx-auto'">
+                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.5">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M11.25 11.25l.041-.02a.75.75 0 011.063.852l-.708 2.836a.75.75 0 001.063.853l.041-.021M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-9-3.75h.008v.008H12V8.25z"/>
+                        </svg>
+                    </button>
+                    <span x-show="$store.app.sidebarOpen"
+                          x-text="vi.version"
+                          :title="'Commit: ' + (vi.commit || '—') + '\nTag: ' + (vi.tag || '—')"
+                          class="text-[10px] text-gray-400 dark:text-gray-600 font-mono truncate cursor-default"></span>
+                </div>
             </div>
         </div>
     </aside>
+
+    {# === MODALE À PROPOS === #}
+    <div x-show="helpVersion" class="fixed inset-0 bg-black/40 dark:bg-black/60 flex items-end md:items-center justify-center z-50" @click.self="helpVersion = false" x-cloak>
+        <div class="bg-white dark:bg-gray-900 rounded-t-2xl md:rounded-2xl shadow-xl w-full md:max-w-sm md:mx-4 slide-up"
+             x-data="{ vi: {} }" x-init="fetch('/api/version').then(r=>r.json()).then(d=>vi=d).catch(()=>0)">
+            <div class="flex items-center gap-3 px-6 py-4 border-b border-gray-200 dark:border-gray-800">
+                <div class="w-8 h-8 rounded-full bg-brand-100 dark:bg-brand-900/50 flex items-center justify-center">
+                    <svg class="w-5 h-5 text-brand-600 dark:text-brand-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.5">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75L11.25 15 15 9.75m-3-7.036A11.959 11.959 0 013.598 6 11.99 11.99 0 003 9.749c0 5.592 3.824 10.29 9 11.623 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.571-.598-3.751h-.152c-3.196 0-6.1-1.248-8.25-3.285z"/>
+                    </svg>
+                </div>
+                <h3 class="font-semibold text-gray-800 dark:text-gray-200">À propos</h3>
+                <button @click="helpVersion = false" class="ml-auto text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 p-1 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800">✕</button>
+            </div>
+            <div class="px-6 py-4 space-y-3 text-sm">
+                <div class="flex justify-between">
+                    <span class="text-gray-500 dark:text-gray-400">Application</span>
+                    <span class="font-medium text-gray-800 dark:text-gray-200">SymlinkRepair</span>
+                </div>
+                <div class="flex justify-between">
+                    <span class="text-gray-500 dark:text-gray-400">Version</span>
+                    <span class="font-mono text-gray-800 dark:text-gray-200" x-text="vi.version || '—'"></span>
+                </div>
+                <div class="flex justify-between">
+                    <span class="text-gray-500 dark:text-gray-400">Commit</span>
+                    <span class="font-mono text-gray-800 dark:text-gray-200" x-text="vi.commit || '—'"></span>
+                </div>
+                <div class="flex justify-between">
+                    <span class="text-gray-500 dark:text-gray-400">Tag</span>
+                    <span class="font-mono text-gray-800 dark:text-gray-200" x-text="vi.tag || '—'"></span>
+                </div>
+            </div>
+            <div class="px-6 py-4 border-t border-gray-200 dark:border-gray-800 flex justify-end">
+                <button @click="helpVersion = false" class="bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 px-4 py-2 rounded-lg text-sm font-medium hover:bg-gray-200 dark:hover:bg-gray-700">Fermer</button>
+            </div>
+        </div>
+    </div>
 
     {# === MAIN CONTENT === #}
     <main class="md:ml-56 pb-16 md:pb-0 min-h-screen"
@@ -146,6 +196,11 @@
                 <span class="text-[10px] font-medium leading-tight">{{ label }}</span>
             </a>
             {% endfor %}
+            <div x-data="{ vi: {} }" x-init="fetch('/api/version').then(r=>r.json()).then(d=>vi=d).catch(()=>0)"
+                 class="absolute right-1 bottom-0.5">
+                <span x-text="vi.version ? 'v' + (''+vi.version).split(' ')[0].replace(/^v/,'').split('-')[0] : ''"
+                      class="text-[8px] text-gray-400 dark:text-gray-600 font-mono"></span>
+            </div>
         </div>
     </nav>
 
