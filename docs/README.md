@@ -28,7 +28,7 @@ AllDebrid / Decypharr dans les bibliothèques Radarr et Sonarr.
 make dev        # Lancer en dev sur http://localhost:8000
 make test       # Lancer les tests
 make docker     # Lancer avec Docker
-make push       # Pusher sur GitHub → CI build & push l'image Docker multi-arch
+make deploy     # Pusher le code sur GitHub (sans build Docker)
 ```
 
 ## Docker Compose — développement local
@@ -57,21 +57,19 @@ docker compose down 2>&1 && docker compose -f docker-compose.dev.yml up --build 
 
 ## Publier une nouvelle version
 
-La publication de l'image Docker est automatisée via GitHub Actions.
-Un simple push sur `main` déclenche le build multi-arch (amd64 + arm64)
-et la publication sur `ghcr.io/kesurof/symlinkrepair`.
+Le build de l'image Docker est déclenché manuellement depuis GitHub.
 
 ```bash
-# 1. Pusher la dernière version
+# Pusher le code
 git add . && git commit -m "..."
-git push origin main
-
-# 2. (Optionnel) Créer un tag de version pour marquer une release
-git tag v0.2.0
-make push    # equivalent à : git push origin main && git push origin --tags
+make deploy    # git push origin main
 ```
 
-La CI :
-- Build les images **linux/amd64** et **linux/arm64**
-- Les pousse sur **ghcr.io** avec les tags `latest`, `main`, `v*`, `sha-<commit>`
-- Utilise le cache GitHub Actions pour accélérer les builds suivants
+Puis sur GitHub :
+1. Aller sur **Actions** → **Docker Publish** → **Run workflow**
+2. Rentrer la version (ex: `0.3.0`)
+3. Cliquer **Run workflow**
+
+Le CI build l'image et la pousse sur `ghcr.io/kesurof/symlinkrepair` avec les tags `v0.3.0` et `latest`.
+
+**Note** : pousser sur `main` ne build plus d'image. Le build est uniquement manuel via *workflow_dispatch*.
