@@ -34,6 +34,7 @@ app/
 │   ├── db_utils.py         # Utilitaires partagés (copy DB, fetch tags)
 │   ├── verifier.py         # Vérificateur asynchrone (surveille remplacement)
 │   ├── scheduler.py        # Scans automatiques planifiés
+│   ├── retryer.py          # Nouvelle tentative périodique des échecs
 │   ├── discord.py          # Notifications Discord (webhook)
 │   └── config_service.py   # CRUD config.json + browse sécurisé
 ├── models/
