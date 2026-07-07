@@ -172,7 +172,7 @@
                     <div class="flex items-center gap-2 mt-0.5 text-xs text-gray-500 dark:text-gray-400">
                         <span class="shrink-0">{{ item.media_type or '—' }}{% if item.season %} S{{ item.season }}{% endif %}</span>
                         <span class="shrink-0">·</span>
-                        <span class="font-mono truncate min-w-0">{{ item.symlink_path }}</span>
+                        <span class="font-mono truncate max-w-[120px] sm:max-w-[200px]">{{ item.symlink_path }}</span>
                         <button @click.stop="
                             clipboardCopy($el.getAttribute('data-path'));
                             $el.innerHTML = '<svg class=\'w-3.5 h-3.5 text-green-500 shrink-0\' fill=\'none\' stroke=\'currentColor\' viewBox=\'0 0 24 24\' stroke-width=\'2\'><path stroke-linecap=\'round\' stroke-linejoin=\'round\' d=\'M4.5 12.75l6 6 9-13.5\'/></svg>';
@@ -202,6 +202,18 @@
                         {{ item.status }}
                     </span>
 
+                    {# Actions compactes inline #}
+                    {% if item.status not in ('remplacé','en_attente') %}
+                    <button @click.stop="itemAction({{ item.id }}, 'verify-fs')"
+                            class="text-xs px-1.5 py-0.5 rounded font-medium bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors shrink-0">
+                        Vér
+                    </button>
+                    <button @click.stop="itemAction({{ item.id }}, 'process')"
+                            class="text-xs px-1.5 py-0.5 rounded font-medium bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300 hover:bg-amber-200 dark:hover:bg-amber-900/50 transition-colors shrink-0">
+                        Tr{% if item.search_count %}({{ item.search_count }}){% endif %}
+                    </button>
+                    {% endif %}
+
                     <div class="relative" x-data="{ menuOpen: false }" @click.outside="menuOpen = false" @click.stop>
                         <button @click.stop="menuOpen = !menuOpen"
                                 class="p-1.5 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800">
@@ -213,56 +225,31 @@
                              class="absolute right-0 top-full mt-1 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg py-1 min-w-[180px] z-10">
                             <a href="/results/{{ item.id }}" @click.stop
                                class="block px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800">Voir le détail</a>
-                              {% if item.status in ('non_remplacé','échoué','détecté','recherche') %}
-                              <button @click.stop="itemAction({{ item.id }}, 'fix'); menuOpen = false"
-                                       class="block w-full text-left px-4 py-2 text-sm text-green-600 dark:text-green-400 hover:bg-gray-50 dark:hover:bg-gray-800">Marquer remplacé</button>
-                              {% endif %}
-                              {% if item.status in ('non_remplacé','échoué') %}
-                              <button @click.stop="itemAction({{ item.id }}, 'recheck'); menuOpen = false"
-                                       class="block w-full text-left px-4 py-2 text-sm text-amber-600 dark:text-amber-400 hover:bg-gray-50 dark:hover:bg-gray-800">Revérifier</button>
-                              {% endif %}
-                             <button @click.stop="selected = [{{ item.id }}]; confirmDelete = true; menuOpen = false"
-                                     class="block w-full text-left px-4 py-2 text-sm text-red-600 dark:text-red-400 hover:bg-gray-50 dark:hover:bg-gray-800">Supprimer</button>
+                            <button @click.stop="itemAction({{ item.id }}, 'verify-fs'); menuOpen = false"
+                                    class="block w-full text-left px-4 py-2 text-sm text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800">Vérifier</button>
+                            {% if item.status in ('détecté','recherche','ignoré','non_remplacé','échoué') %}
+                            <button @click.stop="itemAction({{ item.id }}, 'process'); menuOpen = false"
+                                    class="block w-full text-left px-4 py-2 text-sm text-amber-600 dark:text-amber-400 hover:bg-gray-50 dark:hover:bg-gray-800">Traiter{% if item.search_count %} ({{ item.search_count }}){% endif %}</button>
+                            {% endif %}
+                            {% if item.status in ('non_remplacé','échoué','détecté','recherche') %}
+                            <button @click.stop="itemAction({{ item.id }}, 'fix'); menuOpen = false"
+                                    class="block w-full text-left px-4 py-2 text-sm text-green-600 dark:text-green-400 hover:bg-gray-50 dark:hover:bg-gray-800">Marquer remplacé</button>
+                            {% endif %}
+                            {% if item.status not in ('ignoré','remplacé','en_attente') %}
+                            <button @click.stop="itemAction({{ item.id }}, 'ignore'); menuOpen = false"
+                                    class="block w-full text-left px-4 py-2 text-sm text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800">Ignorer</button>
+                            {% endif %}
+                            {% if item.status in ('non_remplacé','échoué') %}
+                            <button @click.stop="itemAction({{ item.id }}, 'recheck'); menuOpen = false"
+                                    class="block w-full text-left px-4 py-2 text-sm text-amber-600 dark:text-amber-400 hover:bg-gray-50 dark:hover:bg-gray-800">Revérifier</button>
+                            {% endif %}
+                            <button @click.stop="selected = [{{ item.id }}]; confirmDelete = true; menuOpen = false"
+                                    class="block w-full text-left px-4 py-2 text-sm text-red-600 dark:text-red-400 hover:bg-gray-50 dark:hover:bg-gray-800">Supprimer</button>
                         </div>
                     </div>
                 </div>
-            </div>
-
-            <div x-show="!showBatch" class="flex flex-wrap gap-1.5 mt-3 sm:ml-9" x-cloak>
-                <button @click.stop="itemAction({{ item.id }}, 'verify-fs')"
-                        class="bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 px-2.5 py-1 rounded-lg text-xs font-medium hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors">
-                    Vérifier
-                </button>
-                {% if item.status in ('détecté','recherche') %}
-                <button @click.stop="itemAction({{ item.id }}, 'process')"
-                        class="bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300 px-2.5 py-1 rounded-lg text-xs font-medium hover:bg-amber-200 dark:hover:bg-amber-900/50 transition-colors">
-                    Traiter{% if item.search_count %} ({{ item.search_count }}){% endif %}
-                </button>
-                <button @click.stop="itemAction({{ item.id }}, 'ignore')"
-                        class="bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 px-2.5 py-1 rounded-lg text-xs font-medium hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors">
-                    Ignorer
-                </button>
-                {% elif item.status == 'ignoré' %}
-                <button @click.stop="itemAction({{ item.id }}, 'process')"
-                        class="bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300 px-2.5 py-1 rounded-lg text-xs font-medium hover:bg-amber-200 dark:hover:bg-amber-900/50 transition-colors">
-                    Traiter{% if item.search_count %} ({{ item.search_count }}){% endif %}
-                </button>
-                {% elif item.status in ('non_remplacé','échoué') %}
-                <button @click.stop="itemAction({{ item.id }}, 'process')"
-                        class="bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300 px-2.5 py-1 rounded-lg text-xs font-medium hover:bg-amber-200 dark:hover:bg-amber-900/50 transition-colors">
-                    Traiter{% if item.search_count %} ({{ item.search_count }}){% endif %}
-                </button>
-                <button @click.stop="itemAction({{ item.id }}, 'fix')"
-                        class="bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300 px-2.5 py-1 rounded-lg text-xs font-medium hover:bg-green-200 dark:hover:bg-green-900/50 transition-colors">
-                    Remplacé
-                </button>
-                <button @click.stop="itemAction({{ item.id }}, 'ignore')"
-                        class="bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 px-2.5 py-1 rounded-lg text-xs font-medium hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors">
-                    Ignorer
-                </button>
-                {% endif %}
-            </div>
-        </div>
+            </div>  {# end flex #}
+        </div>  {# end p-4 #}
     </div>
     {% endif %}
     {% endfor %}
