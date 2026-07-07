@@ -1,4 +1,5 @@
 name: Docker Publish
+run-name: "Build ${{ inputs.version }} by @${{ github.actor }}"
 
 on:
   workflow_dispatch:
