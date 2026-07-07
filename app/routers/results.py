@@ -44,6 +44,7 @@ async def results_page(
     per_page: int = 50,
     dedup: bool = True,
     scan_id: int = 0,
+    group_season: bool = True,
 ):
     if page < 1:
         page = 1
@@ -80,46 +81,118 @@ async def results_page(
         if row:
             scan_info = dict(row)
 
-    if dedup:
-        count_cursor = await db.execute(
-            f"SELECT COUNT(*) FROM ("
-            f"  SELECT MAX(id) FROM results {where} GROUP BY symlink_path, source"
-            f" )",
-            params,
-        )
+    columns = (
+        "id, source, media_title, media_type, season, episode,"
+        " symlink_path, status, action, search_count, series_id, file_id"
+    )
+
+    if group_season:
+        if dedup:
+            cursor = await db.execute(
+                f"SELECT r.{columns}, latest.total_count"
+                f" FROM results r"
+                f" INNER JOIN ("
+                f"   SELECT symlink_path, source, MAX(id) as max_id, COUNT(*) as total_count"
+                f"   FROM results {where}"
+                f"   GROUP BY symlink_path, source"
+                f" ) latest ON r.id = latest.max_id"
+                f" ORDER BY r.id DESC",
+                params,
+            )
+        else:
+            cursor = await db.execute(
+                f"SELECT {columns} FROM results {where}"
+                f" ORDER BY id DESC",
+                params,
+            )
+        rows = await cursor.fetchall()
+        all_items = [dict(r) for r in rows]
+
+        groups_map: dict[tuple, dict] = {}
+        singles = []
+        for item in all_items:
+            if (
+                item.get("source") == "sonarr"
+                and item.get("series_id")
+                and item.get("season") is not None
+            ):
+                key = (item["series_id"], item["season"])
+                if key not in groups_map:
+                    groups_map[key] = {
+                        "series_id": item["series_id"],
+                        "season": item["season"],
+                        "media_title": item["media_title"],
+                        "episodes": [],
+                    }
+                groups_map[key]["episodes"].append(item)
+            else:
+                singles.append(item)
+
+        display_items = []
+        for g in sorted(
+            groups_map.values(),
+            key=lambda g: max(e["id"] for e in g["episodes"]),
+            reverse=True,
+        ):
+            g["episode_count"] = len(g["episodes"])
+            g["replaced_count"] = sum(1 for e in g["episodes"] if e["status"] == "remplacé")
+            g["pending_count"] = sum(
+                1 for e in g["episodes"] if e["status"] in ("détecté", "recherche")
+            )
+            g["episodes"].sort(key=lambda e: e.get("episode") or 0)
+            display_items.append({"type": "group", **g})
+
+        for s in singles:
+            display_items.append({"type": "single", "item": s})
+
+        total = len(display_items)
+        total_pages = max(1, (total + per_page - 1) // per_page)
+        if page > total_pages:
+            page = total_pages
+        offset = (page - 1) * per_page
+        items = display_items[offset : offset + per_page]
+        raw_total = len(all_items)
     else:
-        count_cursor = await db.execute(f"SELECT COUNT(*) FROM results {where}", params)
-    total = (await count_cursor.fetchone())[0]
+        if dedup:
+            count_cursor = await db.execute(
+                f"SELECT COUNT(*) FROM ("
+                f"  SELECT MAX(id) FROM results {where} GROUP BY symlink_path, source"
+                f" )",
+                params,
+            )
+        else:
+            count_cursor = await db.execute(
+                f"SELECT COUNT(*) FROM results {where}", params
+            )
+        total = (await count_cursor.fetchone())[0]
 
-    total_pages = max(1, (total + per_page - 1) // per_page)
-    if page > total_pages:
-        page = total_pages
+        total_pages = max(1, (total + per_page - 1) // per_page)
+        if page > total_pages:
+            page = total_pages
 
-    offset = (page - 1) * per_page
+        offset = (page - 1) * per_page
 
-    if dedup:
-        cursor = await db.execute(
-            f"SELECT r.id, r.source, r.media_title, r.media_type, r.season,"
-            f" r.symlink_path, r.status, r.action, latest.total_count"
-            f" FROM results r"
-            f" INNER JOIN ("
-            f"   SELECT symlink_path, source, MAX(id) as max_id, COUNT(*) as total_count"
-            f"   FROM results {where}"
-            f"   GROUP BY symlink_path, source"
-            f" ) latest ON r.id = latest.max_id"
-            f" ORDER BY r.id DESC LIMIT ? OFFSET ?",
-            params + [per_page, offset],
-        )
-    else:
-        cursor = await db.execute(
-            f"SELECT id, source, media_title, media_type, season,"
-            f" symlink_path, status, action"
-            f" FROM results {where}"
-            f" ORDER BY id DESC LIMIT ? OFFSET ?",
-            params + [per_page, offset],
-        )
-    rows = await cursor.fetchall()
-    items = [dict(r) for r in rows]
+        if dedup:
+            cursor = await db.execute(
+                f"SELECT r.{columns}, latest.total_count"
+                f" FROM results r"
+                f" INNER JOIN ("
+                f"   SELECT symlink_path, source, MAX(id) as max_id, COUNT(*) as total_count"
+                f"   FROM results {where}"
+                f"   GROUP BY symlink_path, source"
+                f" ) latest ON r.id = latest.max_id"
+                f" ORDER BY r.id DESC LIMIT ? OFFSET ?",
+                params + [per_page, offset],
+            )
+        else:
+            cursor = await db.execute(
+                f"SELECT {columns} FROM results {where}"
+                f" ORDER BY id DESC LIMIT ? OFFSET ?",
+                params + [per_page, offset],
+            )
+        rows = await cursor.fetchall()
+        items = [dict(r) for r in rows]
+        raw_total = total
 
     cursor_src = await db.execute("SELECT DISTINCT source FROM results")
     sources = [r[0] for r in await cursor_src.fetchall()]
@@ -159,6 +232,8 @@ async def results_page(
             "total": total,
             "total_pages": total_pages,
             "show_duplicates": not dedup,
+            "group_season": group_season,
+            "raw_total": raw_total,
             "copy_icon": copy_icon,
         },
     )
@@ -528,6 +603,31 @@ async def batch_action(request: Request, db: Connection = Depends(get_db)):
         )
         await db.commit()
         affected = len(ids)
+    elif action == "process_season":
+        series_id = body.get("series_id")
+        season_num = body.get("season")
+        if not series_id or season_num is None:
+            return JSONResponse(
+                {"ok": False, "error": "series_id et season requis"}, status_code=400
+            )
+        cursor_ps = await db.execute(
+            "SELECT * FROM results"
+            " WHERE series_id = ? AND season = ? AND source = 'sonarr' LIMIT 1",
+            (series_id, season_num),
+        )
+        row_ps = await cursor_ps.fetchone()
+        if not row_ps:
+            return JSONResponse(
+                {"ok": False, "error": "Aucun résultat trouvé pour cette saison"},
+                status_code=404,
+            )
+        result_ps = dict(row_ps)
+        outcome_ps = await process_season(result_ps, db, result_ps.get("scan_id", 0))
+        return {
+            "ok": outcome_ps.get("ok", False),
+            "affected": outcome_ps.get("processed", 0),
+            "total": outcome_ps.get("total", 0),
+        }
     else:
         return JSONResponse({"ok": False, "error": f"Action inconnue: {action}"}, status_code=400)
 
