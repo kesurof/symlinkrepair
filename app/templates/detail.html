@@ -11,7 +11,7 @@
     </a>
 
     <div class="bg-white dark:bg-gray-900 rounded-xl shadow-sm border border-gray-200 dark:border-gray-800 p-4 sm:p-6"
-         x-data="{ processStep: 'initial', processMsg: '' }">
+         x-data="{ processStep: 'initial', processMsg: '', verifyFsMsg: '', async verifyFs(id, btn) { this.verifyFsMsg = 'Vérification...'; btn.disabled = true; try { const r = await fetch('/api/results/' + id + '/verify-fs', {method:'POST'}); const d = await r.json(); if (d.status_updated) { this.verifyFsMsg = '✅ Symlink valide — statut mis à jour'; setTimeout(() => window.location.reload(), 1200); } else if (d.valid) { this.verifyFsMsg = '✅ Symlink valide'; } else { this.verifyFsMsg = '❌ ' + (d.reason || 'Symlink invalide'); } } catch(e) { this.verifyFsMsg = '⚠️ Erreur de vérification'; } finally { btn.disabled = false; } } }">
 
         {# === Header === #}
         <div class="flex items-center justify-between mb-6">
@@ -94,14 +94,21 @@
         <div class="mb-4">
             <div class="flex items-center justify-between mb-1.5">
                 <span class="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wider font-medium">Symlink</span>
-                <button @click="
-                    clipboardCopy($el.getAttribute('data-path'));
-                    $el.textContent = 'Copié !';
-                    setTimeout(() => $el.textContent = 'Copier', 1500);
-                " data-path="{{ item.symlink_path }}"
-                        class="text-xs text-brand-600 dark:text-brand-400 hover:underline font-medium">Copier</button>
+                <div class="flex items-center gap-1.5">
+                    <button @click="verifyFs({{ item.id }}, $el)"
+                            class="text-xs bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 px-2 py-1 rounded-lg font-medium hover:bg-blue-200 dark:hover:bg-blue-900/50 transition-colors">
+                        Vérifier
+                    </button>
+                    <button @click="
+                        clipboardCopy($el.getAttribute('data-path'));
+                        $el.textContent = 'Copié !';
+                        setTimeout(() => $el.textContent = 'Copier', 1500);
+                    " data-path="{{ item.symlink_path }}"
+                            class="text-xs text-brand-600 dark:text-brand-400 hover:underline font-medium">Copier</button>
+                </div>
             </div>
             <div class="font-mono text-xs sm:text-sm break-all bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-300 px-3 py-2 rounded-lg">{{ item.symlink_path }}</div>
+            <div x-text="verifyFsMsg" class="mt-1 text-xs"></div>
         </div>
 
         {% if item.target_path %}
