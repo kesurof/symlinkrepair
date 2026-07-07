@@ -188,7 +188,31 @@
 
     {# === Derniers résultats détectés === #}
     <div x-show="loaded" x-cloak class="bg-white dark:bg-gray-900 rounded-xl shadow-sm border border-gray-200 dark:border-gray-800 p-5 mb-8">
-        ...
+        <div class="flex items-center justify-between mb-4">
+            <div class="flex items-center gap-2">
+                <svg class="w-5 h-5 text-amber-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.5">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m9-.75a9 9 0 11-18 0 9 9 0 0118 0zm-9 3.75h.008v.008H12v-.008z"/>
+                </svg>
+                <h3 class="font-medium text-gray-800 dark:text-gray-200">Derniers résultats détectés</h3>
+            </div>
+            <a href="/results" class="text-xs text-brand-600 dark:text-brand-400 hover:underline font-medium">Voir tout →</a>
+        </div>
+        <template x-if="recent.length === 0">
+            <div class="text-sm text-gray-400 dark:text-gray-500 text-center py-4">Aucun résultat récent.</div>
+        </template>
+        <template x-for="item in recent" :key="item.id">
+            <a :href="'/results/' + item.id" class="flex items-center gap-3 py-2 border-b border-gray-100 dark:border-gray-800 last:border-b-0 hover:bg-gray-50 dark:hover:bg-gray-800/50 rounded-lg px-2 -mx-2 transition-colors">
+                <span class="inline-flex items-center gap-1 text-xs font-medium px-2 py-0.5 rounded-full shrink-0"
+                      :class="item.source === 'radarr' ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/50 dark:text-blue-300' : 'bg-green-100 text-green-700 dark:bg-green-900/50 dark:text-green-300'"
+                      x-text="item.source"></span>
+                <div class="flex-1 min-w-0">
+                    <span class="text-sm font-medium text-gray-800 dark:text-gray-200 truncate" x-text="item.media_title || item.symlink_path || '—'"></span>
+                </div>
+                <span class="text-xs font-medium px-2 py-0.5 rounded-full shrink-0"
+                      :class="item.status === 'détecté' ? 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300' : 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300'"
+                      x-text="item.status"></span>
+            </a>
+        </template>
     </div>
 
     {# === Top affectés === #}
