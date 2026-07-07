@@ -221,6 +221,18 @@ async def ignore_result(result_id: int, db: Connection = Depends(get_db)):
     return {"ok": True}
 
 
+@router.post("/api/results/{result_id}/recheck")
+async def recheck_result(result_id: int, db: Connection = Depends(get_db)):
+    await db.execute(
+        "UPDATE results SET status = 'recherche', action = 'recheck',"
+        " action_date = datetime('now') WHERE id = ?",
+        (result_id,),
+    )
+    await db.commit()
+    logger.info("Result %d recheck scheduled", result_id)
+    return {"ok": True}
+
+
 @router.post("/api/results/{result_id}/fix")
 async def fix_result(result_id: int, db: Connection = Depends(get_db)):
     await db.execute(
@@ -334,14 +346,25 @@ async def batch_action(request: Request, db: Connection = Depends(get_db)):
     elif action == "process":
         config = load_config()
         ok_count = 0
+        delete_season = body.get("delete_season", False)
         for rid in ids:
             cursor = await db.execute("SELECT * FROM results WHERE id = ?", (rid,))
             row = await cursor.fetchone()
             if not row:
                 continue
             result = dict(row)
-            outcome = await process_single(result)
-            if outcome["ok"]:
+            if (
+                delete_season
+                and result.get("source") == "sonarr"
+                and result.get("series_id")
+                and result.get("season") is not None
+            ):
+                from app.services.cleanup import process_season
+
+                outcome = await process_season(result, db, 0)
+            else:
+                outcome = await process_single(result)
+            if outcome.get("ok"):
                 ok_count += 1
                 await db.execute(
                     "UPDATE results SET status = 'en_attente', action = 'api_delete',"
@@ -352,6 +375,14 @@ async def batch_action(request: Request, db: Connection = Depends(get_db)):
                 await notify_cleanup(config, result, outcome.get("actions", {}))
             await asyncio.sleep(0.1)
         affected = ok_count
+    elif action == "recheck":
+        await db.execute(
+            f"UPDATE results SET status = 'recherche', action = 'recheck',"
+            f" action_date = datetime('now') WHERE id IN ({','.join('?' for _ in ids)})",
+            ids,
+        )
+        await db.commit()
+        affected = len(ids)
     else:
         return JSONResponse({"ok": False, "error": f"Action inconnue: {action}"}, status_code=400)
 

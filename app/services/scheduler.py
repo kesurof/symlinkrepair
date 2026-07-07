@@ -6,11 +6,46 @@ import aiosqlite
 
 from app.database import DATABASE_PATH
 from app.services import scanner
+from app.services.cleanup import process_all_detected
 from app.services.config_service import load_config
+from app.services.discord import notify_cleanup, notify_scan
 
 logger = logging.getLogger(__name__)
 
 _scheduler_task: asyncio.Task | None = None
+
+
+async def _dedup_or_insert(db, scan_id, target, source):
+    existing = await db.execute(
+        "SELECT id FROM results WHERE symlink_path = ? AND source = ?"
+        " AND status IN ('détecté', 'en_attente', 'recherche') LIMIT 1",
+        (target.get("symlink_path", ""), target.get("source", source)),
+    )
+    if await existing.fetchone():
+        return False
+    await db.execute(
+        "INSERT INTO results (scan_id, source, symlink_path, target_path,"
+        " media_type, media_title, season, episode, file_id, movie_id, series_id,"
+        " tags, detection, status)"
+        " VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+        (
+            scan_id,
+            target.get("source", source),
+            target.get("symlink_path", ""),
+            target.get("target_path", ""),
+            target.get("media_type"),
+            target.get("media_title"),
+            target.get("season"),
+            target.get("episode"),
+            target.get("file_id"),
+            target.get("movie_id"),
+            target.get("series_id"),
+            target.get("tags"),
+            target.get("detection", "broken_symlink"),
+            target.get("status", "détecté"),
+        ),
+    )
+    return True
 
 
 async def _trigger_scan(source: str):
@@ -26,48 +61,72 @@ async def _trigger_scan(source: str):
             cursor = await db.execute(
                 "INSERT INTO scans"
                 " (source, mode, status, total, broken, processed, summary, completed_at)"
-                " VALUES (?, ?, ?, ?, ?, ?, ?, datetime('now'))",
+                " VALUES (?, ?, ?, ?, ?, 0, ?, datetime('now'))",
                 (
                     source,
                     "clean",
                     result["status"],
                     result.get("total", 0),
                     result.get("broken", 0),
-                    result.get("matching", 0),
                     "",
                 ),
             )
             scan_id = cursor.lastrowid
 
+            inserted = 0
             for target in result.get("targets", []):
-                await db.execute(
-                    "INSERT INTO results (scan_id, source, symlink_path, target_path,"
-                    " media_type, media_title, season, episode, file_id, movie_id, series_id,"
-                    " tags, detection, status)"
-                    " VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
-                    (
-                        scan_id,
-                        target.get("source", source),
-                        target.get("symlink_path", ""),
-                        target.get("target_path", ""),
-                        target.get("media_type"),
-                        target.get("media_title"),
-                        target.get("season"),
-                        target.get("episode"),
-                        target.get("file_id"),
-                        target.get("movie_id"),
-                        target.get("series_id"),
-                        target.get("tags"),
-                        target.get("detection", "broken_symlink"),
-                        target.get("status", "detected"),
-                    ),
-                )
+                if await _dedup_or_insert(db, scan_id, target, source):
+                    inserted += 1
             await db.commit()
+
+            if inserted == 0:
+                await db.execute(
+                    "UPDATE scans SET summary = 'Aucun nouveau symlink cassé' WHERE id = ?",
+                    (scan_id,),
+                )
+                await db.commit()
+                logger.info("%s scan: no new broken symlinks", source)
+                return
+
+            cleanup_stats = await process_all_detected(source, db, scan_id)
+
+            summary_parts = []
+            if cleanup_stats.get("deleted"):
+                summary_parts.append(f"{cleanup_stats['deleted']} supprimés")
+            if cleanup_stats.get("failed"):
+                summary_parts.append(f"{cleanup_stats['failed']} échecs")
+            summary = ", ".join(summary_parts) if summary_parts else "0 traités"
+            await db.execute(
+                "UPDATE scans SET processed = ?, summary = ? WHERE id = ?",
+                (cleanup_stats.get("deleted", 0), summary, scan_id),
+            )
+            await db.commit()
+
+            config = load_config()
+            await notify_scan(config, source, result)
+            if cleanup_stats.get("deleted"):
+                for target in result.get("targets", []):
+                    title = target.get("media_title") or ""
+                    if title:
+                        action_log = {
+                            "api_delete": True,
+                            "symlink_removed": True,
+                            "refresh": config.defaults.rescan,
+                            "search": config.defaults.search,
+                        }
+                        fake_result = {
+                            "source": source,
+                            "media_title": title,
+                        }
+                        await notify_cleanup(config, fake_result, action_log)
+
             logger.info(
-                "%s scan done: %d broken, %d results",
+                "%s scan done: %d broken, %d new, %d deleted, %d failed",
                 source,
                 result.get("broken", 0),
-                len(result.get("targets", [])),
+                inserted,
+                cleanup_stats.get("deleted", 0),
+                cleanup_stats.get("failed", 0),
             )
         finally:
             await db.close()

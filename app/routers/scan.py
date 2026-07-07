@@ -44,21 +44,28 @@ async def trigger_scan(
     # Store scan in DB
     cursor = await db.execute(
         "INSERT INTO scans (source, mode, status, total, broken, processed, summary, completed_at)"
-        " VALUES (?, ?, ?, ?, ?, ?, ?, datetime('now'))",
+        " VALUES (?, ?, ?, ?, ?, 0, ?, datetime('now'))",
         (
             source,
             mode,
             result["status"],
             result.get("total", 0),
             result.get("broken", 0),
-            result.get("matching", 0),
             "",
         ),
     )
     scan_id = cursor.lastrowid
 
-    # Store results
+    # Store results with dedup
+    inserted = 0
     for target in result.get("targets", []):
+        existing = await db.execute(
+            "SELECT id FROM results WHERE symlink_path = ? AND source = ?"
+            " AND status IN ('détecté', 'en_attente', 'recherche') LIMIT 1",
+            (target.get("symlink_path", ""), target.get("source", source)),
+        )
+        if await existing.fetchone():
+            continue
         await db.execute(
             "INSERT INTO results (scan_id, source, symlink_path, target_path,"
             " media_type, media_title, season, episode, file_id, movie_id, series_id,"
@@ -81,23 +88,55 @@ async def trigger_scan(
                 target.get("status", "détecté"),
             ),
         )
+        inserted += 1
     await db.commit()
+
+    if inserted == 0:
+        await db.execute(
+            "UPDATE scans SET summary = 'Aucun nouveau symlink cassé' WHERE id = ?",
+            (scan_id,),
+        )
+        await db.commit()
+        logger.info("Scan: no new broken symlinks for %s", source)
+        return {
+            "ok": True,
+            "scan_id": scan_id,
+            "source": source,
+            "mode": mode,
+            "total": result.get("total", 0),
+            "broken": result.get("broken", 0),
+            "processed": 0,
+            "inserted": 0,
+            "status": result["status"],
+            "cleanup": {"deleted": 0, "failed": 0},
+        }
 
     config = load_config()
 
     cleanup_stats = {"deleted": 0, "failed": 0}
     if mode == "clean":
         cleanup_stats = await process_all_detected(source, db, scan_id)
+        summary_parts = []
+        if cleanup_stats.get("deleted"):
+            summary_parts.append(f"{cleanup_stats['deleted']} supprimés")
+        if cleanup_stats.get("failed"):
+            summary_parts.append(f"{cleanup_stats['failed']} échecs")
+        summary = ", ".join(summary_parts) if summary_parts else "0 traités"
+        await db.execute(
+            "UPDATE scans SET processed = ?, summary = ? WHERE id = ?",
+            (cleanup_stats.get("deleted", 0), summary, scan_id),
+        )
+        await db.commit()
 
     await notify_scan(config, source, result)
 
     logger.info(
-        "Scan completed: source=%s mode=%s total=%d broken=%d processed=%d cleanup_deleted=%d",
+        "Scan completed: source=%s mode=%s total=%d broken=%d inserted=%d cleanup_deleted=%d",
         source,
         mode,
         result.get("total", 0),
         result.get("broken", 0),
-        result.get("matching", 0),
+        inserted,
         cleanup_stats.get("deleted", 0),
     )
     return {
@@ -107,7 +146,8 @@ async def trigger_scan(
         "mode": mode,
         "total": result.get("total", 0),
         "broken": result.get("broken", 0),
-        "processed": result.get("matching", 0),
+        "processed": cleanup_stats.get("deleted", 0) if mode == "clean" else 0,
+        "inserted": inserted,
         "status": result["status"],
         "cleanup": cleanup_stats,
     }

@@ -29,6 +29,7 @@ def add(
     series_id: int | None = None,
     movie_id: int | None = None,
     season: int | None = None,
+    result_id: int | None = None,
 ):
     if not _enabled:
         return
@@ -42,6 +43,7 @@ def add(
         "series_id": series_id,
         "movie_id": movie_id,
         "season": season,
+        "result_id": result_id,
         "added_at": now,
         "cycle_start": now,
         "search_done": False,
@@ -99,14 +101,23 @@ def _check_exists(symlink_path: str) -> bool:
         return False
 
 
-async def _update_db_status(symlink_path: str, status: str, action: str):
+async def _update_db_status(
+    symlink_path: str, status: str, action: str, result_id: int | None = None
+):
     try:
         db = await aiosqlite.connect(str(DATABASE_PATH))
-        await db.execute(
-            "UPDATE results SET status = ?, action = ?, action_date = datetime('now')"
-            " WHERE symlink_path = ? AND status = 'en_attente'",
-            (status, action, symlink_path),
-        )
+        if result_id is not None:
+            await db.execute(
+                "UPDATE results SET status = ?, action = ?, action_date = datetime('now')"
+                " WHERE id = ? AND status = 'en_attente'",
+                (status, action, result_id),
+            )
+        else:
+            await db.execute(
+                "UPDATE results SET status = ?, action = ?, action_date = datetime('now')"
+                " WHERE symlink_path = ? AND status = 'en_attente'",
+                (status, action, symlink_path),
+            )
         await db.commit()
         await db.close()
     except Exception as e:
@@ -168,7 +179,9 @@ async def _check_loop():
                             path,
                             meta.get("media_title", "?"),
                         )
-                        await _update_db_status(path, "remplacé", "verifier_ok")
+                        await _update_db_status(
+                            path, "remplacé", "verifier_ok", meta.get("result_id")
+                        )
                         _pending.pop(path, None)
 
                     elif elapsed >= _max_duration:
@@ -187,7 +200,9 @@ async def _check_loop():
                                 path,
                                 meta.get("media_title", "?"),
                             )
-                            await _update_db_status(path, "non_remplacé", "verifier_fail")
+                            await _update_db_status(
+                                path, "non_remplacé", "verifier_fail", meta.get("result_id")
+                            )
                             _pending.pop(path, None)
                 except Exception as e:
                     logger.error("Verifier error for %s: %s", path, e)
