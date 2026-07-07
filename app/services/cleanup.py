@@ -108,6 +108,7 @@ async def _delete_one(result: dict, config, delete_season: bool = False) -> dict
             series_id=result.get("series_id"),
             movie_id=result.get("movie_id"),
             season=result.get("season"),
+            result_id=result.get("id"),
         )
     elif not action.get("skipped"):
         logger.warning("Delete failed for %s file_id=%d", source, file_id)

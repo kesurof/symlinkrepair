@@ -101,10 +101,14 @@
                              class="absolute right-0 top-full mt-1 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg py-1 min-w-[180px] z-10">
                             <a href="/results/{{ item.id }}" @click.stop
                                class="block px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800">Voir le détail</a>
-                             {% if item.status in ('non_remplacé','échoué','détecté','recherche') %}
-                             <button @click.stop="itemAction({{ item.id }}, 'fix'); menuOpen = false"
-                                      class="block w-full text-left px-4 py-2 text-sm text-green-600 dark:text-green-400 hover:bg-gray-50 dark:hover:bg-gray-800">Marquer remplacé</button>
-                             {% endif %}
+                              {% if item.status in ('non_remplacé','échoué','détecté','recherche') %}
+                              <button @click.stop="itemAction({{ item.id }}, 'fix'); menuOpen = false"
+                                       class="block w-full text-left px-4 py-2 text-sm text-green-600 dark:text-green-400 hover:bg-gray-50 dark:hover:bg-gray-800">Marquer remplacé</button>
+                              {% endif %}
+                              {% if item.status in ('non_remplacé','échoué') %}
+                              <button @click.stop="itemAction({{ item.id }}, 'recheck'); menuOpen = false"
+                                       class="block w-full text-left px-4 py-2 text-sm text-amber-600 dark:text-amber-400 hover:bg-gray-50 dark:hover:bg-gray-800">Revérifier</button>
+                              {% endif %}
                              <button @click.stop="selected = [{{ item.id }}]; confirmDelete = true; menuOpen = false"
                                      class="block w-full text-left px-4 py-2 text-sm text-red-600 dark:text-red-400 hover:bg-gray-50 dark:hover:bg-gray-800">Supprimer</button>
                         </div>
