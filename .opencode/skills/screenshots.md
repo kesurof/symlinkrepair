@@ -35,14 +35,14 @@ make dev
 PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium-browser bash scripts/screenshots.sh
 ```
 
-Le script capture 5 pages :
-- `http://localhost:8000` → `docs/screenshots/dashboard.png`
-- `http://localhost:8000/scan` → `docs/screenshots/scan.png`
-- `http://localhost:8000/results` → `docs/screenshots/results.png`
-- `http://localhost:8000/reports` → `docs/screenshots/reports.png`
-- `http://localhost:8000/config` → `docs/screenshots/config.png`
+Le script capture 5 pages en **dark mode** (via `?dark=1`) avec **floutage des données sensibles** (clés API, URLs, chemins) :
+- `http://localhost:8000/?dark=1` → `docs/screenshots/dashboard.png`
+- `http://localhost:8000/scan?dark=1` → `docs/screenshots/scan.png`
+- `http://localhost:8000/results?dark=1` → `docs/screenshots/results.png`
+- `http://localhost:8000/reports?dark=1` → `docs/screenshots/reports.png`
+- `http://localhost:8000/config?dark=1` → `docs/screenshots/config.png`
 
-### Capture unique
+### Capture unique (sans floutage)
 
 ```bash
 PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium-browser pageres \
@@ -58,7 +58,8 @@ Les captures sont faites en **1280x800** (vue desktop).
 
 - Fichiers : `PNG`
 - Emplacement : `docs/screenshots/`
-- Chaque fichier fait ~100-300 Ko
+- Chaque fichier fait ~100-500 Ko
+- Les données sensibles sont floutées (Puppeteer + CSS `filter: blur()`)
 - Ils sont versionnés dans git (pour le README sur GitHub)
 
 ## Intégration README
