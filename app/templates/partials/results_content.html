@@ -122,69 +122,52 @@
     </div>
 
     {% else %}
-    {# === Single item (Radarr or non-season Sonarr) — existing card === #}
+    {# === Single item (Radarr or non-season Sonarr) === #}
     {% set item = display.item if display.item is defined else display %}
     <div @click="showBatch && toggle({{ item.id }})"
          class="bg-white dark:bg-gray-900 rounded-xl shadow-sm border border-gray-200 dark:border-gray-800 hover:shadow-md transition-shadow"
          :class="{'ring-2 ring-brand-500/30 bg-brand-50/50 dark:bg-brand-900/10': selected.includes({{ item.id }})}">
-        <div class="p-4">
-            <div class="flex items-start gap-3">
-                {% if showBatch %}
-                <div x-show="showBatch" x-cloak class="pt-0.5 shrink-0" @click.stop>
-                    <input type="checkbox" value="{{ item.id }}"
-                           @change="toggle({{ item.id }})"
-                           :checked="selected.includes({{ item.id }})"
-                           class="rounded border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800">
-                </div>
-                {% endif %}
+        <div class="px-3 py-2.5">
+            {% if showBatch %}
+            <div x-show="showBatch" x-cloak class="float-left mr-2 mt-1" @click.stop>
+                <input type="checkbox" value="{{ item.id }}"
+                       @change="toggle({{ item.id }})"
+                       :checked="selected.includes({{ item.id }})"
+                       class="rounded border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800">
+            </div>
+            {% endif %}
 
-                <div class="w-3 h-3 rounded-full mt-1 shrink-0
+            <div class="flex items-center gap-1.5 min-w-0">
+                <div class="w-2.5 h-2.5 rounded-full shrink-0
                     {% if item.status in ('détecté','recherche') %}bg-amber-500
                     {% elif item.status == 'ignoré' %}bg-gray-400
                     {% elif item.status == 'remplacé' %}bg-green-500
                     {% elif item.status == 'en_attente' %}bg-blue-500
                     {% else %}bg-red-500{% endif %}">
                 </div>
+                <span class="inline-flex items-center gap-1 text-xs font-medium px-2 py-0.5 rounded-full shrink-0 {{ 'bg-blue-100 text-blue-700 dark:bg-blue-900/50 dark:text-blue-300' if item.source == 'radarr' else 'bg-green-100 text-green-700 dark:bg-green-900/50 dark:text-green-300' }}">
+                    {{ item.source }}
+                </span>
+                <a href="/results/{{ item.id }}" @click.stop
+                   class="font-medium text-sm text-gray-800 dark:text-gray-200 hover:text-brand-600 dark:hover:text-brand-400 truncate min-w-0">
+                    {{ item.media_title or '—' }}
+                </a>
+                <button @click.stop="
+                    clipboardCopy($el.getAttribute('data-title'));
+                    $el.innerHTML = '<svg class=\'w-3.5 h-3.5 text-green-500 shrink-0\' fill=\'none\' stroke=\'currentColor\' viewBox=\'0 0 24 24\' stroke-width=\'2\'><path stroke-linecap=\'round\' stroke-linejoin=\'round\' d=\'M4.5 12.75l6 6 9-13.5\'/></svg>';
+                    setTimeout(() => $el.innerHTML = copyIcon, 1500);
+                " data-title="{{ item.media_title }}"
+                        class="p-0.5 rounded hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors shrink-0"
+                        title="Copier le titre" type="button">
+                    {{ copy_icon|safe }}
+                </button>
+                {% set dup = item.total_count|default(0) %}
+                {% if dup > 1 %}
+                <span class="text-xs text-gray-400 dark:text-gray-500 shrink-0">(+{{ dup - 1 }})</span>
+                {% endif %}
 
-                <div class="flex-1 min-w-0 flex items-center gap-1.5 min-h-[2.5rem]">
-                    <span class="inline-flex items-center gap-1 text-xs font-medium px-2 py-0.5 rounded-full shrink-0 {{ 'bg-blue-100 text-blue-700 dark:bg-blue-900/50 dark:text-blue-300' if item.source == 'radarr' else 'bg-green-100 text-green-700 dark:bg-green-900/50 dark:text-green-300' }}">
-                        {{ item.source }}
-                    </span>
-                    <a href="/results/{{ item.id }}" @click.stop
-                       class="font-medium text-sm text-gray-800 dark:text-gray-200 hover:text-brand-600 dark:hover:text-brand-400 truncate max-w-[35%] shrink">
-                        {{ item.media_title or '—' }}
-                    </a>
-                    <button @click.stop="
-                        clipboardCopy($el.getAttribute('data-title'));
-                        $el.innerHTML = '<svg class=\'w-4 h-4 text-green-500 shrink-0\' fill=\'none\' stroke=\'currentColor\' viewBox=\'0 0 24 24\' stroke-width=\'2\'><path stroke-linecap=\'round\' stroke-linejoin=\'round\' d=\'M4.5 12.75l6 6 9-13.5\'/></svg>';
-                        setTimeout(() => $el.innerHTML = copyIcon, 1500);
-                    " data-title="{{ item.media_title }}"
-                            class="p-0.5 rounded hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors shrink-0"
-                            title="Copier le titre" type="button">
-                        {{ copy_icon|safe }}
-                    </button>
-                    {% set dup = item.total_count|default(0) %}
-                    {% if dup > 1 %}
-                    <span class="text-xs text-gray-400 dark:text-gray-500 shrink-0">(+{{ dup - 1 }})</span>
-                    {% endif %}
-                    <span class="text-[10px] text-gray-300 dark:text-gray-600 shrink-0">·</span>
-                    <span class="font-mono text-[11px] text-gray-500 dark:text-gray-400 truncate max-w-[30%] shrink-0"
-                          style="direction:rtl;text-align:left;unicode-bidi:plaintext">{{ item.symlink_path }}</span>
-                    <button @click.stop="
-                        clipboardCopy($el.getAttribute('data-path'));
-                        $el.innerHTML = '<svg class=\'w-3.5 h-3.5 text-green-500 shrink-0\' fill=\'none\' stroke=\'currentColor\' viewBox=\'0 0 24 24\' stroke-width=\'2\'><path stroke-linecap=\'round\' stroke-linejoin=\'round\' d=\'M4.5 12.75l6 6 9-13.5\'/></svg>';
-                        setTimeout(() => $el.innerHTML = copyIcon, 1500);
-                    " data-path="{{ item.symlink_path }}"
-                            class="p-0.5 rounded hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors shrink-0"
-                            title="Copier le chemin" type="button">
-                        {{ copy_icon|safe }}
-                    </button>
-                    <span class="text-[10px] text-gray-300 dark:text-gray-600 shrink-0">·</span>
-                    <span class="shrink-0 text-xs text-gray-500 dark:text-gray-400">{{ item.media_type or '—' }}{% if item.season %} S{{ item.season }}{% endif %}</span>
-                </div>
-
-                <div class="flex items-center gap-1 shrink-0">
-                    <span class="inline-flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-full font-medium whitespace-nowrap
+                <div class="ml-auto flex items-center gap-1 shrink-0">
+                    <span class="inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full font-medium whitespace-nowrap
                         {% if item.status in ('détecté','recherche') %}bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300
                         {% elif item.status == 'ignoré' %}bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400
                         {% elif item.status == 'remplacé' %}bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300
@@ -200,8 +183,6 @@
                         {{ item.status }}
                     </span>
 
-                    {# Actions compactes inline #}
-                    {% if item.status not in ('remplacé','en_attente') %}
                     <button @click.stop="itemAction({{ item.id }}, 'verify-fs')"
                             class="text-xs px-1.5 py-0.5 rounded font-medium bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors shrink-0">
                         Vér
@@ -210,12 +191,11 @@
                             class="text-xs px-1.5 py-0.5 rounded font-medium bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300 hover:bg-amber-200 dark:hover:bg-amber-900/50 transition-colors shrink-0">
                         Tr{% if item.search_count %}({{ item.search_count }}){% endif %}
                     </button>
-                    {% endif %}
 
                     <div class="relative" x-data="{ menuOpen: false }" @click.outside="menuOpen = false" @click.stop>
                         <button @click.stop="menuOpen = !menuOpen"
-                                class="p-1.5 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800">
-                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
+                                class="p-1 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 rounded hover:bg-gray-100 dark:hover:bg-gray-800">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
                                 <path stroke-linecap="round" stroke-linejoin="round" d="M12 6.75a.75.75 0 110-1.5.75.75 0 010 1.5zM12 12.75a.75.75 0 110-1.5.75.75 0 010 1.5zM12 18.75a.75.75 0 110-1.5.75.75 0 010 1.5z"/>
                             </svg>
                         </button>
@@ -246,8 +226,26 @@
                         </div>
                     </div>
                 </div>
-            </div>  {# end flex #}
-        </div>  {# end p-4 #}
+            </div>
+
+            {# === Path line (indented) === #}
+            <div class="flex items-center gap-1 mt-1 {{ 'ml-7' if not showBatch else 'ml-9' }}">
+                <span class="text-[10px] text-gray-300 dark:text-gray-600 shrink-0">·</span>
+                <span class="font-mono text-[11px] text-gray-500 dark:text-gray-400 truncate max-w-full"
+                      style="direction:rtl;text-align:left;unicode-bidi:plaintext">{{ item.symlink_path }}</span>
+                <button @click.stop="
+                    clipboardCopy($el.getAttribute('data-path'));
+                    $el.innerHTML = '<svg class=\'w-3 h-3 text-green-500 shrink-0\' fill=\'none\' stroke=\'currentColor\' viewBox=\'0 0 24 24\' stroke-width=\'2\'><path stroke-linecap=\'round\' stroke-linejoin=\'round\' d=\'M4.5 12.75l6 6 9-13.5\'/></svg>';
+                    setTimeout(() => $el.innerHTML = copyIcon, 1500);
+                " data-path="{{ item.symlink_path }}"
+                        class="p-0.5 rounded hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors shrink-0"
+                        title="Copier le chemin" type="button">
+                    {{ copy_icon|safe }}
+                </button>
+                <span class="text-[10px] text-gray-300 dark:text-gray-600 shrink-0">·</span>
+                <span class="text-[11px] text-gray-500 dark:text-gray-400 shrink-0 whitespace-nowrap">{{ item.media_type or '—' }}{% if item.season %} · S{{ item.season }}{% endif %}</span>
+            </div>
+        </div>
     </div>
     {% endif %}
     {% endfor %}
