@@ -23,6 +23,10 @@
 - [x] Notifications Discord (webhook configurable, envoi scan + nettoyage)
 - [x] Scans automatiques planifiés (intervalle configurable dans /config)
 - [x] Vérificateur asynchrone (surveille les symlinks en attente de remplacement)
+- [x] Déduplication des doublons + synchronisation des statuts (sync siblings)
+- [x] Auto-fix : si symlink déjà valide → marque remplacé sans erreur
+- [x] Gestion de version (API + affichage sidebar)
+- [x] CI manuelle via workflow_dispatch GitHub Actions
 
 ## Ce qu'il reste à faire
 

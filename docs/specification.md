@@ -53,6 +53,7 @@ Par élément, sélection, film, série ou saison entière.
 | **Marquer remplacé** | Flag manuel | `remplacé` |
 | **Ignorer** | Cache le résultat | `ignoré` |
 | **Revérifier** | Remet en file d'attente pour `process_all_detected` | `recherche` |
+| **Vérifier fs** | Vérifie le symlink sur le filesystem (auto-fix si valide) | `remplacé` |
 | **Supprimer** | Supprime la ligne en base | — |
 
 ## V1 (14 items)

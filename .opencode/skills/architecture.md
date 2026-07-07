@@ -14,6 +14,7 @@ app/
 ├── database.py       # Connexion SQLite, init_db, get_db
 ├── templates.py      # Instance Jinja2Templates partagée
 ├── logging_config.py # Configuration du logging structuré
+├── version.py        # Version (git describe / VERSION file)
 ├── error_handlers.py # Gestionnaires d'erreurs (404, 500)
 ├── routers/          # Routes FastAPI (domaines fonctionnels)
 │   ├── web.py           # Dashboard (/)
@@ -29,6 +30,7 @@ app/
 │   ├── radarr.py         # Client API Radarr + DB loader
 │   ├── sonarr.py         # Client API Sonarr + DB loader
 │   ├── cleanup.py        # Actions de nettoyage (DELETE API, refresh, search)
+│   ├── db_utils.py        # Utilitaires partagés (copy DB, fetch tags)
 │   ├── verifier.py       # Vérificateur asynchrone
 │   ├── scheduler.py      # Scans automatiques planifiés
 │   ├── discord.py        # Notifications Discord
@@ -70,7 +72,7 @@ app/
 
 | Router | Routes | Format |
 |--------|--------|--------|
-| `web.py` | `/` | HTML |
+| `web.py` | `/`, `/api/version` | HTML + JSON |
 | `health.py` | `/health` | JSON |
 | `config_ui.py` | `/config` | HTML |
 | `scan.py` | `/scan`, `/fastscan` (→ 301), `/api/scan/*`, `/api/fast-scan` | HTML + JSON |
