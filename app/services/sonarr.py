@@ -23,11 +23,13 @@ def load_episode_records(db_path: str) -> dict[str, dict]:
                 ef.Id AS episode_file_id,
                 ef.SeriesId AS series_id,
                 ef.SeasonNumber AS season,
+                ep.EpisodeNumber AS episode,
                 (s.Path || '/' || ef.RelativePath) AS full_path,
                 s.Title AS title,
                 s.Tags AS tags
             FROM EpisodeFiles ef
             JOIN Series s ON s.Id = ef.SeriesId
+            LEFT JOIN Episodes ep ON ep.EpisodeFileId = ef.Id
         """)
         for row in cursor.fetchall():
             d = dict(row)

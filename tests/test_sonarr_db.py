@@ -16,6 +16,13 @@ def _create_sonarr_db(path: str):
             RelativePath TEXT, SeasonNumber INTEGER
         )
     """)
+    conn.execute("""
+        CREATE TABLE Episodes (
+            Id INTEGER PRIMARY KEY, SeriesId INTEGER,
+            EpisodeFileId INTEGER, EpisodeNumber INTEGER,
+            SeasonNumber INTEGER
+        )
+    """)
     conn.execute(
         "INSERT INTO Series (Id, Title, Path, Tags)"
         " VALUES (1, 'Test Series', '/series/Test', '[1,2]')"
@@ -27,6 +34,14 @@ def _create_sonarr_db(path: str):
     conn.execute(
         "INSERT INTO EpisodeFiles (Id, SeriesId, RelativePath, SeasonNumber)"
         " VALUES (11, 1, 'S01/ep2.mkv', 1)"
+    )
+    conn.execute(
+        "INSERT INTO Episodes (Id, SeriesId, EpisodeFileId, EpisodeNumber, SeasonNumber)"
+        " VALUES (100, 1, 10, 1, 1)"
+    )
+    conn.execute(
+        "INSERT INTO Episodes (Id, SeriesId, EpisodeFileId, EpisodeNumber, SeasonNumber)"
+        " VALUES (101, 1, 11, 2, 1)"
     )
     conn.commit()
     conn.close()

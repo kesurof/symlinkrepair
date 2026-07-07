@@ -499,6 +499,64 @@ async def batch_action(request: Request, db: Connection = Depends(get_db)):
     action = body.get("action", "")
     ids = body.get("ids", [])
 
+    if action in ("process_season", "verify_season"):
+        series_id = body.get("series_id")
+        season_num = body.get("season")
+        if not series_id or season_num is None:
+            return JSONResponse(
+                {"ok": False, "error": "series_id et season requis"}, status_code=400
+            )
+        cursor_ps = await db.execute(
+            "SELECT * FROM results"
+            " WHERE series_id = ? AND season = ? AND source = 'sonarr' LIMIT 1",
+            (series_id, season_num),
+        )
+        row_ps = await cursor_ps.fetchone()
+        if not row_ps:
+            return JSONResponse(
+                {"ok": False, "error": "Aucun résultat trouvé pour cette saison"},
+                status_code=404,
+            )
+
+        if action == "process_season":
+            result_ps = dict(row_ps)
+            outcome_ps = await process_season(result_ps, db, result_ps.get("scan_id", 0))
+            return {
+                "ok": outcome_ps.get("ok", False),
+                "affected": outcome_ps.get("processed", 0),
+                "total": outcome_ps.get("total", 0),
+            }
+
+        if action == "verify_season":
+            rows_ps = await db.execute(
+                "SELECT id, symlink_path, source, status FROM results"
+                " WHERE series_id = ? AND season = ? AND source = 'sonarr'",
+                (series_id, season_num),
+            )
+            all_rows = await rows_ps.fetchall()
+            config = load_config()
+            cfg_sources = {"radarr": config.radarr, "sonarr": config.sonarr}
+            verified = 0
+            for r in all_rows:
+                rdict = dict(r)
+                path = rdict.get("symlink_path", "")
+                if not path or not os.path.islink(path):
+                    continue
+                cfg = cfg_sources.get(rdict.get("source", ""))
+                if not cfg:
+                    continue
+                info = inspect_symlink(path, cfg.target_prefixes)
+                valid = info.get("exists", False) and info.get("matches_prefix", False)
+                if valid:
+                    await db.execute(
+                        "UPDATE results SET status = 'remplacé', action = 'verify_fs',"
+                        " action_date = datetime('now') WHERE id = ?",
+                        (rdict["id"],),
+                    )
+                    verified += 1
+            await db.commit()
+            return {"ok": True, "verified": verified, "total": len(all_rows)}
+
     if not ids:
         return JSONResponse({"ok": False, "error": "Aucun ID fourni"}, status_code=400)
 
@@ -559,8 +617,6 @@ async def batch_action(request: Request, db: Connection = Depends(get_db)):
                 and result.get("series_id")
                 and result.get("season") is not None
             ):
-                from app.services.cleanup import process_season
-
                 outcome = await process_season(result, db, 0)
             else:
                 outcome = await process_single(result)
@@ -603,31 +659,6 @@ async def batch_action(request: Request, db: Connection = Depends(get_db)):
         )
         await db.commit()
         affected = len(ids)
-    elif action == "process_season":
-        series_id = body.get("series_id")
-        season_num = body.get("season")
-        if not series_id or season_num is None:
-            return JSONResponse(
-                {"ok": False, "error": "series_id et season requis"}, status_code=400
-            )
-        cursor_ps = await db.execute(
-            "SELECT * FROM results"
-            " WHERE series_id = ? AND season = ? AND source = 'sonarr' LIMIT 1",
-            (series_id, season_num),
-        )
-        row_ps = await cursor_ps.fetchone()
-        if not row_ps:
-            return JSONResponse(
-                {"ok": False, "error": "Aucun résultat trouvé pour cette saison"},
-                status_code=404,
-            )
-        result_ps = dict(row_ps)
-        outcome_ps = await process_season(result_ps, db, result_ps.get("scan_id", 0))
-        return {
-            "ok": outcome_ps.get("ok", False),
-            "affected": outcome_ps.get("processed", 0),
-            "total": outcome_ps.get("total", 0),
-        }
     else:
         return JSONResponse({"ok": False, "error": f"Action inconnue: {action}"}, status_code=400)
 

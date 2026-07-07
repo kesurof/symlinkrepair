@@ -32,10 +32,21 @@
                        @change="toggleGroup({{ display.series_id }}, {{ display.season }}, $el.checked)"
                        class="rounded border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800">
                 {% else %}
+                <button @click.stop="groupSeasonAction({{ display.series_id }}, {{ display.season }}, 'verify')"
+                        class="bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 px-2.5 py-1 rounded-lg text-xs font-medium hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors whitespace-nowrap">
+                    Vérifier
+                </button>
+                {% if display.replaced_count < display.episode_count %}
                 <button @click.stop="groupSeasonAction({{ display.series_id }}, {{ display.season }}, 'process')"
                         class="bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300 px-2.5 py-1 rounded-lg text-xs font-medium hover:bg-amber-200 dark:hover:bg-amber-900/50 transition-colors whitespace-nowrap">
                     Traiter la saison
                 </button>
+                {% else %}
+                <span class="text-xs text-green-600 dark:text-green-400 font-medium flex items-center gap-1">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5"/></svg>
+                    Tout remplacé
+                </span>
+                {% endif %}
                 {% endif %}
             </div>
         </div>
@@ -72,39 +83,6 @@
                     {% else %}bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300{% endif %}">
                     {{ ep.status }}
                 </span>
-
-                {% if not showBatch %}
-                <div class="flex gap-1 shrink-0" @click.stop>
-                    {% if ep.status in ('détecté','recherche') %}
-                    <button @click.stop="itemAction({{ ep.id }}, 'process')"
-                            class="bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300 px-2 py-0.5 rounded text-xs font-medium hover:bg-amber-200 dark:hover:bg-amber-900/50 transition-colors">
-                        Traiter{% if ep.search_count %} ({{ ep.search_count }}){% endif %}
-                    </button>
-                    <button @click.stop="itemAction({{ ep.id }}, 'ignore')"
-                            class="bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 px-2 py-0.5 rounded text-xs font-medium hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors">
-                        Ignorer
-                    </button>
-                    {% elif ep.status == 'ignoré' %}
-                    <button @click.stop="itemAction({{ ep.id }}, 'process')"
-                            class="bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300 px-2 py-0.5 rounded text-xs font-medium hover:bg-amber-200 dark:hover:bg-amber-900/50 transition-colors">
-                        Traiter{% if ep.search_count %} ({{ ep.search_count }}){% endif %}
-                    </button>
-                    {% elif ep.status in ('non_remplacé','échoué') %}
-                    <button @click.stop="itemAction({{ ep.id }}, 'process')"
-                            class="bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300 px-2 py-0.5 rounded text-xs font-medium hover:bg-amber-200 dark:hover:bg-amber-900/50 transition-colors">
-                        Traiter{% if ep.search_count %} ({{ ep.search_count }}){% endif %}
-                    </button>
-                    <button @click.stop="itemAction({{ ep.id }}, 'fix')"
-                            class="bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300 px-2 py-0.5 rounded text-xs font-medium hover:bg-green-200 dark:hover:bg-green-900/50 transition-colors">
-                        Remplacé
-                    </button>
-                    <button @click.stop="itemAction({{ ep.id }}, 'ignore')"
-                            class="bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 px-2 py-0.5 rounded text-xs font-medium hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors">
-                        Ignorer
-                    </button>
-                    {% endif %}
-                </div>
-                {% endif %}
 
                 <div class="relative shrink-0" x-data="{ menuOpen: false }" @click.outside="menuOpen = false" @click.stop>
                     <button @click.stop="menuOpen = !menuOpen"

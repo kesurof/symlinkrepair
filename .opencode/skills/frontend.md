@@ -112,6 +112,7 @@ function resultsApp() {
 |--------|--------|-------|
 | `process` | Traiter | DELETE API Radarr/Sonarr + recherche |
 | `process_season` | Traiter la saison | DELETE API Sonarr + recherche saison complète |
+| `verify_season` | Vérifier la saison | Vérifie les symlinks sur le filesystem |
 | `fix` | Marquer remplacé | Flag manuel |
 | `ignore` | Ignorer | Cache le résultat |
 | `recheck` | Revérifier | Remet en file d'attente |
