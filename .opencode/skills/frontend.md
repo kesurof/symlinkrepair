@@ -111,6 +111,7 @@ function resultsApp() {
 | action | Bouton | Effet |
 |--------|--------|-------|
 | `process` | Traiter | DELETE API Radarr/Sonarr + recherche |
+| `process_season` | Traiter la saison | DELETE API Sonarr + recherche saison complète |
 | `fix` | Marquer remplacé | Flag manuel |
 | `ignore` | Ignorer | Cache le résultat |
 | `recheck` | Revérifier | Remet en file d'attente |

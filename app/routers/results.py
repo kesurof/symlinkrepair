@@ -81,6 +81,10 @@ async def results_page(
         if row:
             scan_info = dict(row)
 
+    r_columns = (
+        "r.id, r.source, r.media_title, r.media_type, r.season, r.episode,"
+        " r.symlink_path, r.status, r.action, r.search_count, r.series_id, r.file_id"
+    )
     columns = (
         "id, source, media_title, media_type, season, episode,"
         " symlink_path, status, action, search_count, series_id, file_id"
@@ -89,7 +93,7 @@ async def results_page(
     if group_season:
         if dedup:
             cursor = await db.execute(
-                f"SELECT r.{columns}, latest.total_count"
+                f"SELECT {r_columns}, latest.total_count"
                 f" FROM results r"
                 f" INNER JOIN ("
                 f"   SELECT symlink_path, source, MAX(id) as max_id, COUNT(*) as total_count"
@@ -101,8 +105,7 @@ async def results_page(
             )
         else:
             cursor = await db.execute(
-                f"SELECT {columns} FROM results {where}"
-                f" ORDER BY id DESC",
+                f"SELECT {columns} FROM results {where} ORDER BY id DESC",
                 params,
             )
         rows = await cursor.fetchall()
@@ -161,9 +164,7 @@ async def results_page(
                 params,
             )
         else:
-            count_cursor = await db.execute(
-                f"SELECT COUNT(*) FROM results {where}", params
-            )
+            count_cursor = await db.execute(f"SELECT COUNT(*) FROM results {where}", params)
         total = (await count_cursor.fetchone())[0]
 
         total_pages = max(1, (total + per_page - 1) // per_page)
@@ -174,7 +175,7 @@ async def results_page(
 
         if dedup:
             cursor = await db.execute(
-                f"SELECT r.{columns}, latest.total_count"
+                f"SELECT {r_columns}, latest.total_count"
                 f" FROM results r"
                 f" INNER JOIN ("
                 f"   SELECT symlink_path, source, MAX(id) as max_id, COUNT(*) as total_count"
@@ -186,8 +187,7 @@ async def results_page(
             )
         else:
             cursor = await db.execute(
-                f"SELECT {columns} FROM results {where}"
-                f" ORDER BY id DESC LIMIT ? OFFSET ?",
+                f"SELECT {columns} FROM results {where} ORDER BY id DESC LIMIT ? OFFSET ?",
                 params + [per_page, offset],
             )
         rows = await cursor.fetchall()

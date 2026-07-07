@@ -95,6 +95,7 @@ async def list_results(db: Connection = Depends(get_db)):
 | action | Déclencheur | Statut |
 |--------|-------------|--------|
 | `process` | Traiter (DELETE API) | `en_attente` |
+| `process_season` | Traiter saison Sonarr (DELETE API + search) | `en_attente` / `échoué` |
 | `fix` | Marquer remplacé | `remplacé` |
 | `ignore` | Ignorer | `ignoré` |
 | `delete` | Supprimer | — (DELETE row) |
