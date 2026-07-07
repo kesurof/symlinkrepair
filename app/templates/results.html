@@ -222,14 +222,19 @@ function resultsApp() {
         },
 
         async groupSeasonAction(seriesId, season, action) {
+            const urlAction = action === 'verify' ? 'verify_season' : 'process_season';
             const resp = await fetch('/api/results/batch', {
                 method: 'POST',
                 headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({action: 'process_season', series_id: seriesId, season: season})
+                body: JSON.stringify({action: urlAction, series_id: seriesId, season: season})
             });
             const data = await resp.json();
             if (data.ok) {
-                this.batchMsg = data.affected + ' épisode' + (data.affected > 1 ? 's' : '') + ' traité' + (data.affected > 1 ? 's' : '');
+                if (action === 'verify') {
+                    this.batchMsg = data.verified + '/' + data.total + ' vérifié' + (data.verified > 1 ? 's' : '');
+                } else {
+                    this.batchMsg = data.affected + ' épisode' + (data.affected > 1 ? 's' : '') + ' traité' + (data.affected > 1 ? 's' : '');
+                }
                 setTimeout(() => { this.batchMsg = ''; hxNavFromFilters(); }, 1500);
             } else {
                 alert('Erreur: ' + (data.error || 'inconnue'));

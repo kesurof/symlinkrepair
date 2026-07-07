@@ -88,7 +88,7 @@ make deploy
 - `GET /api/results/{id}/verifier` — Statut du cycle de vérification
 - `POST /api/results/{id}/stop-verifier` — Arrêter le cycle de vérification (→ `non_remplacé` / `abandon`)
 - `POST /api/results/{id}/verify-fs` — Vérifier le symlink sur le filesystem (→ `remplacé` si valide)
-- `POST /api/results/batch` — Action groupée (process/fix/ignore/delete/recheck/process_season)
+- `POST /api/results/batch` — Action groupée (process/fix/ignore/delete/recheck/process_season/verify_season)
 - `GET /api/results/ids` — IDs filtrés (pour selectAll batch)
 - `GET /api/results/recent` — Résultats récents pour le dashboard
 
@@ -115,6 +115,7 @@ make deploy
 ## Actions batch disponibles
 - **Traiter** (`process`) — DELETE API Radarr/Sonarr + recherche auto (supporte `delete_season` pour Sonarr)
 - **Traiter une saison** (`process_season`) — DELETE API Sonarr + recherche de tous les épisodes d'une saison d'un coup (nécessite `series_id` + `season` dans le body)
+- **Vérifier une saison** (`verify_season`) — Vérifie sur le filesystem tous les épisodes d'une saison, marque `remplacé` ceux qui sont valides (nécessite `series_id` + `season` dans le body)
 - **Marquer remplacé** (`fix`) — Flag manuel (symlink marqué comme remplacé)
 - **Ignorer** (`ignore`) — Cache le résultat
 - **Revérifier** (`recheck`) — Remet en file d'attente (`recherche`)
