@@ -5,6 +5,7 @@ from pathlib import Path
 from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
 from starlette.exceptions import HTTPException as StarletteHTTPException
+from starlette.requests import Request
 
 from app.database import init_db
 from app.error_handlers import general_error_handler, not_found_handler
@@ -38,6 +39,21 @@ async def lifespan(app: FastAPI):
 
 
 app = FastAPI(title="SymlinkRepair", lifespan=lifespan)
+
+
+@app.middleware("http")
+async def no_cache_html(request: Request, call_next):
+    response = await call_next(request)
+    ct = response.headers.get("content-type", "")
+    if "text/html" in ct:
+        response.headers["Cache-Control"] = "no-store, no-cache, must-revalidate, proxy-revalidate"
+        response.headers["Pragma"] = "no-cache"
+        response.headers["Expires"] = "0"
+    elif "/static/" in str(request.url.path):
+        response.headers.setdefault("Cache-Control", "public, max-age=3600")
+    return response
+
+
 app.include_router(web.router)
 app.include_router(health.router)
 app.include_router(config_ui.router)
