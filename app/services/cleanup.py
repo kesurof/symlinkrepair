@@ -61,6 +61,7 @@ async def _delete_one(result: dict, config, delete_season: bool = False) -> dict
         "refresh": False,
         "search": False,
         "skipped": "",
+        "auto_fixed": False,
     }
 
     if not file_id:
@@ -78,7 +79,7 @@ async def _delete_one(result: dict, config, delete_season: bool = False) -> dict
             action["skipped"] = "target_not_allowed"
             return action
         if not delete_season and not info["broken"]:
-            action["skipped"] = "not_broken"
+            action["auto_fixed"] = True
             return action
 
     if source == "radarr":
@@ -119,6 +120,12 @@ async def _delete_one(result: dict, config, delete_season: bool = False) -> dict
 async def process_single(result: dict) -> dict:
     config = load_config()
     action = await _delete_one(result, config)
+    if action.get("auto_fixed"):
+        logger.info(
+            "Auto-fixed (symlink already valid): %s",
+            result.get("symlink_path", "?"),
+        )
+        return {"ok": True, "auto_fixed": True, "actions": action}
     if not action["api_delete"]:
         return {"ok": False, "error": action.get("skipped", "delete_failed"), "actions": action}
 

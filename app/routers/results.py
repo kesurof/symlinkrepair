@@ -1,5 +1,6 @@
 import asyncio
 import logging
+import os
 
 from aiosqlite import Connection
 from fastapi import APIRouter, Depends, Request
@@ -9,6 +10,7 @@ from app.database import get_db
 from app.services.cleanup import process_season, process_single
 from app.services.config_service import load_config
 from app.services.discord import notify_cleanup
+from app.services.filescanner import inspect_symlink
 from app.services.verifier import get_status as verifier_get_status
 from app.services.verifier import remove as verifier_remove
 from app.templates import templates
@@ -275,6 +277,57 @@ async def stop_verifier(result_id: int, db: Connection = Depends(get_db)):
     return {"ok": True}
 
 
+@router.post("/api/results/{result_id}/verify-fs")
+async def verify_filesystem(result_id: int, db: Connection = Depends(get_db)):
+    cursor = await db.execute("SELECT * FROM results WHERE id = ?", (result_id,))
+    row = await cursor.fetchone()
+    if not row:
+        return JSONResponse({"ok": False, "error": "Résultat introuvable"}, status_code=404)
+
+    result = dict(row)
+    path = result.get("symlink_path", "")
+    if not path or not os.path.islink(path):
+        return {
+            "ok": True,
+            "valid": False,
+            "reason": "Le symlink n'existe plus",
+            "status_updated": False,
+        }
+
+    config = load_config()
+    cfg_sources = {"radarr": config.radarr, "sonarr": config.sonarr}
+    cfg = cfg_sources.get(result.get("source", ""))
+    if not cfg:
+        return {"ok": True, "valid": False, "reason": "Source inconnue", "status_updated": False}
+
+    info = inspect_symlink(path, cfg.target_prefixes)
+    if info.get("broken"):
+        return {
+            "ok": True,
+            "valid": False,
+            "reason": "Le symlink est toujours cassé",
+            "status_updated": False,
+        }
+
+    valid = info.get("exists", False) and info.get("matches_prefix", False)
+    if valid:
+        await db.execute(
+            "UPDATE results SET status = 'remplacé', action = 'verify_fs',"
+            " action_date = datetime('now') WHERE id = ?",
+            (result_id,),
+        )
+        await db.commit()
+        logger.info("Result %d: verified on filesystem, marked as replaced", result_id)
+        return {"ok": True, "valid": True, "status_updated": True, "status": "remplacé"}
+
+    return {
+        "ok": True,
+        "valid": False,
+        "reason": "La cible ne correspond pas aux préfixes autorisés",
+        "status_updated": False,
+    }
+
+
 @router.post("/api/results/{result_id}/process")
 async def process_single_result(
     result_id: int, delete_season: bool = False, db: Connection = Depends(get_db)
@@ -292,7 +345,15 @@ async def process_single_result(
     else:
         outcome = await process_single(result)
 
-        if outcome["ok"]:
+        if outcome.get("auto_fixed"):
+            await db.execute(
+                "UPDATE results SET status = 'remplacé', action = 'auto_fix',"
+                " action_date = datetime('now') WHERE id = ?",
+                (result_id,),
+            )
+            await db.commit()
+            logger.info("Result %d auto-fixed (symlink already valid)", result_id)
+        elif outcome["ok"]:
             await db.execute(
                 "UPDATE results SET status = 'en_attente', action = 'api_delete',"
                 " search_count = search_count + 1, action_date = datetime('now') WHERE id = ?",
@@ -364,7 +425,15 @@ async def batch_action(request: Request, db: Connection = Depends(get_db)):
                 outcome = await process_season(result, db, 0)
             else:
                 outcome = await process_single(result)
-            if outcome.get("ok"):
+            if outcome.get("auto_fixed"):
+                ok_count += 1
+                await db.execute(
+                    "UPDATE results SET status = 'remplacé', action = 'auto_fix',"
+                    " action_date = datetime('now') WHERE id = ?",
+                    (rid,),
+                )
+                await db.commit()
+            elif outcome.get("ok"):
                 ok_count += 1
                 await db.execute(
                     "UPDATE results SET status = 'en_attente', action = 'api_delete',"
