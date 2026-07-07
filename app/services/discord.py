@@ -88,3 +88,50 @@ async def notify_cleanup(config, result: dict, action_log: dict) -> bool:
 
     payload = _build_embed(title, f"Traitement de {result.get('media_title', '?')}", color, fields)
     return await send_webhook(config.discord.webhook, payload)
+
+
+async def notify_season_cleanup(
+    config, series_title: str, season: int, source: str, outcome: dict
+) -> bool:
+    if not config.discord.enabled or not config.discord.webhook:
+        return False
+
+    processed = outcome.get("processed", 0)
+    total = outcome.get("total", 0)
+    ok = processed > 0
+    all_ok = processed == total and total > 0
+
+    if all_ok:
+        color = 0x57F287
+        emoji = "✅"
+    elif ok:
+        color = 0xFEE75C
+        emoji = "⚠️"
+    else:
+        color = 0xED4245
+        emoji = "❌"
+
+    title = f"{emoji} Saison nettoyée — {series_title} S{season}"
+
+    actions = []
+    actions_log = outcome.get("actions", {})
+    if actions_log.get("api_delete"):
+        actions.append("DELETE API")
+    if actions_log.get("symlink_removed"):
+        actions.append("symlink supprimé")
+    if actions_log.get("refresh"):
+        actions.append("refresh")
+    if actions_log.get("search"):
+        actions.append("recherche")
+
+    fields = [
+        {"name": "Source", "value": source, "inline": True},
+        {"name": "Saison", "value": f"S{season}", "inline": True},
+        {"name": "Traités", "value": f"{processed} / {total}", "inline": True},
+        {"name": "Actions", "value": ", ".join(actions) or "aucune", "inline": False},
+    ]
+
+    payload = _build_embed(
+        title, f"{processed}/{total} épisodes traités pour {series_title} S{season}", color, fields
+    )
+    return await send_webhook(config.discord.webhook, payload)

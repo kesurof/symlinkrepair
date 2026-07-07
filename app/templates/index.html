@@ -188,35 +188,39 @@
 
     {# === Derniers résultats détectés === #}
     <div x-show="loaded" x-cloak class="bg-white dark:bg-gray-900 rounded-xl shadow-sm border border-gray-200 dark:border-gray-800 p-5 mb-8">
+        ...
+    </div>
+
+    {# === Top affectés === #}
+    <div x-show="loaded" x-cloak class="bg-white dark:bg-gray-900 rounded-xl shadow-sm border border-gray-200 dark:border-gray-800 p-5 mb-8">
         <div class="flex items-center justify-between mb-4">
             <div class="flex items-center gap-2">
-                <svg class="w-5 h-5 text-amber-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.5">
-                    <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z"/>
+                <svg class="w-5 h-5 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.5">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m9-.75a9 9 0 11-18 0 9 9 0 0118 0zm-9 3.75h.008v.008H12v-.008z"/>
                 </svg>
-                <h3 class="font-medium text-gray-800 dark:text-gray-200">Derniers résultats détectés</h3>
+                <h3 class="font-medium text-gray-800 dark:text-gray-200">Séries/films les plus touchés</h3>
             </div>
-            <a href="/results?status=d%C3%A9tect%C3%A9" class="text-xs text-brand-600 dark:text-brand-400 hover:underline font-medium">Voir tout →</a>
+            <select @change="loadAffected($el.value)"
+                    class="text-xs border border-gray-200 dark:border-gray-700 rounded-lg px-2 py-1 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300">
+                <option value="">Toutes sources</option>
+                <option value="sonarr">Sonarr</option>
+                <option value="radarr">Radarr</option>
+            </select>
         </div>
-        <template x-if="recent.length === 0">
-            <div class="text-sm text-gray-400 dark:text-gray-500 text-center py-4">Aucun résultat en attente.</div>
+        <template x-if="topAffected.length === 0">
+            <div class="text-sm text-gray-400 dark:text-gray-500 text-center py-4">Aucun résultat actif.</div>
         </template>
-        <template x-for="item in recent" :key="item.id">
-            <div class="flex items-center gap-3 py-3 border-b border-gray-100 dark:border-gray-800 last:border-b-0">
-                <input type="checkbox" class="rounded border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 shrink-0">
+        <template x-for="(item, i) in topAffected" :key="i">
+            <div class="flex items-center gap-3 py-2 border-b border-gray-100 dark:border-gray-800 last:border-b-0">
+                <span class="text-xs text-gray-400 dark:text-gray-500 w-5 shrink-0" x-text="i+1"></span>
                 <span class="inline-flex items-center gap-1 text-xs font-medium px-2 py-0.5 rounded-full shrink-0"
                       :class="item.source === 'radarr' ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/50 dark:text-blue-300' : 'bg-green-100 text-green-700 dark:bg-green-900/50 dark:text-green-300'"
                       x-text="item.source"></span>
                 <div class="flex-1 min-w-0">
-                    <div class="text-sm font-medium text-gray-800 dark:text-gray-200 truncate" x-text="item.media_title || '—'"></div>
-                    <div class="text-xs text-gray-400 dark:text-gray-500 font-mono truncate" x-text="item.symlink_path"></div>
+                    <span class="text-sm font-medium text-gray-800 dark:text-gray-200 truncate" x-text="item.media_title || '—'"></span>
+                    <span x-show="item.season" class="text-xs font-mono text-gray-500 dark:text-gray-400 ml-1" x-text="'S'+item.season"></span>
                 </div>
-                <span class="inline-flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-full font-medium shrink-0"
-                      :class="item.status === 'détecté' ? 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300' : 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300'">
-                    <span class="w-1.5 h-1.5 rounded-full" :class="item.status === 'détecté' ? 'bg-amber-500' : 'bg-blue-500'"></span>
-                    <span x-text="item.status"></span>
-                </span>
-                <a :href="'/results/' + item.id"
-                   class="text-brand-600 dark:text-brand-400 text-xs font-medium hover:underline shrink-0">Détail</a>
+                <span class="text-sm font-bold text-gray-700 dark:text-gray-300 shrink-0" x-text="item.count"></span>
             </div>
         </template>
     </div>
@@ -228,6 +232,7 @@ function dashboardApp() {
         loaded: false,
         stats: {},
         recent: [],
+        topAffected: [],
         chartDays: 30,
         chartInstance: null,
 
@@ -241,6 +246,7 @@ function dashboardApp() {
                 this.recent = (await recentRes.json()).results || [];
                 this.loaded = true;
                 this.$nextTick(() => this.initChart());
+                this.loadAffected('');
             } catch (e) {
                 console.error('Dashboard load error', e);
                 this.loaded = true;
@@ -383,6 +389,12 @@ function dashboardApp() {
                 this.chartInstance = null;
             }
             this.initChart();
+        },
+
+        async loadAffected(source) {
+            const params = source ? '?source=' + source : '';
+            const resp = await fetch('/api/stats/top-affected' + params);
+            this.topAffected = (await resp.json()).items || [];
         },
 
         fixRate() {
