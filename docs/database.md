@@ -14,7 +14,7 @@ CREATE TABLE scans (
     status          TEXT    NOT NULL DEFAULT 'running',  -- 'running' | 'completed' | 'error'
     total           INTEGER DEFAULT 0,            -- Symlinks totaux scannés
     broken          INTEGER DEFAULT 0,            -- Symlinks cassés trouvés
-    processed       INTEGER DEFAULT 0,            -- Matching réussis avec Radarr/Sonarr
+    processed       INTEGER DEFAULT 0,            -- Nombre de fichiers traités (nettoyage clean)
     summary         TEXT,                          -- Résumé texte
     report_file     TEXT,                          -- Chemin du fichier rapport (optionnel)
     created_at      TEXT    DEFAULT (datetime('now')),
@@ -62,6 +62,7 @@ CREATE INDEX idx_scans_created ON scans(created_at);
 | Statut | Description |
 |--------|-------------|
 | `détecté` | Détecté par un scan, en attente d'action |
+| `recherche` | En cours de revérification (action "Revérifier") |
 | `en_attente` | DELETE API envoyé, vérification en cours |
 | `remplacé` | Symlink remplacé ou marqué manuellement comme corrigé |
 | `non_remplacé` | Vérifié : le symlink n'a pas été remplacé (ou cycle abandonné) |
@@ -78,6 +79,11 @@ CREATE INDEX idx_scans_created ON scans(created_at);
 | `verifier_ok` | Vérificateur : symlink remplacé |
 | `verifier_fail` | Vérificateur : symlink non remplacé |
 | `abandon` | Cycle de vérification arrêté manuellement |
+| `auto_fix` | Traitement : symlink déjà valide |
+| `verify_fs` | Vérification filesystem manuelle |
+| `recheck` | Action "Revérifier" |
+| `cleaned_duplicate` | Migration : doublon nettoyé |
+| `*_sibling` | Synchronisation d'un doublon frère |
 
 ## Accès
 

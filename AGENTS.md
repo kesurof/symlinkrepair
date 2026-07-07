@@ -2,6 +2,7 @@
 
 ## Stack
 - **Backend** : FastAPI (Python ≥3.11)
+- **Version** : via `app/version.py` (git describe / VERSION file)
 - **Templates** : Jinja2
 - **Frontend** : HTMX 2.x + Alpine.js 3.x + Tailwind CSS (CDN) + Inter (Google Fonts)
 - **Icônes** : Heroicons SVG inline
@@ -46,6 +47,9 @@ make test
 
 # Lancer avec Docker
 make docker
+
+# Pusher le code
+make deploy
 ```
 
 ## Tests
@@ -83,8 +87,10 @@ make docker
 - `POST /api/results/{id}/process` — Traitement réel : DELETE API + recherche
 - `GET /api/results/{id}/verifier` — Statut du cycle de vérification
 - `POST /api/results/{id}/stop-verifier` — Arrêter le cycle de vérification (→ `non_remplacé` / `abandon`)
-- `POST /api/results/batch` — Action groupée (process/fix/ignore/delete)
+- `POST /api/results/{id}/verify-fs` — Vérifier le symlink sur le filesystem (→ `remplacé` si valide)
+- `POST /api/results/batch` — Action groupée (process/fix/ignore/delete/recheck)
 - `GET /api/results/ids` — IDs filtrés (pour selectAll batch)
+- `GET /api/results/recent` — Résultats récents pour le dashboard
 
 ### Configuration
 - `GET /api/config` — Lire la config (secrets masqués)
@@ -92,6 +98,9 @@ make docker
 - `GET /api/browse?path=...` — Explorateur de dossiers
 - `POST /api/config/test-radarr` — Tester connexion Radarr
 - `POST /api/config/test-sonarr` — Tester connexion Sonarr
+
+### Version
+- `GET /api/version` — Version de l'application
 
 ### Statistiques
 - `GET /api/stats` — Statistiques globales
@@ -103,15 +112,27 @@ make docker
 - Initialisation automatique au démarrage via `app/database.py`
 - Tables : `scans`, `results` (avec index sur scan_id, status, created_at)
 
-## Statuts des résultats
-`détecté` / `recherche` → `en_attente` → `remplacé` / `non_remplacé` / `ignoré` / `échoué`
-
 ## Actions batch disponibles
 - **Traiter** (`process`) — DELETE API Radarr/Sonarr + recherche auto (supporte `delete_season` pour Sonarr)
 - **Marquer remplacé** (`fix`) — Flag manuel (symlink marqué comme remplacé)
 - **Ignorer** (`ignore`) — Cache le résultat
 - **Revérifier** (`recheck`) — Remet en file d'attente (`recherche`)
 - **Supprimer** (`delete`) — Supprime la ligne en base
+
+## Actions des résultats (results.action)
+| Action | Déclencheur |
+|--------|-------------|
+| `ignored` | Action "Ignorer" |
+| `manual_fix` | Action "Marquer remplacé" |
+| `api_delete` | Action "Traiter" (DELETE API) |
+| `verifier_ok` | Vérificateur : symlink remplacé |
+| `verifier_fail` | Vérificateur : symlink non remplacé |
+| `abandon` | Cycle de vérification arrêté manuellement |
+| `auto_fix` | Traitement : symlink déjà valide |
+| `verify_fs` | Vérification filesystem manuelle |
+| `recheck` | Action "Revérifier" |
+| `cleaned_duplicate` | Migration : doublon nettoyé |
+| `*_sibling` | Synchronisation d'un doublon frère |
 
 ## Sécurité
 - Aucun secret dans le code
@@ -136,3 +157,7 @@ make docker
 - [x] Vérificateur asynchrone (surveille remplacement des symlinks)
 - [x] Sélection multiple et actions batch (process, fix, ignore, delete)
 - [x] **Refonte UI** : sidebar desktop + bottom nav mobile, dark mode, mobile-first, Heroicons
+- [x] **Gestion de version** : `/api/version`, affichage sidebar, `VERSION` file en Docker
+- [x] **Déduplication** doublons : migration nettoyage + `_sync_siblings` + stats dédupliquées
+- [x] **Auto-fix** : si symlink déjà valide → marque `remplacé` sans erreur
+- [x] **CI manuelle** : `workflow_dispatch` GitHub Actions, plus de build automatique sur push
