@@ -65,75 +65,83 @@
             {% for ep in display.episodes %}
             <div data-ep-id="{{ ep.id }}" data-ep-series="{{ display.series_id }}" data-ep-season="{{ display.season }}"
                  @click="showBatch && toggle({{ ep.id }})"
-                 class="flex items-center gap-2.5 px-3 sm:pl-6 py-2 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors text-sm min-w-0"
+                 class="flex items-start gap-2.5 px-3 sm:pl-6 py-2 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors text-sm min-w-0"
                  :class="{'bg-brand-50/50 dark:bg-brand-900/10': selected.includes({{ ep.id }})}">
                 {% if showBatch %}
-                <div @click.stop class="shrink-0">
+                <div @click.stop class="shrink-0 pt-0.5">
                     <input type="checkbox" value="{{ ep.id }}"
                            @change="toggle({{ ep.id }})"
                            :checked="selected.includes({{ ep.id }})"
                            class="rounded border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800">
                 </div>
                 {% endif %}
-                <div class="w-2 h-2 rounded-full shrink-0
-                    {% if ep.status in ('détecté','recherche') %}bg-amber-500
-                    {% elif ep.status == 'ignoré' %}bg-gray-400
-                    {% elif ep.status == 'remplacé' %}bg-green-500
-                    {% elif ep.status == 'en_attente' %}bg-blue-500
-                    {% else %}bg-red-500{% endif %}">
-                </div>
-                <span class="font-mono text-xs text-gray-500 dark:text-gray-400 shrink-0 w-10">E{{ '%02d' % (ep.episode or 0) }}</span>
-                <span class="font-mono text-xs text-gray-400 dark:text-gray-500 truncate min-w-0 flex-1">{{ ep.symlink_path }}</span>
-                <span class="inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full font-medium shrink-0
-                    {% if ep.status in ('détecté','recherche') %}bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300
-                    {% elif ep.status == 'ignoré' %}bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400
-                    {% elif ep.status == 'remplacé' %}bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300
-                    {% elif ep.status == 'en_attente' %}bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300
-                    {% else %}bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300{% endif %}">
-                    {{ ep.status }}
-                </span>
 
-                {% if ep.status not in ('remplacé',) %}
-                <button @click.stop="itemAction({{ ep.id }}, 'verify-fs')"
-                        class="text-xs px-1.5 py-0.5 rounded font-medium bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors shrink-0">
-                    Vérifier
-                </button>
-                <button @click.stop="itemAction({{ ep.id }}, 'process')"
-                        class="text-xs px-1.5 py-0.5 rounded font-medium bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300 hover:bg-amber-200 dark:hover:bg-amber-900/50 transition-colors shrink-0">
-                    Traiter
-                </button>
-                {% endif %}
-                <div class="relative shrink-0" x-data="{ menuOpen: false }" @click.outside="menuOpen = false" @click.stop>
-                    <button @click.stop="menuOpen = !menuOpen"
-                            class="p-1 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 rounded hover:bg-gray-100 dark:hover:bg-gray-800">
-                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
-                            <path stroke-linecap="round" stroke-linejoin="round" d="M12 6.75a.75.75 0 110-1.5.75.75 0 010 1.5zM12 12.75a.75.75 0 110-1.5.75.75 0 010 1.5zM12 18.75a.75.75 0 110-1.5.75.75 0 010 1.5z"/>
-                        </svg>
-                    </button>
-                    <div x-show="menuOpen" x-cloak
-                         class="absolute right-0 top-full mt-1 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg py-1 min-w-[160px] z-10">
-                        <a href="/results/{{ ep.id }}" @click.stop
-                           class="block px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800">Voir le détail</a>
-                        <button @click.stop="itemAction({{ ep.id }}, 'verify-fs'); menuOpen = false"
-                                class="block w-full text-left px-4 py-2 text-sm text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800">Vérifier</button>
-                        {% if ep.status in ('détecté','recherche','en_attente','ignoré','non_remplacé','échoué') %}
-                        <button @click.stop="itemAction({{ ep.id }}, 'process'); menuOpen = false"
-                                class="block w-full text-left px-4 py-2 text-sm text-amber-600 dark:text-amber-400 hover:bg-gray-50 dark:hover:bg-gray-800">Traiter</button>
-                        {% endif %}
-                        {% if ep.status in ('non_remplacé','échoué','détecté','recherche') %}
-                        <button @click.stop="itemAction({{ ep.id }}, 'fix'); menuOpen = false"
-                                class="block w-full text-left px-4 py-2 text-sm text-green-600 dark:text-green-400 hover:bg-gray-50 dark:hover:bg-gray-800">Marquer remplacé</button>
-                        {% endif %}
-                        {% if ep.status not in ('ignoré','remplacé','en_attente') %}
-                        <button @click.stop="itemAction({{ ep.id }}, 'ignore'); menuOpen = false"
-                                class="block w-full text-left px-4 py-2 text-sm text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800">Ignorer</button>
-                        {% endif %}
-                        {% if ep.status in ('non_remplacé','échoué') %}
-                        <button @click.stop="itemAction({{ ep.id }}, 'recheck'); menuOpen = false"
-                                class="block w-full text-left px-4 py-2 text-sm text-amber-600 dark:text-amber-400 hover:bg-gray-50 dark:hover:bg-gray-800">Revérifier</button>
-                        {% endif %}
-                        <button @click.stop="selected = [{{ ep.id }}]; confirmDelete = true; menuOpen = false"
-                                class="block w-full text-left px-4 py-2 text-sm text-red-600 dark:text-red-400 hover:bg-gray-50 dark:hover:bg-gray-800">Supprimer</button>
+                <div class="flex items-center gap-2.5 min-w-0 flex-1">
+                    <div class="w-2 h-2 rounded-full shrink-0
+                        {% if ep.status in ('détecté','recherche') %}bg-amber-500
+                        {% elif ep.status == 'ignoré' %}bg-gray-400
+                        {% elif ep.status == 'remplacé' %}bg-green-500
+                        {% elif ep.status == 'en_attente' %}bg-blue-500
+                        {% else %}bg-red-500{% endif %}">
+                    </div>
+                    <span class="font-mono text-xs text-gray-500 dark:text-gray-400 shrink-0 w-10">E{{ '%02d' % (ep.episode or 0) }}</span>
+                    <span class="font-mono text-xs text-gray-400 dark:text-gray-500 truncate min-w-0">{{ ep.symlink_path }}</span>
+                </div>
+
+                <div class="flex flex-col items-end gap-0.5 shrink-0">
+                    <span class="inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full font-medium whitespace-nowrap
+                        {% if ep.status in ('détecté','recherche') %}bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300
+                        {% elif ep.status == 'ignoré' %}bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400
+                        {% elif ep.status == 'remplacé' %}bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300
+                        {% elif ep.status == 'en_attente' %}bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300
+                        {% else %}bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300{% endif %}">
+                        <span class="w-1.5 h-1.5 rounded-full
+                            {% if ep.status in ('détecté','recherche') %}bg-amber-500
+                            {% elif ep.status == 'ignoré' %}bg-gray-400
+                            {% elif ep.status == 'remplacé' %}bg-green-500
+                            {% elif ep.status == 'en_attente' %}bg-blue-500
+                            {% else %}bg-red-500{% endif %}">
+                        </span>
+                        {{ ep.status }}
+                    </span>
+                    {% if ep.status not in ('remplacé',) %}
+                    <button @click.stop="itemAction({{ ep.id }}, 'verify-fs')"
+                            class="text-xs px-1.5 py-0.5 rounded font-medium bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors shrink-0 w-full text-center">Vérifier</button>
+                    <button @click.stop="itemAction({{ ep.id }}, 'process')"
+                            class="text-xs px-1.5 py-0.5 rounded font-medium bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300 hover:bg-amber-200 dark:hover:bg-amber-900/50 transition-colors shrink-0 w-full text-center">Traiter</button>
+                    {% endif %}
+                    <div class="relative" x-data="{ menuOpen: false }" @click.outside="menuOpen = false" @click.stop>
+                        <button @click.stop="menuOpen = !menuOpen"
+                                class="p-1 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 rounded hover:bg-gray-100 dark:hover:bg-gray-800 w-full flex items-center justify-center">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M12 6.75a.75.75 0 110-1.5.75.75 0 010 1.5zM12 12.75a.75.75 0 110-1.5.75.75 0 010 1.5zM12 18.75a.75.75 0 110-1.5.75.75 0 010 1.5z"/>
+                            </svg>
+                        </button>
+                        <div x-show="menuOpen" x-cloak
+                             class="absolute right-0 top-full mt-1 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg py-1 min-w-[160px] z-10">
+                            <a href="/results/{{ ep.id }}" @click.stop
+                               class="block px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800">Voir le détail</a>
+                            <button @click.stop="itemAction({{ ep.id }}, 'verify-fs'); menuOpen = false"
+                                    class="block w-full text-left px-4 py-2 text-sm text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800">Vérifier</button>
+                            {% if ep.status in ('détecté','recherche','en_attente','ignoré','non_remplacé','échoué') %}
+                            <button @click.stop="itemAction({{ ep.id }}, 'process'); menuOpen = false"
+                                    class="block w-full text-left px-4 py-2 text-sm text-amber-600 dark:text-amber-400 hover:bg-gray-50 dark:hover:bg-gray-800">Traiter</button>
+                            {% endif %}
+                            {% if ep.status in ('non_remplacé','échoué','détecté','recherche') %}
+                            <button @click.stop="itemAction({{ ep.id }}, 'fix'); menuOpen = false"
+                                    class="block w-full text-left px-4 py-2 text-sm text-green-600 dark:text-green-400 hover:bg-gray-50 dark:hover:bg-gray-800">Marquer remplacé</button>
+                            {% endif %}
+                            {% if ep.status not in ('ignoré','remplacé','en_attente') %}
+                            <button @click.stop="itemAction({{ ep.id }}, 'ignore'); menuOpen = false"
+                                    class="block w-full text-left px-4 py-2 text-sm text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800">Ignorer</button>
+                            {% endif %}
+                            {% if ep.status in ('non_remplacé','échoué') %}
+                            <button @click.stop="itemAction({{ ep.id }}, 'recheck'); menuOpen = false"
+                                    class="block w-full text-left px-4 py-2 text-sm text-amber-600 dark:text-amber-400 hover:bg-gray-50 dark:hover:bg-gray-800">Revérifier</button>
+                            {% endif %}
+                            <button @click.stop="selected = [{{ ep.id }}]; confirmDelete = true; menuOpen = false"
+                                    class="block w-full text-left px-4 py-2 text-sm text-red-600 dark:text-red-400 hover:bg-gray-50 dark:hover:bg-gray-800">Supprimer</button>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -148,45 +156,67 @@
          class="bg-white dark:bg-gray-900 rounded-xl shadow-sm border border-gray-200 dark:border-gray-800 hover:shadow-md transition-shadow"
          :class="{'ring-2 ring-brand-500/30 bg-brand-50/50 dark:bg-brand-900/10': selected.includes({{ item.id }})}">
         <div class="px-3 py-2.5">
-            {% if showBatch %}
-            <div x-show="showBatch" x-cloak class="float-left mr-2 mt-1" @click.stop>
-                <input type="checkbox" value="{{ item.id }}"
-                       @change="toggle({{ item.id }})"
-                       :checked="selected.includes({{ item.id }})"
-                       class="rounded border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800">
-            </div>
-            {% endif %}
-
-            <div class="flex items-center gap-1.5 min-w-0">
-                <div class="w-2.5 h-2.5 rounded-full shrink-0
-                    {% if item.status in ('détecté','recherche') %}bg-amber-500
-                    {% elif item.status == 'ignoré' %}bg-gray-400
-                    {% elif item.status == 'remplacé' %}bg-green-500
-                    {% elif item.status == 'en_attente' %}bg-blue-500
-                    {% else %}bg-red-500{% endif %}">
+            <div class="flex items-start gap-3">
+                {% if showBatch %}
+                <div class="shrink-0 pt-1" @click.stop>
+                    <input type="checkbox" value="{{ item.id }}"
+                           @change="toggle({{ item.id }})"
+                           :checked="selected.includes({{ item.id }})"
+                           class="rounded border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800">
                 </div>
-                <span class="inline-flex items-center gap-1 text-xs font-medium px-2 py-0.5 rounded-full shrink-0 {{ 'bg-blue-100 text-blue-700 dark:bg-blue-900/50 dark:text-blue-300' if item.source == 'radarr' else 'bg-green-100 text-green-700 dark:bg-green-900/50 dark:text-green-300' }}">
-                    {{ item.source }}
-                </span>
-                 <a href="/results/{{ item.id }}" @click.stop
-                    class="font-medium text-sm text-gray-800 dark:text-gray-200 hover:text-brand-600 dark:hover:text-brand-400 truncate min-w-0 flex-1">
-                    {{ item.media_title or '—' }}
-                </a>
-                <button @click.stop="
-                    clipboardCopy($el.getAttribute('data-title'));
-                    $el.innerHTML = '<svg class=\'w-3.5 h-3.5 text-green-500 shrink-0\' fill=\'none\' stroke=\'currentColor\' viewBox=\'0 0 24 24\' stroke-width=\'2\'><path stroke-linecap=\'round\' stroke-linejoin=\'round\' d=\'M4.5 12.75l6 6 9-13.5\'/></svg>';
-                    setTimeout(() => $el.innerHTML = copyIcon, 1500);
-                " data-title="{{ item.media_title }}"
-                        class="p-0.5 rounded hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors shrink-0"
-                        title="Copier le titre" type="button">
-                    {{ copy_icon|safe }}
-                </button>
-                {% set dup = item.total_count|default(0) %}
-                {% if dup > 1 %}
-                <span class="text-xs text-gray-400 dark:text-gray-500 shrink-0">(+{{ dup - 1 }})</span>
                 {% endif %}
 
-                <div class="ml-auto flex items-center gap-1 shrink-0">
+                <div class="flex-1 min-w-0">
+                    <div class="flex items-center gap-1.5">
+                        <div class="w-2.5 h-2.5 rounded-full shrink-0
+                            {% if item.status in ('détecté','recherche') %}bg-amber-500
+                            {% elif item.status == 'ignoré' %}bg-gray-400
+                            {% elif item.status == 'remplacé' %}bg-green-500
+                            {% elif item.status == 'en_attente' %}bg-blue-500
+                            {% else %}bg-red-500{% endif %}">
+                        </div>
+                        <span class="inline-flex items-center gap-1 text-xs font-medium px-2 py-0.5 rounded-full shrink-0 {{ 'bg-blue-100 text-blue-700 dark:bg-blue-900/50 dark:text-blue-300' if item.source == 'radarr' else 'bg-green-100 text-green-700 dark:bg-green-900/50 dark:text-green-300' }}">
+                            {{ item.source }}
+                        </span>
+                        <a href="/results/{{ item.id }}" @click.stop
+                           class="font-medium text-sm text-gray-800 dark:text-gray-200 hover:text-brand-600 dark:hover:text-brand-400 truncate min-w-0">
+                            {{ item.media_title or '—' }}
+                        </a>
+                        <button @click.stop="
+                            clipboardCopy($el.getAttribute('data-title'));
+                            $el.innerHTML = '<svg class=\'w-3.5 h-3.5 text-green-500 shrink-0\' fill=\'none\' stroke=\'currentColor\' viewBox=\'0 0 24 24\' stroke-width=\'2\'><path stroke-linecap=\'round\' stroke-linejoin=\'round\' d=\'M4.5 12.75l6 6 9-13.5\'/></svg>';
+                            setTimeout(() => $el.innerHTML = copyIcon, 1500);
+                        " data-title="{{ item.media_title }}"
+                                class="p-0.5 rounded hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors shrink-0"
+                                title="Copier le titre" type="button">
+                            {{ copy_icon|safe }}
+                        </button>
+                        {% set dup = item.total_count|default(0) %}
+                        {% if dup > 1 %}
+                        <span class="text-xs text-gray-400 dark:text-gray-500 shrink-0">(+{{ dup - 1 }})</span>
+                        {% endif %}
+                    </div>
+
+                    {# === Path line === #}
+                    <div class="flex items-center gap-1 mt-1">
+                        <span class="text-[10px] text-gray-300 dark:text-gray-600 shrink-0">·</span>
+                        <span class="font-mono text-[11px] text-gray-500 dark:text-gray-400 truncate min-w-0"
+                              style="direction:rtl;text-align:left;unicode-bidi:plaintext">{{ item.symlink_path }}</span>
+                        <button @click.stop="
+                            clipboardCopy($el.getAttribute('data-path'));
+                            $el.innerHTML = '<svg class=\'w-3 h-3 text-green-500 shrink-0\' fill=\'none\' stroke=\'currentColor\' viewBox=\'0 0 24 24\' stroke-width=\'2\'><path stroke-linecap=\'round\' stroke-linejoin=\'round\' d=\'M4.5 12.75l6 6 9-13.5\'/></svg>';
+                            setTimeout(() => $el.innerHTML = copyIcon, 1500);
+                        " data-path="{{ item.symlink_path }}"
+                                class="p-0.5 rounded hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors shrink-0"
+                                title="Copier le chemin" type="button">
+                            {{ copy_icon|safe }}
+                        </button>
+                        <span class="text-[10px] text-gray-300 dark:text-gray-600 shrink-0">·</span>
+                        <span class="text-[11px] text-gray-500 dark:text-gray-400 shrink-0 whitespace-nowrap">{{ item.media_type or '—' }}{% if item.season %} · S{{ item.season }}{% endif %}</span>
+                    </div>
+                </div>
+
+                <div class="flex flex-col items-end gap-0.5 shrink-0 pt-0.5">
                     <span class="inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full font-medium whitespace-nowrap
                         {% if item.status in ('détecté','recherche') %}bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300
                         {% elif item.status == 'ignoré' %}bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400
@@ -202,21 +232,15 @@
                         </span>
                         {{ item.status }}
                     </span>
-
                     {% if item.status not in ('remplacé',) %}
                     <button @click.stop="itemAction({{ item.id }}, 'verify-fs')"
-                            class="text-xs px-1.5 py-0.5 rounded font-medium bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors shrink-0">
-                        Vérifier
-                    </button>
+                            class="text-xs px-1.5 py-0.5 rounded font-medium bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors shrink-0 w-full text-center">Vérifier</button>
                     <button @click.stop="itemAction({{ item.id }}, 'process')"
-                            class="text-xs px-1.5 py-0.5 rounded font-medium bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300 hover:bg-amber-200 dark:hover:bg-amber-900/50 transition-colors shrink-0">
-                        Traiter
-                    </button>
+                            class="text-xs px-1.5 py-0.5 rounded font-medium bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300 hover:bg-amber-200 dark:hover:bg-amber-900/50 transition-colors shrink-0 w-full text-center">Traiter</button>
                     {% endif %}
-
                     <div class="relative" x-data="{ menuOpen: false }" @click.outside="menuOpen = false" @click.stop>
                         <button @click.stop="menuOpen = !menuOpen"
-                                class="p-1 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 rounded hover:bg-gray-100 dark:hover:bg-gray-800">
+                                class="p-1 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 rounded hover:bg-gray-100 dark:hover:bg-gray-800 w-full flex items-center justify-center">
                             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
                                 <path stroke-linecap="round" stroke-linejoin="round" d="M12 6.75a.75.75 0 110-1.5.75.75 0 010 1.5zM12 12.75a.75.75 0 110-1.5.75.75 0 010 1.5zM12 18.75a.75.75 0 110-1.5.75.75 0 010 1.5z"/>
                             </svg>
@@ -248,24 +272,6 @@
                         </div>
                     </div>
                 </div>
-            </div>
-
-            {# === Path line (indented) === #}
-            <div class="flex items-center gap-1 mt-1 {{ 'ml-6' if not showBatch else 'ml-8' }}">
-                <span class="text-[10px] text-gray-300 dark:text-gray-600 shrink-0">·</span>
-                <span class="font-mono text-[11px] text-gray-500 dark:text-gray-400 truncate max-w-full min-w-0"
-                      style="direction:rtl;text-align:left;unicode-bidi:plaintext">{{ item.symlink_path }}</span>
-                <button @click.stop="
-                    clipboardCopy($el.getAttribute('data-path'));
-                    $el.innerHTML = '<svg class=\'w-3 h-3 text-green-500 shrink-0\' fill=\'none\' stroke=\'currentColor\' viewBox=\'0 0 24 24\' stroke-width=\'2\'><path stroke-linecap=\'round\' stroke-linejoin=\'round\' d=\'M4.5 12.75l6 6 9-13.5\'/></svg>';
-                    setTimeout(() => $el.innerHTML = copyIcon, 1500);
-                " data-path="{{ item.symlink_path }}"
-                        class="p-0.5 rounded hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors shrink-0"
-                        title="Copier le chemin" type="button">
-                    {{ copy_icon|safe }}
-                </button>
-                <span class="text-[10px] text-gray-300 dark:text-gray-600 shrink-0">·</span>
-                <span class="text-[11px] text-gray-500 dark:text-gray-400 shrink-0 whitespace-nowrap">{{ item.media_type or '—' }}{% if item.season %} · S{{ item.season }}{% endif %}</span>
             </div>
         </div>
     </div>
