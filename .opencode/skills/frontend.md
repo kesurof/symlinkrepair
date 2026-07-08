@@ -111,12 +111,25 @@ function resultsApp() {
 | action | Bouton | Effet |
 |--------|--------|-------|
 | `process` | Traiter | DELETE API Radarr/Sonarr + recherche |
-| `process_season` | Traiter la saison | DELETE API Sonarr + recherche saison complète |
+| `process_season` | Traiter la saison | DELETE API Sonarr + marquage `recherche` si sans `file_id` + recherche saison complète. Retourne `search_triggered` |
 | `verify_season` | Vérifier la saison | Vérifie les symlinks sur le filesystem |
 | `fix` | Marquer remplacé | Flag manuel |
 | `ignore` | Ignorer | Cache le résultat |
 | `recheck` | Revérifier | Remet en file d'attente |
 | `delete` | Supprimer | Supprime la ligne (avec confirmation) |
+
+### Toast « Traiter la saison »
+
+```javascript
+// Dans groupSeasonAction() — quand search_triggered est true
+if (data.search_triggered) {
+    const parts = [];
+    if (data.affected > 0) parts.push(data.affected + ' supprimé(s)');
+    parts.push('recherche déclenchée');
+    msg = parts.join(', ');
+}
+// Affiche : "3 supprimé(s), recherche déclenchée" ou "recherche déclenchée"
+```
 
 ## Tailwind CSS
 

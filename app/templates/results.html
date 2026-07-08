@@ -229,6 +229,11 @@ function resultsApp() {
                 let msg;
                 if (action === 'verify') {
                     msg = data.verified + '/' + data.total + ' vérifié' + (data.verified > 1 ? 's' : '');
+                } else if (data.search_triggered) {
+                    const parts = [];
+                    if (data.affected > 0) parts.push(data.affected + ' supprimé' + (data.affected > 1 ? 's' : ''));
+                    parts.push('recherche déclenchée');
+                    msg = parts.join(', ');
                 } else {
                     msg = data.affected + ' traité' + (data.affected > 1 ? 's' : '');
                 }

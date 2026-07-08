@@ -32,7 +32,7 @@
 | POST | `/api/results/{result_id}/process` | Traitement réel : DELETE API + recherche |
 | GET | `/api/results/{result_id}/verifier` | Statut du cycle de vérification |
 | POST | `/api/results/{result_id}/stop-verifier` | Arrêter le cycle de vérification (→ `non_remplacé` / `abandon`) |
-| POST | `/api/results/batch` | Action groupée (process/fix/ignore/delete/recheck) |
+| POST | `/api/results/batch` | Action groupée (process/fix/ignore/delete/recheck/process_season/verify_season) |
 | GET | `/api/results/ids` | IDs filtrés (pour selectAll batch) |
 | GET | `/api/results/recent` | Résultats récents pour le dashboard |
 
@@ -62,6 +62,37 @@
 | GET | `/api/stats/history` | Historique des stats (30/90 jours) |
 | GET | `/api/scans/ids` | IDs filtrés des scans (pour selectAll batch) |
 | POST | `/api/scans/delete` | Supprimer des scans et leurs résultats |
+
+### Réponse de `POST /api/results/batch` pour `process_season`
+
+```json
+{
+  "ok": true,
+  "error": "",
+  "affected": 0,
+  "total": 5,
+  "search_triggered": true
+}
+```
+
+- `ok` : true si au moins un épisode a été supprimé OU si la recherche Sonarr a été déclenchée
+- `error` : message d'erreur si tout a échoué sans recherche
+- `affected` : nombre d'épisodes supprimés via l'API Sonarr (peut être 0 si les `file_id` étaient absents)
+- `total` : nombre total de résultats trouvés dans la base pour cette saison
+- `search_triggered` : true si une commande `RescanSeries` ou `SeasonSearch` a été soumise à Sonarr
+
+### Réponse de `POST /api/results/batch` pour `verify_season`
+
+```json
+{
+  "ok": true,
+  "verified": 3,
+  "total": 5
+}
+```
+
+- `verified` : nombre de symlinks valides trouvés sur le filesystem (marqués `remplacé`)
+- `total` : nombre total de résultats vérifiés pour la saison
 
 ## Convention
 

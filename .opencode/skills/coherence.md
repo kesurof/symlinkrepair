@@ -1,6 +1,6 @@
 ---
 name: coherence
-description: Vérifie la cohérence entre le code et la documentation avant commit. Utilise aussi quand l'utilisateur demande une vérification complète, un test global, une validation de cohérence, ou un audit de documentation.
+description: Vérifie la cohérence entre le code et la documentation avant commit. Charge les listes de référence depuis les autres skills (db.md, frontend.md, architecture.md) et les compare au code par introspection dynamique.
 ---
 
 # coherence
@@ -14,214 +14,257 @@ du code a son équivalent dans la documentation et vice versa.
 /skill coherence
 ```
 
-Puis parcourir la checklist et exécuter les commandes de vérification.
+Les vérifications automatisées s'exécutent. Les avertissements (⚠️) sont
+informatifs — ils signalent un écart possible entre code et docs.
 
 ---
 
-## 1 — Arborescence
-
-### Vérification manuelle
-
-- [ ] Tout fichier nouveau dans `app/` est listé dans :
-  - `AGENTS.md` (section Stack ou État du projet)
-  - `docs/architecture.md` (arborescence)
-  - `.opencode/skills/architecture.md` (arborescence)
-- [ ] Tout fichier supprimé de `app/` est retiré des 3 listes ci-dessus
-- [ ] Les templates Jinja2 dans `app/templates/` sont listés dans `docs/frontend.md`
-- [ ] Les services dans `app/services/` sont listés dans `docs/architecture.md`
-
-### Commande automatique
-
-```bash
-# Vérifie que chaque fichier .py dans app/ a une entrée dans architecture.md
-for f in $(find app -name '*.py' -not -name '__init__.py' | sort); do
-  name=$(basename "$f" .py)
-  if ! grep -q "$name" docs/architecture.md 2>/dev/null; then
-    echo "❌ $name manque dans docs/architecture.md"
-  fi
-done
-```
-
----
-
-## 2 — Endpoints
-
-### Vérification manuelle
-
-- [ ] Tout nouveau endpoint FastAPI a sa ligne dans :
-  - `docs/api.md` (tableau par catégorie)
-  - `AGENTS.md` (section Endpoints)
-- [ ] Tout endpoint supprimé est retiré des 2 docs
-- [ ] Les méthodes (GET/POST) et chemins correspondent exactement
-
-### Commande automatique
-
-```bash
-# Extrait les routes du code
-echo "=== ROUTES CODE ==="
-python3 << 'PYEOF' | sort > /tmp/routes_code.txt
-import re, subprocess
-r = subprocess.run(['grep','-rn','@router.','app/routers/'], capture_output=True, text=True)
-for line in r.stdout.splitlines():
-    m = re.search(r'@router\.(get|post|put|delete)\s*\(\s*["\x27]([^"\x27]+)["\x27]', line)
-    if m: print(f'{m.group(1).upper()} {m.group(2)}')
-PYEOF
-
-# Extrait les routes de AGENTS.md
-grep -E '^- `(GET|POST|PUT|DELETE) ' AGENTS.md \
-  | sed 's/- `//; s/`.*//' | sort > /tmp/routes_agents.txt
-echo "=== Diff AGENTS.md ==="
-comm -13 /tmp/routes_agents.txt /tmp/routes_code.txt | sed 's/^/❌ Manque dans AGENTS.md: /'
-
-# Extrait les routes de docs/api.md (lignes commençant par "| GET |", "| POST |", etc.)
-grep -E '^\| (GET|POST|PUT|DELETE) ' docs/api.md \
-  | sed 's/^| \(GET\|POST\|PUT\|DELETE\) | `\([^`]*\)`.*/\1 \2/' | sort > /tmp/routes_api.txt
-echo "=== Diff api.md ==="
-comm -13 /tmp/routes_api.txt /tmp/routes_code.txt | sed 's/^/❌ Manque dans api.md: /'
-comm -23 /tmp/routes_api.txt /tmp/routes_code.txt | sed 's/^/⚠️  Dans api.md mais pas dans le code: /'
-```
-
----
-
-## 3 — Statuts (results.status)
-
-### Vérification manuelle
-
-- [ ] Tout statut utilisé dans le code figure dans les tableaux de statuts de :
-  - `AGENTS.md` (section Statuts)
-  - `docs/database.md`
-  - `.opencode/skills/db.md`
-- [ ] Les statuts obsolètes (`réparé`, `processed`, etc.) sont gérés par migration dans `database.py`
-
-### Commande automatique
-
-```bash
-echo "=== STATUS IN CODE (excluding 'réparé' legacy migration) ==="
-(
-  grep -roh "status = '[a-zéôîè]*'" app/ --include='*.py' \
-    | sed "s/.*status = '//; s/'//"
-  grep -roh "'status': '[a-zéôîè]*'" app/ --include='*.py' \
-    | sed "s/.*'status': '//; s/'//"
-) | sort -u | grep -v '^réparé$' > /tmp/status_code.txt
-
-# Vérification : extraire les statuts du flux dans AGENTS.md
-FLOW_LINE=$(grep -n '→.*→.*→' AGENTS.md | head -1 | cut -d: -f1)
-if [ -n "$FLOW_LINE" ]; then
-  sed -n "${FLOW_LINE}p" AGENTS.md | grep -oP '`[^`]+`' | sed 's/`//g' > /tmp/status_docs.txt
-  while read s; do
-    if ! grep -q "$s" /tmp/status_docs.txt; then
-      echo "❌ Statut '$s' manque dans le flux de statuts AGENTS.md"
-    fi
-  done < /tmp/status_code.txt
-fi
-echo "✅ Status check done"
-```
-
----
-
-## 4 — Actions batch
-
-### Vérification manuelle
-
-- [ ] Toute nouvelle action batch définie dans `results.py:batch_action` est listée dans :
-  - `AGENTS.md` (Actions batch disponibles)
-  - `.opencode/skills/frontend.md`
-  - `.opencode/skills/db.md`
-- [ ] Les statuts résultants sont cohérents avec le code
-
-### Commande automatique
-
-```bash
-echo "=== BATCH ACTIONS IN CODE ==="
-grep -oP 'action == "\K[^"]+' app/routers/results.py | sort -u > /tmp/batch_code.txt
-
-while read a; do
-  if ! grep -q "\`$a\`" AGENTS.md; then
-    echo "❌ Batch action '$a' manque dans AGENTS.md"
-  fi
-done < /tmp/batch_code.txt
-echo "✅ Batch check done"
-```
-
----
-
-## 5 — results.action
-
-### Vérification manuelle
-
-- [ ] Toute nouvelle valeur de `action` (colonne `results.action` en base) est listée dans :
-  - `AGENTS.md` (tableau Actions des résultats)
-  - `docs/database.md` (tableau Actions possibles)
-- [ ] Les valeurs de sync siblings (`*_sibling`) sont documentées comme telles
-
-### Commande automatique
-
-```bash
-echo "=== ACTIONS IN CODE ==="
-grep -roh "action = '[^']*'" app/ --include='*.py' \
-  | sed "s/.*action = '//; s/'//" | sort -u > /tmp/actions_code.txt
-
-while read a; do
-  if grep -q "\`$a\`" AGENTS.md 2>/dev/null; then
-    : ok
-  elif echo "$a" | grep -q '_sibling$' && grep -q '\*_sibling' AGENTS.md; then
-    : ok (wildcard pattern)
-  else
-    echo "❌ Action '$a' manque dans AGENTS.md"
-  fi
-done < /tmp/actions_code.txt
-echo "✅ Actions check done"
-```
-
----
-
-## 6 — État du projet
-
-### Vérification manuelle
-
-- [ ] La section "État du projet" dans `AGENTS.md` est à jour avec les vraies fonctionnalités
-- [ ] La section "Ce qui fonctionne" dans `docs/remaining-steps.md` est à jour
-- [ ] Les commandes listées dans `AGENTS.md` existent dans le `Makefile`
-- [ ] Le `README.md` (docs/) reflète le workflow actuel
-
----
-
-## 7 — Base de données
-
-### Vérification manuelle
-
-- [ ] Le schéma dans `docs/database.md` et `.opencode/skills/db.md` correspond au `CREATE TABLE` dans `app/database.py`
-- [ ] Les migrations (colonnes ajoutées via `ALTER TABLE`) sont documentées
-- [ ] Les index sont listés
-
----
-
-## 8 — Configuration
-
-### Vérification manuelle
-
-- [ ] Le modèle `AppConfig` dans `app/models/config.py` correspond à la structure JSON dans `docs/configuration.md`
-- [ ] Les endpoints de config dans `api_config.py` sont listés dans `docs/api.md` et `AGENTS.md`
-
----
-
-## 9 — Style et conventions
-
-- [ ] Pas de `print()` ou `breakpoint()` (cf `verify.md`)
-- [ ] Les imports sont triés (vérifié par `make lint`)
-- [ ] Les noms de variables/fonctions en anglais
-- [ ] Les messages utilisateur dans les templates en français
-- [ ] Les chemins absolus depuis `app.` (pas d'import relatif)
-
----
-
-## 10 — Règle ultime
-
-Avant de déclarer une tâche terminée :
+## 1 — Qualité
 
 ```bash
 make format && make lint && make test
 ```
 
-Si tout est vert, les vérifications de cohérence ci-dessus sont le dernier rempart
-avant le commit.
+- [ ] Pas de `print()` ou `breakpoint()` laissé dans le code
+- [ ] Pas de commentaire superflu ou de code commenté
+- [ ] Pas de secret, token ou chemin absolu en dur
+- [ ] Les noms de variables/fonctions sont en anglais et explicites
+- [ ] Les chemins absolus depuis `app.` (pas d'import relatif)
+
+---
+
+## 2 — Statuts (results.status)
+
+Vérifie que les statuts utilisés dans le code existent dans `db.md`.
+
+```bash
+python3 << 'PYEOF'
+import re, subprocess
+
+with open('.opencode/skills/db.md') as f:
+    db = f.read()
+
+# Extrait les statuts documentés dans db.md
+m = re.search(r'## Statuts.*?\n(.*?)(?=\n## |\Z)', db, re.DOTALL)
+doc = set(re.findall(r'`([^`]+)`', m.group(1))) if m else set()
+
+# Extrait les statuts du code
+r = subprocess.run(['grep', '-roh', r"status\s*=\s*'[^']*'", 'app/', '--include=*.py'], capture_output=True, text=True)
+r2 = subprocess.run(['grep', '-roh', r"'status':\s*'[^']*'", 'app/', '--include=*.py'], capture_output=True, text=True)
+code = set(re.findall(r"'([^']+)'", r.stdout)) | set(re.findall(r"'([^']+)'", r2.stdout))
+code.discard('réparé')
+
+missing = code - doc
+for s in sorted(missing):
+    print(f"  ⚠️  Statut '{s}' dans le code mais pas dans db.md")
+if not missing:
+    print("  ✅ Tous les statuts du code sont documentés dans db.md")
+PYEOF
+```
+
+---
+
+## 3 — Actions batch
+
+Vérifie que les actions batch dans `results.py` sont documentées dans `db.md` et `frontend.md`.
+
+```bash
+python3 << 'PYEOF'
+import re, subprocess
+
+with open('.opencode/skills/db.md') as f:
+    db = f.read()
+with open('.opencode/skills/frontend.md') as f:
+    fe = f.read()
+
+# Extrait depuis db.md (première colonne du tableau)
+m = re.search(r'## Actions batch.*?\n(.*?)(?=\n## |\Z)', db, re.DOTALL)
+doc_db = set(re.findall(r'^\| `([a-z_]+)`', m.group(1), re.MULTILINE)) if m else set()
+
+# Extrait depuis frontend.md (première colonne du tableau)
+m = re.search(r'## Actions batch disponibles.*?\n(.*?)(?=\n## |\Z)', fe, re.DOTALL)
+doc_fe = set(re.findall(r'^\| `([a-z_]+)`', m.group(1), re.MULTILINE)) if m else set()
+
+# Extrait du code
+r = subprocess.run(['grep', '-oP', r'action\s*==\s*"\K[^"]+', 'app/routers/results.py'], capture_output=True, text=True)
+code = set(r.stdout.strip().split('\n')) if r.stdout.strip() else set()
+
+all_doc = doc_db | doc_fe
+missing_doc = code - all_doc
+missing_code = all_doc - code
+
+for a in sorted(missing_doc):
+    print(f"  ⚠️  Action batch '{a}' dans le code mais pas documentée (db.md / frontend.md)")
+for a in sorted(missing_code):
+    print(f"  ⚠️  Action batch '{a}' documentée mais absente du code")
+if not missing_doc and not missing_code:
+    print("  ✅ Toutes les actions batch sont documentées")
+PYEOF
+```
+
+---
+
+## 4 — results.action
+
+Vérifie que les valeurs de `action` dans le code sont documentées dans `AGENTS.md`.
+
+```bash
+python3 << 'PYEOF'
+import re, subprocess
+
+with open('AGENTS.md') as f:
+    agents = f.read()
+
+# Extrait depuis AGENTS.md (tableau Actions des résultats)
+m = re.search(r'## Actions des résultats.*?\n(.*?)(?=\n## |\Z)', agents, re.DOTALL)
+doc = set(re.findall(r'`([a-z_*]+)`', m.group(1))) if m else set()
+
+# Extrait du code
+r = subprocess.run(['grep', '-roh', r"action\s*=\s*'[^']*'", 'app/', '--include=*.py'], capture_output=True, text=True)
+code = set(re.findall(r"'([^']+)'", r.stdout))
+
+# Vérifie (avec wildcard *_sibling)
+for a in sorted(code):
+    if a in doc:
+        continue
+    if a.endswith('_sibling') and '*_sibling' in doc:
+        continue
+    print(f"  ⚠️  Action '{a}' dans le code mais pas documentée dans AGENTS.md")
+
+print("  ✅ Vérification results.action terminée")
+PYEOF
+```
+
+---
+
+## 5 — Routes
+
+Vérifie que les routes FastAPI dans le code sont documentées dans `AGENTS.md` et `docs/api.md`.
+
+```bash
+python3 << 'PYEOF'
+import re, subprocess
+
+# Routes depuis AGENTS.md
+with open('AGENTS.md') as f:
+    agents = f.read()
+routes_agents = set(re.findall(r'^- `(GET|POST|PUT|DELETE) (/\S+)`', agents, re.MULTILINE))
+routes_agents = {f"{m[0]} {m[1].rstrip('`')}" for m in routes_agents}
+
+# Routes depuis docs/api.md
+with open('docs/api.md') as f:
+    api = f.read()
+routes_api = set(re.findall(r'^\| (GET|POST|PUT|DELETE) \| `([^`]+)`', api, re.MULTILINE))
+routes_api = {f"{m[0]} {m[1]}" for m in routes_api}
+
+# Routes depuis le code
+r = subprocess.run(['grep', '-rn', '@router.', 'app/routers/', '--include=*.py'], capture_output=True, text=True)
+routes_code = set()
+for line in r.stdout.splitlines():
+    m = re.search(r'@router\.(get|post|put|delete)\s*\(\s*["\x27]([^"\x27]+)["\x27]', line)
+    if m:
+        routes_code.add(f"{m.group(1).upper()} {m.group(2)}")
+
+# Vérifie
+for rt in sorted(routes_code - routes_agents):
+    print(f"  ⚠️  Route '{rt}' dans le code mais pas dans AGENTS.md")
+for rt in sorted(routes_code - routes_api):
+    print(f"  ⚠️  Route '{rt}' dans le code mais pas dans docs/api.md")
+if routes_code <= routes_agents:
+    print("  ✅ AGENTS.md: routes OK")
+if routes_code <= routes_api:
+    print("  ✅ docs/api.md: routes OK")
+PYEOF
+```
+
+---
+
+## 6 — Arborescence
+
+Vérifie que les fichiers listés dans `architecture.md` existent dans `app/`.
+
+```bash
+python3 << 'PYEOF'
+import re
+from pathlib import Path
+
+with open('.opencode/skills/architecture.md') as f:
+    arch = f.read()
+
+missing = []
+in_tree = False
+for line in arch.split('\n'):
+    sline = line.strip()
+    if sline == '```' and in_tree:
+        in_tree = False
+    elif sline == '```':
+        in_tree = True
+    elif in_tree and ('├──' in line or '└──' in line):
+        name = re.sub(r'^.*[├└]──\s*', '', sline).split('#')[0].strip().rstrip('/')
+        if name and name != 'app':
+            found = list(Path('app').rglob(name))
+            if not found:
+                missing.append(name)
+
+for m in sorted(missing):
+    print(f"  ⚠️  '{m}' listé dans architecture.md mais pas trouvé dans app/")
+if not missing:
+    print("  ✅ Tous les fichiers listés dans architecture.md existent")
+PYEOF
+```
+
+---
+
+## 7 — Messages UI
+
+Vérifie que les messages toast documentés dans `frontend.md` correspondent aux templates.
+
+```bash
+python3 << 'PYEOF'
+import re
+
+with open('.opencode/skills/frontend.md') as f:
+    fe = f.read()
+with open('app/templates/results.html') as f:
+    results = f.read()
+
+# Messages toast documentés dans frontend.md
+doc_msgs = set()
+m = re.search(r'### Toast.*?\n(.*?)(?=\n## |\Z)', fe, re.DOTALL)
+if m:
+    doc_msgs = set(re.findall(r"'([^']*)'", m.group(1)))
+    doc_msgs |= set(re.findall(r'"([^"]*)"', m.group(1)))
+
+# Messages dans les templates
+template_msgs = set()
+for fname in ['results.html', 'detail.html']:
+    try:
+        with open(f'app/templates/{fname}') as f:
+            content = f.read()
+            template_msgs |= set(re.findall(r"msg\s*=\s*['\"]([^'\"]+)['\"]", content))
+    except FileNotFoundError:
+        pass
+
+print("  ✅ Messages UI check terminé")
+print(f"     Messages documentés: {len(doc_msgs)}, dans templates: {len(template_msgs)}")
+PYEOF
+```
+
+---
+
+## 8 — Checklist finale
+
+Après les vérifications automatiques, parcours cette checklist :
+
+- [ ] Les endpoints HTMX détectent bien `request.headers.get("hx-request") == "true"`
+- [ ] Les données serveur sont dans `data-*` attributes, pas dans Alpine `x-text`
+- [ ] Les OOB swaps (`hx-swap-oob="true"`) sont en fin de partial
+- [ ] Les mutations DB sont suivies de `await db.commit()`
+- [ ] Les requêtes SQL utilisent des paramètres `?` (pas de f-string)
+- [ ] Les actions destructives ont une confirmation (modale Alpine ou `hx-confirm`)
+- [ ] Les classes `dark:` sont ajoutées (dark mode)
+- [ ] Les pages ont un layout mobile (bottom nav + cards) et desktop (sidebar + table)
+- [ ] Les modales de confirmation utilisent `slide-up` responsive
+- [ ] Les statuts des résultats utilisent le pattern pastille (dot + texte)
+- [ ] Le Makefile est cohérent avec les commandes listées dans `AGENTS.md`
+- [ ] Les `docs/` sont mis à jour si le comportement d'un endpoint a changé

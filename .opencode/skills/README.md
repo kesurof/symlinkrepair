@@ -4,9 +4,9 @@ Skills disponibles :
 
 | Skill | Usage |
 |-------|-------|
-| `verify` | Vérification lint/tests avant commit |
-| `architecture` | Conventions de code et structure |
-| `db` | Patterns d'accès SQLite |
+| `coherence` | Vérification complète avant commit : format + lint + tests + audit cohérence code↔docs |
+| `architecture` | Conventions de code et structure du projet |
+| `db` | Patterns d'accès SQLite, schéma, statuts |
 | `frontend` | Patterns HTMX / Alpine.js / Tailwind (design system indigo, dark mode, sidebar+bottom nav) |
 | `screenshots` | Capture d'écran des pages (Pageres CLI + Chromium) |
 

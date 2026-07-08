@@ -114,7 +114,7 @@ make deploy
 
 ## Actions batch disponibles
 - **Traiter** (`process`) — DELETE API Radarr/Sonarr + recherche auto (supporte `delete_season` pour Sonarr)
-- **Traiter une saison** (`process_season`) — DELETE API Sonarr + recherche de tous les épisodes d'une saison d'un coup (nécessite `series_id` + `season` dans le body)
+- **Traiter une saison** (`process_season`) — DELETE API Sonarr des épisodes encore référencés + marquage `recherche` pour ceux sans `file_id` + recherche Sonarr systématique de toute la saison (nécessite `series_id` + `season` dans le body). Retourne `search_triggered: true` si la recherche a été déclenchée.
 - **Vérifier une saison** (`verify_season`) — Vérifie sur le filesystem tous les épisodes d'une saison, marque `remplacé` ceux qui sont valides (nécessite `series_id` + `season` dans le body)
 - **Marquer remplacé** (`fix`) — Flag manuel (symlink marqué comme remplacé)
 - **Ignorer** (`ignore`) — Cache le résultat

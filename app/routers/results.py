@@ -567,6 +567,7 @@ async def batch_action(request: Request, db: Connection = Depends(get_db)):
                 "error": outcome_ps.get("error", "Échec du traitement de la saison"),
                 "affected": outcome_ps.get("processed", 0),
                 "total": outcome_ps.get("total", 0),
+                "search_triggered": outcome_ps.get("search_triggered", False),
             }
 
         if action == "verify_season":

@@ -170,22 +170,31 @@ async def process_season(result: dict, db: Connection, scan_id: int) -> dict:
     cursor = await db.execute(
         "SELECT * FROM results"
         " WHERE series_id = ? AND season = ? AND source = 'sonarr'"
-        " AND file_id IS NOT NULL AND status IN ('détecté','recherche')",
+        " AND status IN ('détecté','recherche')",
         (series_id, season),
     )
-    targets = [dict(r) for r in await cursor.fetchall()]
+    all_results = [dict(r) for r in await cursor.fetchall()]
 
     actions = {"api_delete": False, "symlink_removed": False, "refresh": False, "search": False}
-    logger.info("Season cleanup: series=%s season=%s targets=%d", series_id, season, len(targets))
+    logger.info(
+        "Season cleanup: series=%s season=%s total=%d",
+        series_id,
+        season,
+        len(all_results),
+    )
 
-    if not targets:
+    if not all_results:
         return {
             "ok": False,
             "error": "Aucun résultat trouvé pour cette saison",
             "actions": actions,
             "processed": 0,
             "total": 0,
+            "search_triggered": False,
         }
+
+    targets = [r for r in all_results if r.get("file_id") is not None]
+    no_file = [r for r in all_results if r.get("file_id") is None]
 
     deleted = 0
     failed_skipped = []
@@ -211,9 +220,16 @@ async def process_season(result: dict, db: Connection, scan_id: int) -> dict:
             )
         await asyncio.sleep(DELETE_DELAY)
 
+    for r in no_file:
+        await db.execute(
+            "UPDATE results SET status = 'recherche', action = 'recheck',"
+            " action_date = datetime('now') WHERE id = ?",
+            (r["id"],),
+        )
+
     await db.commit()
 
-    if deleted > 0 and config.defaults.rescan:
+    if config.defaults.rescan:
         await asyncio.sleep(COMMAND_DELAY)
         actions["refresh"] = await rescan_series(
             config.sonarr.url,
@@ -221,7 +237,7 @@ async def process_season(result: dict, db: Connection, scan_id: int) -> dict:
             series_id,
         )
 
-    if deleted > 0 and config.defaults.search:
+    if config.defaults.search:
         await asyncio.sleep(COMMAND_DELAY)
         actions["search"] = await search_season(
             config.sonarr.url,
@@ -230,8 +246,10 @@ async def process_season(result: dict, db: Connection, scan_id: int) -> dict:
             season,
         )
 
+    search_triggered = actions["refresh"] or actions["search"]
+
     error_msg = ""
-    if deleted == 0 and failed_skipped:
+    if not search_triggered and deleted == 0 and failed_skipped:
         skipped_counts = {}
         for s in failed_skipped:
             skipped_counts[s] = skipped_counts.get(s, 0) + 1
@@ -239,19 +257,21 @@ async def process_season(result: dict, db: Connection, scan_id: int) -> dict:
         error_msg = f"Tous les épisodes ont échoué : {reasons}"
 
     logger.info(
-        "Season cleanup done: series=%s season=%s deleted=%d total=%d failed=%s",
+        "Season cleanup done: series=%s season=%s deleted=%d total=%d failed=%s search=%s",
         series_id,
         season,
         deleted,
-        len(targets),
+        len(all_results),
         failed_skipped,
+        search_triggered,
     )
     return {
-        "ok": deleted > 0,
+        "ok": deleted > 0 or search_triggered,
         "error": error_msg,
         "actions": actions,
         "processed": deleted,
-        "total": len(targets),
+        "total": len(all_results),
+        "search_triggered": search_triggered,
     }
 
 
