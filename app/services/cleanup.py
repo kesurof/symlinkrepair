@@ -170,7 +170,7 @@ async def process_season(result: dict, db: Connection, scan_id: int) -> dict:
     cursor = await db.execute(
         "SELECT * FROM results"
         " WHERE series_id = ? AND season = ? AND source = 'sonarr'"
-        " AND status IN ('détecté','recherche','en_attente')",
+        " AND status NOT IN ('remplacé','ignoré')",
         (series_id, season),
     )
     all_results = [dict(r) for r in await cursor.fetchall()]
