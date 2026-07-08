@@ -206,6 +206,9 @@ async def _check_loop():
                             _pending.pop(path, None)
                 except Exception as e:
                     logger.error("Verifier error for %s: %s", path, e)
+                    await _update_db_status(
+                        path, "non_remplacé", "verifier_fail", meta.get("result_id")
+                    )
                     _pending.pop(path, None)
         except asyncio.CancelledError:
             raise

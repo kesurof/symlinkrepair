@@ -483,7 +483,7 @@ async def process_single_result(
             await _sync_siblings(db, result, "remplacé", "auto_fix_sibling")
             await db.commit()
             logger.info("Result %d auto-fixed (symlink already valid)", result_id)
-        elif outcome["ok"]:
+        elif outcome.get("ok"):
             await db.execute(
                 "UPDATE results SET status = 'en_attente', action = 'api_delete',"
                 " search_count = search_count + 1, action_date = datetime('now') WHERE id = ?",
@@ -491,6 +491,18 @@ async def process_single_result(
             )
             await _sync_siblings(db, result, "en_attente", "api_delete_sibling")
             await db.commit()
+        else:
+            error_reason = outcome.get("error") or outcome.get("actions", {}).get(
+                "skipped", "delete_failed"
+            )
+            await db.execute(
+                "UPDATE results SET status = 'échoué', action = 'api_error',"
+                " action_date = datetime('now') WHERE id = ?",
+                (result_id,),
+            )
+            await _sync_siblings(db, result, "échoué", "api_error_sibling")
+            await db.commit()
+            logger.warning("Result %d failed: %s", result_id, error_reason)
 
     config = load_config()
     if delete_season and result.get("source") == "sonarr":
@@ -552,6 +564,7 @@ async def batch_action(request: Request, db: Connection = Depends(get_db)):
             )
             return {
                 "ok": outcome_ps.get("ok", False),
+                "error": outcome_ps.get("error", "Échec du traitement de la saison"),
                 "affected": outcome_ps.get("processed", 0),
                 "total": outcome_ps.get("total", 0),
             }
@@ -653,7 +666,7 @@ async def batch_action(request: Request, db: Connection = Depends(get_db)):
                 and result.get("series_id")
                 and result.get("season") is not None
             ):
-                outcome = await process_season(result, db, 0)
+                outcome = await process_season(result, db, result.get("scan_id", 0))
             else:
                 outcome = await process_single(result)
             if outcome.get("auto_fixed"):
@@ -699,4 +712,6 @@ async def batch_action(request: Request, db: Connection = Depends(get_db)):
         return JSONResponse({"ok": False, "error": f"Action inconnue: {action}"}, status_code=400)
 
     logger.info("Batch %s: %d results affected", action, affected)
+    if action in ("process",) and affected == 0 and ids:
+        return {"ok": False, "error": "Aucun résultat traité", "affected": 0}
     return {"ok": True, "affected": affected}

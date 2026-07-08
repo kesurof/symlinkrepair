@@ -7,15 +7,7 @@ from aiosqlite import Connection
 from app.services.config_service import load_config
 from app.services.filescanner import inspect_symlink
 from app.services.radarr import delete_movie_file, refresh_movie, search_movies
-from app.services.sonarr import (
-    copy_database_from_container as copy_sonarr_db,
-)
-from app.services.sonarr import (
-    delete_episode_file,
-    load_episode_records,
-    rescan_series,
-    search_season,
-)
+from app.services.sonarr import delete_episode_file, rescan_series, search_season
 from app.services.verifier import add as verifier_add
 
 logger = logging.getLogger(__name__)
@@ -112,6 +104,7 @@ async def _delete_one(result: dict, config, delete_season: bool = False) -> dict
             result_id=result.get("id"),
         )
     elif not action.get("skipped"):
+        action["skipped"] = "api_failed"
         logger.warning("Delete failed for %s file_id=%d", source, file_id)
 
     return action
@@ -174,32 +167,28 @@ async def process_season(result: dict, db: Connection, scan_id: int) -> dict:
     if not series_id or season is None:
         return {"ok": False, "error": "Aucune series_id/saison", "actions": {}}
 
-    db_path = copy_sonarr_db(config.sonarr.container)
-    if not db_path:
-        return {"ok": False, "error": "DB Sonarr indisponible", "actions": {}}
+    cursor = await db.execute(
+        "SELECT * FROM results"
+        " WHERE series_id = ? AND season = ? AND source = 'sonarr'"
+        " AND file_id IS NOT NULL AND status IN ('détecté','recherche')",
+        (series_id, season),
+    )
+    targets = [dict(r) for r in await cursor.fetchall()]
 
-    try:
-        records = load_episode_records(db_path)
-    except Exception as exc:
-        return {"ok": False, "error": str(exc), "actions": {}}
-
-    targets = []
-    for path, rec in records.items():
-        if rec.get("series_id") != series_id or rec.get("season") != season:
-            continue
-        targets.append(
-            {
-                "source": "sonarr",
-                "file_id": rec.get("episode_file_id"),
-                "symlink_path": path,
-                "series_id": rec.get("series_id"),
-                "season": rec.get("season"),
-            }
-        )
-
-    deleted = 0
     actions = {"api_delete": False, "symlink_removed": False, "refresh": False, "search": False}
     logger.info("Season cleanup: series=%s season=%s targets=%d", series_id, season, len(targets))
+
+    if not targets:
+        return {
+            "ok": False,
+            "error": "Aucun résultat trouvé pour cette saison",
+            "actions": actions,
+            "processed": 0,
+            "total": 0,
+        }
+
+    deleted = 0
+    failed_skipped = []
     for target in targets:
         outcome = await _delete_one(target, config, delete_season=True)
         if outcome["api_delete"]:
@@ -209,17 +198,16 @@ async def process_season(result: dict, db: Connection, scan_id: int) -> dict:
             await db.execute(
                 "UPDATE results SET status = 'en_attente', action = 'api_delete',"
                 " search_count = search_count + 1, action_date = datetime('now')"
-                " WHERE scan_id = ? AND source = 'sonarr' AND series_id = ?"
-                " AND season = ? AND file_id = ?",
-                (scan_id, series_id, season, target.get("file_id")),
+                " WHERE id = ?",
+                (target["id"],),
             )
         else:
+            skip_reason = outcome.get("skipped", "api_failed")
+            failed_skipped.append(skip_reason)
             await db.execute(
                 "UPDATE results SET status = 'échoué', action = 'api_error',"
-                " action_date = datetime('now')"
-                " WHERE scan_id = ? AND source = 'sonarr' AND series_id = ?"
-                " AND season = ? AND file_id = ?",
-                (scan_id, series_id, season, target.get("file_id")),
+                " action_date = datetime('now') WHERE id = ?",
+                (target["id"],),
             )
         await asyncio.sleep(DELETE_DELAY)
 
@@ -242,16 +230,25 @@ async def process_season(result: dict, db: Connection, scan_id: int) -> dict:
             season,
         )
 
+    error_msg = ""
+    if deleted == 0 and failed_skipped:
+        skipped_counts = {}
+        for s in failed_skipped:
+            skipped_counts[s] = skipped_counts.get(s, 0) + 1
+        reasons = ", ".join(f"{c}x {r}" for r, c in skipped_counts.items())
+        error_msg = f"Tous les épisodes ont échoué : {reasons}"
+
     logger.info(
-        "Season cleanup done: series=%s season=%s deleted=%d total=%d",
+        "Season cleanup done: series=%s season=%s deleted=%d total=%d failed=%s",
         series_id,
         season,
         deleted,
         len(targets),
+        failed_skipped,
     )
     return {
         "ok": deleted > 0,
-        "error": "",
+        "error": error_msg,
         "actions": actions,
         "processed": deleted,
         "total": len(targets),
