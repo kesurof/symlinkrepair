@@ -222,7 +222,7 @@ async def process_season(result: dict, db: Connection, scan_id: int) -> dict:
 
     for r in no_file:
         await db.execute(
-            "UPDATE results SET status = 'recherche', action = 'recheck',"
+            "UPDATE results SET status = 'surveillance', action = 'recheck',"
             " action_date = datetime('now') WHERE id = ?",
             (r["id"],),
         )
@@ -279,7 +279,7 @@ async def process_all_detected(source: str, db: Connection, scan_id: int) -> dic
     config = load_config()
     cursor = await db.execute(
         "SELECT * FROM results WHERE scan_id = ? AND source = ?"
-        " AND status IN ('détecté','recherche') AND file_id IS NOT NULL",
+        " AND status IN ('détecté','surveillance') AND file_id IS NOT NULL",
         (scan_id, source),
     )
     rows = [dict(row) for row in await cursor.fetchall()]

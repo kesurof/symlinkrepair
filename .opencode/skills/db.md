@@ -81,7 +81,6 @@ async def list_results(db: Connection = Depends(get_db)):
 | Valeur | Signification |
 |--------|--------------|
 | `détecté` | Détecté par un scan, en attente d'action |
-| `recherche` | En cours de revérification |
 | `surveillance` | DELETE API envoyé, vérification en cours |
 | `remplacé` | Symlink remplacé ou marqué manuellement comme corrigé |
 | `non_remplacé` | Vérifié : symlink non remplacé (ou cycle abandonné) |

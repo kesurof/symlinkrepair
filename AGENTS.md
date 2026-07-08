@@ -82,7 +82,7 @@ make deploy
 ### Actions résultats
 - `POST /api/results/{result_id}/ignore` — Ignorer un résultat
 - `POST /api/results/{result_id}/fix` — Marquer manuellement comme corrigé
-- `POST /api/results/{result_id}/recheck` — Remettre en file d'attente (`recherche`)
+- `POST /api/results/{result_id}/recheck` — Remettre en file d'attente (`surveillance`)
 - `POST /api/results/{result_id}/verify-fs` — Vérifier le symlink sur le filesystem (→ `remplacé` si valide)
 - `POST /api/results/{result_id}/process` — Traitement réel : DELETE API + recherche
 - `GET /api/results/{result_id}/verifier` — Statut du cycle de vérification
@@ -117,15 +117,15 @@ make deploy
 
 ## Actions batch disponibles
 - **Traiter** (`process`) — DELETE API Radarr/Sonarr + recherche auto (supporte `delete_season` pour Sonarr)
-- **Traiter une saison** (`process_season`) — DELETE API Sonarr des épisodes encore référencés + marquage `recherche` pour ceux sans `file_id` + recherche Sonarr systématique de toute la saison (nécessite `series_id` + `season` dans le body). Retourne `search_triggered: true` si la recherche a été déclenchée.
+- **Traiter une saison** (`process_season`) — DELETE API Sonarr des épisodes encore référencés + marquage `surveillance` pour ceux sans `file_id` + recherche Sonarr systématique de toute la saison (nécessite `series_id` + `season` dans le body). Retourne `search_triggered: true` si la recherche a été déclenchée.
 - **Vérifier une saison** (`verify_season`) — Vérifie sur le filesystem tous les épisodes d'une saison, marque `remplacé` ceux qui sont valides (nécessite `series_id` + `season` dans le body)
 - **Marquer remplacé** (`fix`) — Flag manuel (symlink marqué comme remplacé)
 - **Ignorer** (`ignore`) — Cache le résultat
-- **Revérifier** (`recheck`) — Remet en file d'attente (`recherche`)
+- **Surveiller** (`recheck`) — Remet en file d'attente (`surveillance`)
 - **Supprimer** (`delete`) — Supprime la ligne en base
 
 ## Statuts des résultats
-`détecté` / `recherche` → `surveillance` → `remplacé` / `non_remplacé` / `ignoré` / `échoué`
+`détecté` → `surveillance` → `remplacé` / `non_remplacé` / `ignoré` / `échoué`
 
 ## Actions des résultats (results.action)
 | Action | Déclencheur |

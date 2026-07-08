@@ -86,6 +86,7 @@ async def init_db():
             ("en_attente", "surveillance"),
             ("not_replaced", "non_remplacé"),
             ("failed", "échoué"),
+            ("recherche", "surveillance"),
         ]:
             await db.execute(
                 "UPDATE results SET status = ? WHERE status = ?",
@@ -93,7 +94,6 @@ async def init_db():
             )
 
         await db.execute("UPDATE results SET status = 'remplacé' WHERE status = 'réparé'")
-        await db.execute("UPDATE results SET status = 'détecté' WHERE status = 'recherche'")
 
         cursor = await db.execute(
             "UPDATE results SET status = 'ignoré', action = 'cleaned_duplicate',"

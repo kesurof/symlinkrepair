@@ -27,7 +27,7 @@
 |---------|--------|-------------|
 | POST | `/api/results/{result_id}/ignore` | Ignorer un résultat |
 | POST | `/api/results/{result_id}/fix` | Marquer manuellement comme corrigé |
-| POST | `/api/results/{result_id}/recheck` | Remettre en file d'attente (`recherche`) |
+| POST | `/api/results/{result_id}/recheck` | Remettre en file d'attente (`surveillance`) |
 | POST | `/api/results/{result_id}/verify-fs` | Vérifier le symlink sur le filesystem (→ `remplacé` si valide) |
 | POST | `/api/results/{result_id}/process` | Traitement réel : DELETE API + recherche |
 | GET | `/api/results/{result_id}/verifier` | Statut du cycle de vérification |

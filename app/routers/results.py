@@ -27,7 +27,7 @@ async def _sync_siblings(db: Connection, result: dict, new_status: str, new_acti
     await db.execute(
         "UPDATE results SET status = ?, action = ?, action_date = datetime('now')"
         " WHERE symlink_path = ? AND source = ? AND id != ?"
-        " AND status IN ('détecté', 'recherche', 'surveillance')",
+        " AND status IN ('détecté', 'surveillance')",
         (new_status, new_action, symlink_path, source, result.get("id", 0)),
     )
 
@@ -140,7 +140,10 @@ async def results_page(
             g["episode_count"] = len(g["episodes"])
             g["replaced_count"] = sum(1 for e in g["episodes"] if e["status"] == "remplacé")
             g["pending_count"] = sum(
-                1 for e in g["episodes"] if e["status"] in ("détecté", "recherche")
+                1 for e in g["episodes"] if e["status"] in ("détecté", "surveillance")
+            )
+            g["failed_count"] = sum(
+                1 for e in g["episodes"] if e["status"] in ("échoué", "non_remplacé")
             )
             g["episodes"].sort(key=lambda e: e.get("episode") or 0)
             for idx, e in enumerate(g["episodes"]):
@@ -295,7 +298,7 @@ async def results_ids(
 async def recent_results(db: Connection = Depends(get_db), limit: int = 5):
     cursor = await db.execute(
         "SELECT id, source, media_title, symlink_path, status"
-        " FROM results WHERE status IN ('détecté','recherche')"
+        " FROM results WHERE status IN ('détecté','surveillance')"
         " ORDER BY id DESC LIMIT ?",
         (limit,),
     )
@@ -341,11 +344,11 @@ async def recheck_result(result_id: int, db: Connection = Depends(get_db)):
         return JSONResponse({"ok": False, "error": "Résultat introuvable"}, status_code=404)
     result = dict(row)
     await db.execute(
-        "UPDATE results SET status = 'recherche', action = 'recheck',"
+        "UPDATE results SET status = 'surveillance', action = 'recheck',"
         " action_date = datetime('now') WHERE id = ?",
         (result_id,),
     )
-    await _sync_siblings(db, result, "recherche", "recheck_sibling")
+    await _sync_siblings(db, result, "surveillance", "recheck_sibling")
     await db.commit()
     logger.info("Result %d recheck scheduled", result_id)
     return {"ok": True}
@@ -623,7 +626,7 @@ async def batch_action(request: Request, db: Connection = Depends(get_db)):
             f" WHERE (symlink_path, source) IN ("
             f"   SELECT symlink_path, source FROM results WHERE id IN ({placeholders})"
             f" ) AND id NOT IN ({placeholders})"
-            f" AND status IN ('détecté','recherche','surveillance')",
+            f" AND status IN ('détecté','surveillance')",
             ids + ids + ids,
         )
         await db.commit()
@@ -641,7 +644,7 @@ async def batch_action(request: Request, db: Connection = Depends(get_db)):
             f" WHERE (symlink_path, source) IN ("
             f"   SELECT symlink_path, source FROM results WHERE id IN ({placeholders})"
             f" ) AND id NOT IN ({placeholders})"
-            f" AND status IN ('détecté','recherche','surveillance')",
+            f" AND status IN ('détecté','surveillance')",
             ids + ids + ids,
         )
         await db.commit()
@@ -694,17 +697,17 @@ async def batch_action(request: Request, db: Connection = Depends(get_db)):
     elif action == "recheck":
         placeholders = ",".join("?" for _ in ids)
         await db.execute(
-            f"UPDATE results SET status = 'recherche', action = 'recheck',"
+            f"UPDATE results SET status = 'surveillance', action = 'recheck',"
             f" action_date = datetime('now') WHERE id IN ({placeholders})",
             ids,
         )
         await db.execute(
-            f"UPDATE results SET status = 'recherche', action = 'recheck_sibling',"
+            f"UPDATE results SET status = 'surveillance', action = 'recheck_sibling',"
             f" action_date = datetime('now')"
             f" WHERE (symlink_path, source) IN ("
             f"   SELECT symlink_path, source FROM results WHERE id IN ({placeholders})"
             f" ) AND id NOT IN ({placeholders})"
-            f" AND status IN ('détecté','recherche','surveillance')",
+            f" AND status IN ('détecté','surveillance')",
             ids + ids + ids,
         )
         await db.commit()

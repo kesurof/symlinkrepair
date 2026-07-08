@@ -61,7 +61,7 @@ async def trigger_scan(
     for target in result.get("targets", []):
         existing = await db.execute(
             "SELECT id FROM results WHERE symlink_path = ? AND source = ?"
-            " AND status IN ('détecté', 'surveillance', 'recherche') LIMIT 1",
+            " AND status IN ('détecté', 'surveillance') LIMIT 1",
             (target.get("symlink_path", ""), target.get("source", source)),
         )
         if await existing.fetchone():

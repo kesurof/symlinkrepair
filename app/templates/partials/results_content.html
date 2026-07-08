@@ -11,7 +11,10 @@
     {% if display.type is defined and display.type == "group" %}
     {# === Season group accordion === #}
     <div x-data="{ expanded: false }"
-         class="bg-white dark:bg-gray-900 rounded-xl shadow-sm border border-gray-200 dark:border-gray-800">
+         class="bg-white dark:bg-gray-900 rounded-xl shadow-sm border border-gray-200 dark:border-gray-800 border-l-4
+           {% if display.replaced_count == display.episode_count %}border-l-green-500
+           {% elif display.failed_count > 0 %}border-l-red-500
+           {% else %}border-l-amber-500{% endif %}">
         {# Group header #}
         <div class="p-3 flex items-center gap-1.5 cursor-pointer select-none"
              @click="expanded = !expanded">
@@ -79,7 +82,7 @@
             <div data-ep-id="{{ ep.id }}" data-ep-series="{{ display.series_id }}" data-ep-season="{{ display.season }}"
                  @click="showBatch && toggle({{ ep.id }})"
                  class="flex items-center gap-2.5 px-3 sm:pl-6 py-2 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors text-sm min-w-0 border-l-4
-                   {% if ep.status in ('détecté','recherche') %}border-l-amber-500
+                   {% if ep.status == 'détecté' %}border-l-amber-500
                    {% elif ep.status == 'ignoré' %}border-l-gray-400
                    {% elif ep.status == 'remplacé' %}border-l-green-500
                    {% elif ep.status == 'surveillance' %}border-l-amber-500
@@ -94,10 +97,10 @@
                 </div>
                 {% endif %}
                 <div class="w-2 h-2 rounded-full shrink-0
-                    {% if ep.status in ('détecté','recherche') %}bg-amber-500
+                    {% if ep.status == 'détecté' %}bg-amber-500
                     {% elif ep.status == 'ignoré' %}bg-gray-400
                     {% elif ep.status == 'remplacé' %}bg-green-500
-                    {% elif ep.status == 'surveillance' %}bg-amber-500
+                    {% elif ep.status == 'surveillance' %}bg-blue-500
                     {% else %}bg-red-500{% endif %}">
                 </div>
                 <span class="font-mono text-xs text-gray-500 dark:text-gray-400 shrink-0 w-10">E{{ '%02d' % (ep.episode or 0) }}</span>
@@ -107,16 +110,16 @@
                 <span class="text-[10px] text-gray-400 dark:text-gray-500 shrink-0 whitespace-nowrap">{{ ep.created_at[:16] }}</span>
                 {% endif %}
                 <span class="inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full font-medium shrink-0
-                    {% if ep.status in ('détecté','recherche') %}bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300
+                    {% if ep.status == 'détecté' %}bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300
                     {% elif ep.status == 'ignoré' %}bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400
                     {% elif ep.status == 'remplacé' %}bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300
-                    {% elif ep.status == 'surveillance' %}bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300
+                    {% elif ep.status == 'surveillance' %}bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300
                     {% else %}bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300{% endif %}">
                     <span class="w-1.5 h-1.5 rounded-full
-                        {% if ep.status in ('détecté','recherche') %}bg-amber-500
+                        {% if ep.status == 'détecté' %}bg-amber-500
                         {% elif ep.status == 'ignoré' %}bg-gray-400
                         {% elif ep.status == 'remplacé' %}bg-green-500
-                        {% elif ep.status == 'surveillance' %}bg-amber-500
+                        {% elif ep.status == 'surveillance' %}bg-blue-500
                         {% else %}bg-red-500{% endif %}">
                     </span>
                     {{ ep.status }}
@@ -135,11 +138,11 @@
                            class="block px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800">Voir le détail</a>
                         <button @click.stop="itemAction({{ ep.id }}, 'verify-fs'); menuOpen = false"
                                 class="block w-full text-left px-4 py-2 text-sm text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800">Vérifier</button>
-                        {% if ep.status in ('détecté','recherche','surveillance','ignoré','non_remplacé','échoué') %}
+                        {% if ep.status in ('détecté','surveillance','ignoré','non_remplacé','échoué') %}
                         <button @click.stop="itemAction({{ ep.id }}, 'process'); menuOpen = false"
                                 class="block w-full text-left px-4 py-2 text-sm text-amber-600 dark:text-amber-400 hover:bg-gray-50 dark:hover:bg-gray-800">Traiter</button>
                         {% endif %}
-                        {% if ep.status in ('non_remplacé','échoué','détecté','recherche') %}
+                        {% if ep.status in ('non_remplacé','échoué','détecté') %}
                         <button @click.stop="itemAction({{ ep.id }}, 'fix'); menuOpen = false"
                                 class="block w-full text-left px-4 py-2 text-sm text-green-600 dark:text-green-400 hover:bg-gray-50 dark:hover:bg-gray-800">Marquer remplacé</button>
                         {% endif %}
@@ -165,7 +168,7 @@
     {% set item = display.item if display.item is defined else display %}
     <div @click="showBatch && toggle({{ item.id }})"
          class="bg-white dark:bg-gray-900 rounded-xl shadow-sm border border-gray-200 dark:border-gray-800 border-l-4
-           {% if item.status in ('détecté','recherche') %}border-l-amber-500
+           {% if item.status == 'détecté' %}border-l-amber-500
            {% elif item.status == 'ignoré' %}border-l-gray-400
            {% elif item.status == 'remplacé' %}border-l-green-500
            {% elif item.status == 'surveillance' %}border-l-amber-500
@@ -184,10 +187,10 @@
 
             <div class="flex items-center gap-1.5 min-w-0">
                 <div class="w-2.5 h-2.5 rounded-full shrink-0
-                    {% if item.status in ('détecté','recherche') %}bg-amber-500
+                    {% if item.status == 'détecté' %}bg-amber-500
                     {% elif item.status == 'ignoré' %}bg-gray-400
                     {% elif item.status == 'remplacé' %}bg-green-500
-                    {% elif item.status == 'surveillance' %}bg-amber-500
+                    {% elif item.status == 'surveillance' %}bg-blue-500
                     {% else %}bg-red-500{% endif %}">
                 </div>
                 <span class="inline-flex items-center gap-1 text-xs font-medium px-2 py-0.5 rounded-full shrink-0 {{ 'bg-blue-100 text-blue-700 dark:bg-blue-900/50 dark:text-blue-300' if item.source == 'radarr' else 'bg-green-100 text-green-700 dark:bg-green-900/50 dark:text-green-300' }}">
@@ -213,16 +216,16 @@
 
                 <div class="ml-auto flex items-center gap-1 shrink-0">
                     <span class="inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full font-medium whitespace-nowrap
-                        {% if item.status in ('détecté','recherche') %}bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300
+                        {% if item.status == 'détecté' %}bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300
                         {% elif item.status == 'ignoré' %}bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400
                         {% elif item.status == 'remplacé' %}bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300
-                        {% elif item.status == 'surveillance' %}bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300
+                        {% elif item.status == 'surveillance' %}bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300
                         {% else %}bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300{% endif %}">
                         <span class="w-1.5 h-1.5 rounded-full
-                            {% if item.status in ('détecté','recherche') %}bg-amber-500
+                            {% if item.status == 'détecté' %}bg-amber-500
                             {% elif item.status == 'ignoré' %}bg-gray-400
                             {% elif item.status == 'remplacé' %}bg-green-500
-                            {% elif item.status == 'surveillance' %}bg-amber-500
+                            {% elif item.status == 'surveillance' %}bg-blue-500
                             {% else %}bg-red-500{% endif %}">
                         </span>
                         {{ item.status }}
@@ -243,11 +246,11 @@
                                class="block px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800">Voir le détail</a>
                             <button @click.stop="itemAction({{ item.id }}, 'verify-fs'); menuOpen = false"
                                     class="block w-full text-left px-4 py-2 text-sm text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800">Vérifier</button>
-                            {% if item.status in ('détecté','recherche','surveillance','ignoré','non_remplacé','échoué') %}
+                            {% if item.status in ('détecté','surveillance','ignoré','non_remplacé','échoué') %}
                             <button @click.stop="itemAction({{ item.id }}, 'process'); menuOpen = false"
                                     class="block w-full text-left px-4 py-2 text-sm text-amber-600 dark:text-amber-400 hover:bg-gray-50 dark:hover:bg-gray-800">Traiter{% if item.search_count %} ({{ item.search_count }}){% endif %}</button>
                             {% endif %}
-                            {% if item.status in ('non_remplacé','échoué','détecté','recherche') %}
+                            {% if item.status in ('non_remplacé','échoué','détecté') %}
                             <button @click.stop="itemAction({{ item.id }}, 'fix'); menuOpen = false"
                                     class="block w-full text-left px-4 py-2 text-sm text-green-600 dark:text-green-400 hover:bg-gray-50 dark:hover:bg-gray-800">Marquer remplacé</button>
                             {% endif %}

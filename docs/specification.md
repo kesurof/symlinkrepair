@@ -33,13 +33,12 @@ Par élément, sélection, film, série ou saison entière.
 
 ## Statuts des éléments
 
-`détecté` / `recherche` → `surveillance` → `remplacé` / `non_remplacé` / `ignoré` / `échoué`
+`détecté` → `surveillance` → `remplacé` / `non_remplacé` / `ignoré` / `échoué`
 
 | Statut | Description |
 |--------|-------------|
 | `détecté` | Détecté par un scan, en attente d'action |
-| `recherche` | En cours de revérification (bouton "Revérifier") |
-| `surveillance` | DELETE API envoyé, en attente de confirmation |
+| `surveillance` | DELETE API envoyé, vérification en cours |
 | `remplacé` | Symlink remplacé ou marqué manuellement comme corrigé |
 | `non_remplacé` | Vérifié : le symlink n'a pas été remplacé |
 | `ignoré` | Ignoré par l'utilisateur |
@@ -52,7 +51,7 @@ Par élément, sélection, film, série ou saison entière.
 | **Traiter** | DELETE API Radarr/Sonarr + recherche | `surveillance` |
 | **Marquer remplacé** | Flag manuel | `remplacé` |
 | **Ignorer** | Cache le résultat | `ignoré` |
-| **Revérifier** | Remet en file d'attente pour `process_all_detected` | `recherche` |
+| **Surveiller** | Remet en file d'attente pour `process_all_detected` | `surveillance` |
 | **Vérifier fs** | Vérifie le symlink sur le filesystem (auto-fix si valide) | `remplacé` |
 | **Supprimer** | Supprime la ligne en base | — |
 

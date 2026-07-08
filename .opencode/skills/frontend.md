@@ -111,7 +111,7 @@ function resultsApp() {
 | action | Bouton | Effet |
 |--------|--------|-------|
 | `process` | Traiter | DELETE API Radarr/Sonarr + recherche |
-| `process_season` | Traiter la saison | DELETE API Sonarr + marquage `recherche` si sans `file_id` + recherche saison complète. Retourne `search_triggered` |
+| `process_season` | Traiter la saison | DELETE API Sonarr + marquage `surveillance` si sans `file_id` + recherche saison complète. Retourne `search_triggered` |
 | `verify_season` | Vérifier la saison | Vérifie les symlinks sur le filesystem |
 | `fix` | Marquer remplacé | Flag manuel |
 | `ignore` | Ignorer | Cache le résultat |
