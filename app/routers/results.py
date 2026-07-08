@@ -27,7 +27,7 @@ async def _sync_siblings(db: Connection, result: dict, new_status: str, new_acti
     await db.execute(
         "UPDATE results SET status = ?, action = ?, action_date = datetime('now')"
         " WHERE symlink_path = ? AND source = ? AND id != ?"
-        " AND status IN ('détecté', 'recherche', 'en_attente')",
+        " AND status IN ('détecté', 'recherche', 'surveillance')",
         (new_status, new_action, symlink_path, source, result.get("id", 0)),
     )
 
@@ -485,11 +485,11 @@ async def process_single_result(
             logger.info("Result %d auto-fixed (symlink already valid)", result_id)
         elif outcome.get("ok"):
             await db.execute(
-                "UPDATE results SET status = 'en_attente', action = 'api_delete',"
+                "UPDATE results SET status = 'surveillance', action = 'api_delete',"
                 " search_count = search_count + 1, action_date = datetime('now') WHERE id = ?",
                 (result_id,),
             )
-            await _sync_siblings(db, result, "en_attente", "api_delete_sibling")
+            await _sync_siblings(db, result, "surveillance", "api_delete_sibling")
             await db.commit()
         else:
             error_reason = outcome.get("error") or outcome.get("actions", {}).get(
@@ -623,7 +623,7 @@ async def batch_action(request: Request, db: Connection = Depends(get_db)):
             f" WHERE (symlink_path, source) IN ("
             f"   SELECT symlink_path, source FROM results WHERE id IN ({placeholders})"
             f" ) AND id NOT IN ({placeholders})"
-            f" AND status IN ('détecté','recherche','en_attente')",
+            f" AND status IN ('détecté','recherche','surveillance')",
             ids + ids + ids,
         )
         await db.commit()
@@ -641,7 +641,7 @@ async def batch_action(request: Request, db: Connection = Depends(get_db)):
             f" WHERE (symlink_path, source) IN ("
             f"   SELECT symlink_path, source FROM results WHERE id IN ({placeholders})"
             f" ) AND id NOT IN ({placeholders})"
-            f" AND status IN ('détecté','recherche','en_attente')",
+            f" AND status IN ('détecté','recherche','surveillance')",
             ids + ids + ids,
         )
         await db.commit()
@@ -682,11 +682,11 @@ async def batch_action(request: Request, db: Connection = Depends(get_db)):
             elif outcome.get("ok"):
                 ok_count += 1
                 await db.execute(
-                    "UPDATE results SET status = 'en_attente', action = 'api_delete',"
+                    "UPDATE results SET status = 'surveillance', action = 'api_delete',"
                     " search_count = search_count + 1, action_date = datetime('now') WHERE id = ?",
                     (rid,),
                 )
-                await _sync_siblings(db, result, "en_attente", "api_delete_sibling")
+                await _sync_siblings(db, result, "surveillance", "api_delete_sibling")
                 await db.commit()
                 await notify_cleanup(config, result, outcome.get("actions", {}))
             await asyncio.sleep(0.1)
@@ -704,7 +704,7 @@ async def batch_action(request: Request, db: Connection = Depends(get_db)):
             f" WHERE (symlink_path, source) IN ("
             f"   SELECT symlink_path, source FROM results WHERE id IN ({placeholders})"
             f" ) AND id NOT IN ({placeholders})"
-            f" AND status IN ('détecté','recherche','en_attente')",
+            f" AND status IN ('détecté','recherche','surveillance')",
             ids + ids + ids,
         )
         await db.commit()

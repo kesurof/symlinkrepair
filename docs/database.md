@@ -63,7 +63,7 @@ CREATE INDEX idx_scans_created ON scans(created_at);
 |--------|-------------|
 | `détecté` | Détecté par un scan, en attente d'action |
 | `recherche` | En cours de revérification (action "Revérifier") |
-| `en_attente` | DELETE API envoyé, vérification en cours |
+| `surveillance` | DELETE API envoyé, vérification en cours |
 | `remplacé` | Symlink remplacé ou marqué manuellement comme corrigé |
 | `non_remplacé` | Vérifié : le symlink n'a pas été remplacé (ou cycle abandonné) |
 | `ignoré` | Ignoré par l'utilisateur |

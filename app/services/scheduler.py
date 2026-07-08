@@ -18,7 +18,7 @@ _scheduler_task: asyncio.Task | None = None
 async def _dedup_or_insert(db, scan_id, target, source):
     existing = await db.execute(
         "SELECT id FROM results WHERE symlink_path = ? AND source = ?"
-        " AND status IN ('détecté', 'en_attente', 'recherche') LIMIT 1",
+        " AND status IN ('détecté', 'surveillance', 'recherche') LIMIT 1",
         (target.get("symlink_path", ""), target.get("source", source)),
     )
     if await existing.fetchone():

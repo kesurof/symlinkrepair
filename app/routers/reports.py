@@ -109,7 +109,7 @@ async def stats(db: Connection = Depends(get_db)):
          (SELECT COUNT(*) FROM ({_LATEST_DEDUP})) AS total_results,
          (SELECT COUNT(*) FROM ({_LATEST_DEDUP}) WHERE status = 'remplacé') AS replaced,
          (SELECT COUNT(*) FROM ({_LATEST_DEDUP})
-          WHERE status IN ('non_remplacé','en_attente')) AS not_replaced,
+          WHERE status IN ('non_remplacé','surveillance')) AS not_replaced,
          (SELECT COUNT(*) FROM ({_LATEST_DEDUP}) WHERE status = 'échoué') AS failed,
          (SELECT COUNT(*) FROM ({_LATEST_DEDUP}) WHERE status = 'ignoré') AS ignored
     """)
@@ -129,9 +129,9 @@ async def stats(db: Connection = Depends(get_db)):
          (SELECT COUNT(*) FROM ({_LATEST_DEDUP})
           WHERE source='sonarr' AND status = 'remplacé') AS rs,
          (SELECT COUNT(*) FROM ({_LATEST_DEDUP})
-          WHERE source='radarr' AND status IN ('non_remplacé','en_attente')) AS nr,
+          WHERE source='radarr' AND status IN ('non_remplacé','surveillance')) AS nr,
          (SELECT COUNT(*) FROM ({_LATEST_DEDUP})
-          WHERE source='sonarr' AND status IN ('non_remplacé','en_attente')) AS ns,
+          WHERE source='sonarr' AND status IN ('non_remplacé','surveillance')) AS ns,
          (SELECT COUNT(*) FROM ({_LATEST_DEDUP})
           WHERE source='radarr') AS tr,
          (SELECT COUNT(*) FROM ({_LATEST_DEDUP})
@@ -163,9 +163,9 @@ async def stats_history(db: Connection = Depends(get_db), days: int = 30):
     cursor = await db.execute(
         "SELECT DATE(action_date) as day,"
         "  SUM(CASE WHEN status = 'remplacé' THEN 1 ELSE 0 END) as replaced,"
-        "  SUM(CASE WHEN status IN ('non_remplacé','en_attente') THEN 1 ELSE 0 END) as not_replaced"
+        "  SUM(CASE WHEN status IN ('non_remplacé','surveillance') THEN 1 ELSE 0 END) as not_replaced"
         " FROM results"
-        " WHERE action_date IS NOT NULL AND status IN ('remplacé','non_remplacé','en_attente')"
+        " WHERE action_date IS NOT NULL AND status IN ('remplacé','non_remplacé','surveillance')"
         "  AND action_date >= DATE('now', ? || ' days')"
         " GROUP BY DATE(action_date) ORDER BY day",
         (f"-{days}",),

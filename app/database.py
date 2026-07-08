@@ -82,7 +82,8 @@ async def init_db():
             ("detected", "détecté"),
             ("ignored", "ignoré"),
             ("fixed", "remplacé"),
-            ("processed", "en_attente"),
+            ("processed", "surveillance"),
+            ("en_attente", "surveillance"),
             ("not_replaced", "non_remplacé"),
             ("failed", "échoué"),
         ]:

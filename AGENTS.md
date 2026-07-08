@@ -125,7 +125,7 @@ make deploy
 - **Supprimer** (`delete`) — Supprime la ligne en base
 
 ## Statuts des résultats
-`détecté` / `recherche` → `en_attente` → `remplacé` / `non_remplacé` / `ignoré` / `échoué`
+`détecté` / `recherche` → `surveillance` → `remplacé` / `non_remplacé` / `ignoré` / `échoué`
 
 ## Actions des résultats (results.action)
 | Action | Déclencheur |

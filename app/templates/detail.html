@@ -59,13 +59,13 @@
                         {% if item.status in ('détecté','recherche') %}bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300
                         {% elif item.status == 'ignoré' %}bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400
                         {% elif item.status == 'remplacé' %}bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300
-                        {% elif item.status == 'en_attente' %}bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300
+                        {% elif item.status == 'surveillance' %}bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300
                         {% else %}bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300{% endif %}">
                         <span class="w-1.5 h-1.5 rounded-full
                             {% if item.status in ('détecté','recherche') %}bg-amber-500
                             {% elif item.status == 'ignoré' %}bg-gray-400
                             {% elif item.status == 'remplacé' %}bg-green-500
-                            {% elif item.status == 'en_attente' %}bg-blue-500
+                            {% elif item.status == 'surveillance' %}bg-amber-500
                             {% else %}bg-red-500{% endif %}">
                         </span>
                         {{ item.status }}
@@ -129,7 +129,7 @@
         {# === Actions === #}
         <div class="mt-6 pt-4 border-t border-gray-100 dark:border-gray-800" id="action-buttons">
             <div class="flex flex-wrap gap-2">
-                {% if item.status in ('détecté','recherche','en_attente','ignoré','non_remplacé','échoué') %}
+                {% if item.status in ('détecté','recherche','surveillance','ignoré','non_remplacé','échoué') %}
                 <div x-show="processStep === 'initial'" x-cloak>
                     <button @click="processStep = 'confirm'"
                             class="bg-red-500 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-red-600 transition-colors">
@@ -180,8 +180,8 @@
             <div x-text="processMsg" class="mt-2 text-sm text-gray-600 dark:text-gray-400"></div>
         </div>
 
-        {# === Cycle de vérification (statut en_attente) === #}
-        {% if item.status == 'en_attente' %}
+        {# === Cycle de vérification (statut surveillance) === #}
+        {% if item.status == 'surveillance' %}
         <div class="mt-6 pt-4 border-t border-gray-100 dark:border-gray-800" x-data="verifierCycle({{ item.id }})" x-init="load()" x-cloak>
             <div x-show="!loaded" class="flex items-center gap-2 text-sm text-gray-400 dark:text-gray-500">
                 <svg class="w-4 h-4 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0l3.181 3.183a8.25 8.25 0 0013.803-3.7M4.031 9.865a8.25 8.25 0 0113.803-3.7l3.181 3.182"/></svg>

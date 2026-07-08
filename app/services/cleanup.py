@@ -205,7 +205,7 @@ async def process_season(result: dict, db: Connection, scan_id: int) -> dict:
             actions["api_delete"] = True
             actions["symlink_removed"] = actions["symlink_removed"] or outcome["symlink_removed"]
             await db.execute(
-                "UPDATE results SET status = 'en_attente', action = 'api_delete',"
+                "UPDATE results SET status = 'surveillance', action = 'api_delete',"
                 " search_count = search_count + 1, action_date = datetime('now')"
                 " WHERE id = ?",
                 (target["id"],),
@@ -301,7 +301,7 @@ async def process_all_detected(source: str, db: Connection, scan_id: int) -> dic
         if outcome["api_delete"]:
             deleted += 1
             await db.execute(
-                "UPDATE results SET status = 'en_attente', action = 'api_delete',"
+                "UPDATE results SET status = 'surveillance', action = 'api_delete',"
                 " action_date = datetime('now') WHERE id = ?",
                 (row["id"],),
             )

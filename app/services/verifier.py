@@ -109,13 +109,13 @@ async def _update_db_status(
         if result_id is not None:
             await db.execute(
                 "UPDATE results SET status = ?, action = ?, action_date = datetime('now')"
-                " WHERE id = ? AND status = 'en_attente'",
+                " WHERE id = ? AND status = 'surveillance'",
                 (status, action, result_id),
             )
         else:
             await db.execute(
                 "UPDATE results SET status = ?, action = ?, action_date = datetime('now')"
-                " WHERE symlink_path = ? AND status = 'en_attente'",
+                " WHERE symlink_path = ? AND status = 'surveillance'",
                 (status, action, symlink_path),
             )
         await db.commit()

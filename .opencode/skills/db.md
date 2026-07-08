@@ -82,7 +82,7 @@ async def list_results(db: Connection = Depends(get_db)):
 |--------|--------------|
 | `détecté` | Détecté par un scan, en attente d'action |
 | `recherche` | En cours de revérification |
-| `en_attente` | DELETE API envoyé, vérification en cours |
+| `surveillance` | DELETE API envoyé, vérification en cours |
 | `remplacé` | Symlink remplacé ou marqué manuellement comme corrigé |
 | `non_remplacé` | Vérifié : symlink non remplacé (ou cycle abandonné) |
 | `ignoré` | Ignoré par l'utilisateur |
@@ -94,8 +94,8 @@ async def list_results(db: Connection = Depends(get_db)):
 |--------|-------------|--------|
 | action | Déclencheur | Statut |
 |--------|-------------|--------|
-| `process` | Traiter (DELETE API) | `en_attente` |
-| `process_season` | Traiter saison Sonarr (DELETE API + search) | `en_attente` / `échoué` |
+| `process` | Traiter (DELETE API) | `surveillance` |
+| `process_season` | Traiter saison Sonarr (DELETE API + search) | `surveillance` / `échoué` |
 | `verify_season` | Vérifier saison Sonarr (filesystem check) | `remplacé` / unchanged |
 | `fix` | Marquer remplacé | `remplacé` |
 | `ignore` | Ignorer | `ignoré` |
