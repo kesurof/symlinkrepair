@@ -11,6 +11,8 @@ from app.services.cleanup import process_season, process_single
 from app.services.config_service import load_config
 from app.services.discord import notify_cleanup, notify_season_cleanup
 from app.services.filescanner import inspect_symlink
+from app.services.radarr import search_movies
+from app.services.sonarr import search_season
 from app.services.verifier import get_status as verifier_get_status
 from app.services.verifier import remove as verifier_remove
 from app.templates import templates
@@ -39,6 +41,7 @@ async def results_page(
     source: str = "",
     status: str = "",
     season: str = "",
+    series_id: int = 0,
     q: str = "",
     page: int = 1,
     per_page: int = 50,
@@ -66,6 +69,9 @@ async def results_page(
     if season:
         where += " AND season = ?"
         params.append(int(season))
+    if series_id:
+        where += " AND series_id = ?"
+        params.append(series_id)
     if q:
         where += " AND (media_title LIKE ? OR symlink_path LIKE ?)"
         like = f"%{q}%"
@@ -139,6 +145,7 @@ async def results_page(
         ):
             g["episode_count"] = len(g["episodes"])
             g["replaced_count"] = sum(1 for e in g["episodes"] if e["status"] == "remplacé")
+            g["surveillance_count"] = sum(1 for e in g["episodes"] if e["status"] == "surveillance")
             g["pending_count"] = sum(
                 1 for e in g["episodes"] if e["status"] in ("détecté", "surveillance")
             )
@@ -239,6 +246,7 @@ async def results_page(
             "active_source": source,
             "active_status": status,
             "active_season": season,
+            "active_series_id": series_id,
             "active_q": q,
             "active_scan_id": scan_id,
             "scan_info": scan_info,
@@ -305,13 +313,115 @@ async def recent_results(db: Connection = Depends(get_db), limit: int = 5):
     return {"results": [dict(r) for r in await cursor.fetchall()]}
 
 
+@router.get("/api/results/surveillance")
+async def surveillance_items(db: Connection = Depends(get_db)):
+    cursor = await db.execute(
+        "SELECT id, source, media_title, season, episode, series_id,"
+        " symlink_path, search_count, created_at"
+        " FROM results WHERE status = 'surveillance'"
+        " ORDER BY id DESC"
+    )
+    all_items = [dict(r) for r in await cursor.fetchall()]
+
+    groups = []
+    singles = []
+    seen = set()
+    for item in all_items:
+        if item["source"] == "sonarr" and item.get("series_id") and item.get("season") is not None:
+            key = (item["series_id"], item["season"])
+            if key not in seen:
+                seen.add(key)
+                episodes = [
+                    i for i in all_items
+                    if i["series_id"] == item["series_id"] and i["season"] == item["season"]
+                ]
+                dates = [e["created_at"] for e in episodes if e.get("created_at")]
+                groups.append({
+                    "series_id": item["series_id"],
+                    "season": item["season"],
+                    "media_title": item["media_title"],
+                    "episode_count": len(episodes),
+                    "total_searches": sum(e.get("search_count") or 0 for e in episodes),
+                    "oldest_created": min(dates) if dates else None,
+                })
+        else:
+            singles.append({
+                "id": item["id"],
+                "source": item["source"],
+                "media_title": item["media_title"],
+                "symlink_path": item["symlink_path"],
+                "search_count": item.get("search_count") or 0,
+                "created_at": item.get("created_at"),
+            })
+
+    return {"groups": groups, "singles": singles, "total": len(all_items)}
+
+
 @router.get("/results/{result_id}", response_class=HTMLResponse)
 async def result_detail(request: Request, result_id: int, db: Connection = Depends(get_db)):
     cursor = await db.execute("SELECT * FROM results WHERE id = ?", (result_id,))
     row = await cursor.fetchone()
     if not row:
         return templates.TemplateResponse(request, "404.html", status_code=404)
-    return templates.TemplateResponse(request, "detail.html", {"item": dict(row)})
+    config = load_config()
+    return templates.TemplateResponse(request, "detail.html", {
+        "item": dict(row),
+        "retryer": config.retryer,
+        "copy_icon": (
+            '<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"'
+            ' stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round"'
+            ' d="M15.666 3.888A2.25 2.25 0 0013.5 2.25h-3c-1.03 0-1.9.693-2.166 1.638m7.332 0c.055.194.084.4.084.612v0a.75.75 0 01-.75.75H9a.75.75 0 01-.75-.75v0c0-.212.03-.418.084-.612m7.332 0c.646.049 1.288.11 1.927.184 1.1.128 1.907 1.077 1.907 2.185V19.5a2.25 2.25 0 01-2.25 2.25H6.75A2.25 2.25 0 014.5 19.5V6.257c0-1.108.806-2.057 1.907-2.185a48.208 48.208 0 011.927-.184"/></svg>'
+        ),
+    })
+
+
+@router.get("/season/{series_id}/{season}", response_class=HTMLResponse)
+async def season_detail(
+    request: Request,
+    series_id: int,
+    season: int,
+    db: Connection = Depends(get_db),
+):
+    cursor = await db.execute(
+        "SELECT * FROM results WHERE series_id = ? AND season = ? AND source = 'sonarr' ORDER BY episode",
+        (series_id, season),
+    )
+    rows = await cursor.fetchall()
+    if not rows:
+        return templates.TemplateResponse(request, "404.html", status_code=404)
+
+    episodes = [dict(r) for r in rows]
+    info = episodes[0]
+
+    total = len(episodes)
+    replaced = sum(1 for e in episodes if e["status"] == "remplacé")
+    detected = sum(1 for e in episodes if e["status"] == "détecté")
+    surveillance = sum(1 for e in episodes if e["status"] == "surveillance")
+    failed = sum(1 for e in episodes if e["status"] in ("non_remplacé", "échoué"))
+    ignored = sum(1 for e in episodes if e["status"] == "ignoré")
+
+    config = load_config()
+
+    return templates.TemplateResponse(
+        request,
+        "season_detail.html",
+        {
+            "info": info,
+            "episodes": episodes,
+            "total": total,
+            "replaced": replaced,
+            "detected": detected,
+            "surveillance": surveillance,
+            "failed": failed,
+            "ignored": ignored,
+            "retryer": config.retryer,
+            "copy_icon": (
+                '<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"'
+                ' stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round"'
+                ' d="M15.666 3.888A2.25 2.25 0 0013.5 2.25h-3c-1.03 0-1.9.693-2.166 1.638m7.332 0c.055.194.084.4.084.612v0a.75.75 0 01-.75.75H9a.75.75 0 01-.75-.75v0c0-.212.03-.418.084-.612m7.332 0c.646.049 1.288.11 1.927.184 1.1.128 1.907 1.077 1.907 2.185V19.5a2.25 2.25 0 01-2.25 2.25H6.75A2.25 2.25 0 014.5 19.5V6.257c0-1.108.806-2.057 1.907-2.185a48.208 48.208 0 011.927-.184"/></svg>'
+            ),
+        },
+    )
 
 
 @router.post("/api/results/{result_id}/ignore")
@@ -337,7 +447,8 @@ async def ignore_result(result_id: int, db: Connection = Depends(get_db)):
 @router.post("/api/results/{result_id}/recheck")
 async def recheck_result(result_id: int, db: Connection = Depends(get_db)):
     cursor = await db.execute(
-        "SELECT id, symlink_path, source FROM results WHERE id = ?", (result_id,)
+        "SELECT id, symlink_path, source, file_id, media_title, series_id, movie_id, season FROM results WHERE id = ?",
+        (result_id,),
     )
     row = await cursor.fetchone()
     if not row:
@@ -345,13 +456,19 @@ async def recheck_result(result_id: int, db: Connection = Depends(get_db)):
     result = dict(row)
     await db.execute(
         "UPDATE results SET status = 'surveillance', action = 'recheck',"
-        " action_date = datetime('now') WHERE id = ?",
+        " search_count = search_count + 1, action_date = datetime('now') WHERE id = ?",
         (result_id,),
     )
     await _sync_siblings(db, result, "surveillance", "recheck_sibling")
     await db.commit()
-    logger.info("Result %d recheck scheduled", result_id)
-    return {"ok": True}
+    cfg = load_config()
+    search_ok = False
+    if result["source"] == "sonarr" and result.get("series_id") and result.get("season") is not None:
+        search_ok = await search_season(cfg.sonarr.url, cfg.sonarr.api_key, result["series_id"], result["season"])
+    elif result["source"] == "radarr" and result.get("movie_id"):
+        search_ok = await search_movies(cfg.radarr.url, cfg.radarr.api_key, [result["movie_id"]])
+    logger.info("Result %d recheck scheduled (search=%s)", result_id, search_ok)
+    return {"ok": True, "search_triggered": bool(search_ok)}
 
 
 @router.post("/api/results/{result_id}/fix")
@@ -535,7 +652,7 @@ async def batch_action(request: Request, db: Connection = Depends(get_db)):
     action = body.get("action", "")
     ids = body.get("ids", [])
 
-    if action in ("process_season", "verify_season"):
+    if action in ("process_season", "verify_season", "ignore_season", "recheck_season", "fix_season"):
         series_id = body.get("series_id")
         season_num = body.get("season")
         if not series_id or season_num is None:
@@ -609,6 +726,112 @@ async def batch_action(request: Request, db: Connection = Depends(get_db)):
                 len(all_rows),
             )
             return {"ok": True, "verified": verified, "total": len(all_rows)}
+
+        if action == "ignore_season":
+            rows_is = await db.execute(
+                "SELECT id, symlink_path, source, status FROM results"
+                " WHERE series_id = ? AND season = ? AND source = 'sonarr'",
+                (series_id, season_num),
+            )
+            all_rows = await rows_is.fetchall()
+            stopped = 0
+            for r in all_rows:
+                rdict = dict(r)
+                if rdict.get("status") == "surveillance":
+                    verifier_remove(rdict["symlink_path"])
+                    stopped += 1
+            ids_is = [r["id"] for r in all_rows]
+            if ids_is:
+                placeholders = ",".join("?" for _ in ids_is)
+                await db.execute(
+                    f"UPDATE results SET status = 'ignoré', action = 'season_ignore',"
+                    f" action_date = datetime('now') WHERE id IN ({placeholders})",
+                    ids_is,
+                )
+                await db.execute(
+                    f"UPDATE results SET status = 'ignoré', action = 'season_ignore_sibling',"
+                    f" action_date = datetime('now')"
+                    f" WHERE (symlink_path, source) IN ("
+                    f"   SELECT symlink_path, source FROM results WHERE id IN ({placeholders})"
+                    f" ) AND id NOT IN ({placeholders})"
+                    f" AND status IN ('détecté','surveillance')",
+                    ids_is + ids_is,
+                )
+                await db.commit()
+            logger.info(
+                "Season ignore: series=%s season=%s affected=%d verifier_stopped=%d",
+                series_id, season_num, len(ids_is), stopped,
+            )
+            return {"ok": True, "affected": len(ids_is), "verifier_stopped": stopped}
+
+        if action == "recheck_season":
+            rows_rs = await db.execute(
+                "SELECT id, symlink_path, source, status, file_id, media_title, series_id, movie_id, season FROM results"
+                " WHERE series_id = ? AND season = ? AND source = 'sonarr'"
+                " AND status IN ('ignoré','non_remplacé','détecté','échoué')",
+                (series_id, season_num),
+            )
+            all_rows = await rows_rs.fetchall()
+            ids_rs = [r["id"] for r in all_rows]
+            if ids_rs:
+                placeholders = ",".join("?" for _ in ids_rs)
+                await db.execute(
+                    f"UPDATE results SET status = 'surveillance', action = 'recheck',"
+                    f" search_count = search_count + 1, action_date = datetime('now')"
+                    f" WHERE id IN ({placeholders})",
+                    ids_rs,
+                )
+                await db.execute(
+                    f"UPDATE results SET status = 'surveillance', action = 'recheck_sibling',"
+                    f" search_count = search_count + 1, action_date = datetime('now')"
+                    f" WHERE (symlink_path, source) IN ("
+                    f"   SELECT symlink_path, source FROM results WHERE id IN ({placeholders})"
+                    f" ) AND id NOT IN ({placeholders})"
+                    f" AND status IN ('détecté','surveillance')",
+                    ids_rs + ids_rs,
+                )
+                await db.commit()
+                cfg = load_config()
+                search_ok = await search_season(cfg.sonarr.url, cfg.sonarr.api_key, series_id, season_num)
+            else:
+                search_ok = False
+            logger.info(
+                "Season recheck: series=%s season=%s affected=%d search=%s",
+                series_id, season_num, len(ids_rs), search_ok,
+            )
+            return {"ok": True, "affected": len(ids_rs), "search_triggered": bool(search_ok)}
+
+        if action == "fix_season":
+            rows_fs = await db.execute(
+                "SELECT id, symlink_path, source, status FROM results"
+                " WHERE series_id = ? AND season = ? AND source = 'sonarr'"
+                " AND status IN ('détecté','non_remplacé','échoué','ignoré')",
+                (series_id, season_num),
+            )
+            all_rows = await rows_fs.fetchall()
+            ids_fs = [r["id"] for r in all_rows]
+            if ids_fs:
+                placeholders = ",".join("?" for _ in ids_fs)
+                await db.execute(
+                    f"UPDATE results SET status = 'remplacé', action = 'season_fix',"
+                    f" action_date = datetime('now') WHERE id IN ({placeholders})",
+                    ids_fs,
+                )
+                await db.execute(
+                    f"UPDATE results SET status = 'remplacé', action = 'season_fix_sibling',"
+                    f" action_date = datetime('now')"
+                    f" WHERE (symlink_path, source) IN ("
+                    f"   SELECT symlink_path, source FROM results WHERE id IN ({placeholders})"
+                    f" ) AND id NOT IN ({placeholders})"
+                    f" AND status IN ('détecté','surveillance')",
+                    ids_fs + ids_fs,
+                )
+                await db.commit()
+            logger.info(
+                "Season fix: series=%s season=%s affected=%d",
+                series_id, season_num, len(ids_fs),
+            )
+            return {"ok": True, "affected": len(ids_fs)}
 
     if not ids:
         return JSONResponse({"ok": False, "error": "Aucun ID fourni"}, status_code=400)
@@ -698,12 +921,12 @@ async def batch_action(request: Request, db: Connection = Depends(get_db)):
         placeholders = ",".join("?" for _ in ids)
         await db.execute(
             f"UPDATE results SET status = 'surveillance', action = 'recheck',"
-            f" action_date = datetime('now') WHERE id IN ({placeholders})",
+            f" search_count = search_count + 1, action_date = datetime('now') WHERE id IN ({placeholders})",
             ids,
         )
         await db.execute(
             f"UPDATE results SET status = 'surveillance', action = 'recheck_sibling',"
-            f" action_date = datetime('now')"
+            f" search_count = search_count + 1, action_date = datetime('now')"
             f" WHERE (symlink_path, source) IN ("
             f"   SELECT symlink_path, source FROM results WHERE id IN ({placeholders})"
             f" ) AND id NOT IN ({placeholders})"
@@ -711,6 +934,22 @@ async def batch_action(request: Request, db: Connection = Depends(get_db)):
             ids + ids + ids,
         )
         await db.commit()
+        cfg = load_config()
+        cursor_v = await db.execute(
+            f"SELECT id, source, series_id, movie_id, season FROM results WHERE id IN ({placeholders})",
+            ids,
+        )
+        triggered = 0
+        for row_v in await cursor_v.fetchall():
+            rdict = dict(row_v)
+            if rdict["source"] == "sonarr" and rdict.get("series_id") and rdict.get("season") is not None:
+                ok = await search_season(cfg.sonarr.url, cfg.sonarr.api_key, rdict["series_id"], rdict["season"])
+                if ok:
+                    triggered += 1
+            elif rdict["source"] == "radarr" and rdict.get("movie_id"):
+                ok = await search_movies(cfg.radarr.url, cfg.radarr.api_key, [rdict["movie_id"]])
+                if ok:
+                    triggered += 1
         affected = len(ids)
     else:
         return JSONResponse({"ok": False, "error": f"Action inconnue: {action}"}, status_code=400)

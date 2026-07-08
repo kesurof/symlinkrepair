@@ -38,14 +38,14 @@ class SchedulerConfig(BaseModel):
 
 class VerifierConfig(BaseModel):
     enabled: bool = True
-    interval_minutes: int = 3
-    max_duration_minutes: int = 60
+    interval_minutes: int = 1
+    max_duration_minutes: int = 30
 
 
 class RetryerConfig(BaseModel):
-    enabled: bool = False
-    interval_minutes: int = 60
-    max_daily_retries: int = 3
+    enabled: bool = True
+    interval_minutes: int = 30
+    max_daily_retries: int = 6
 
 
 class AppConfig(BaseModel):

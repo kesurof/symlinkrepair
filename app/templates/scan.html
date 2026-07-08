@@ -118,8 +118,8 @@
                                 </svg>
                             </template>
                             <h3 class="font-medium text-gray-800 dark:text-gray-200" x-text="'Scan ' + report.source"></h3>
-                            <span class="inline-flex items-center gap-1 text-xs font-medium px-2 py-0.5 rounded-full"
-                                  :class="report.source === 'radarr' ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/50 dark:text-blue-300' : 'bg-green-100 text-green-700 dark:bg-green-900/50 dark:text-green-300'"
+                            <span class="inline-flex items-center gap-1 text-xs font-medium px-2 py-0.5 rounded-md"
+                                  :class="report.source === 'radarr' ? 'bg-purple-100 text-purple-700 dark:bg-purple-900/50 dark:text-purple-300' : 'bg-cyan-100 text-cyan-700 dark:bg-cyan-900/50 dark:text-cyan-300'"
                                   x-text="report.source"></span>
                         </div>
                         <a :href="'/results?source=' + report.source"
@@ -238,7 +238,7 @@
                                     <tr class="border-t border-gray-100 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800/50">
                                         <td class="px-3 py-2">
                                             <span class="text-xs font-medium px-2 py-0.5 rounded"
-                                                  :class="item.source === 'radarr' ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/50 dark:text-blue-300' : 'bg-green-100 text-green-700 dark:bg-green-900/50 dark:text-green-300'"
+                                                  :class="item.source === 'radarr' ? 'bg-purple-100 text-purple-700 dark:bg-purple-900/50 dark:text-purple-300' : 'bg-cyan-100 text-cyan-700 dark:bg-cyan-900/50 dark:text-cyan-300'"
                                                   x-text="item.source"></span>
                                         </td>
                                         <td class="px-3 py-2 text-gray-500 dark:text-gray-400 font-mono text-xs max-w-xs truncate" x-text="item.symlink_path"></td>
@@ -292,7 +292,7 @@
                     <tr class="border-t border-gray-100 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800/30 transition-colors">
                         <td class="px-4 py-2.5 text-gray-500 dark:text-gray-400">{{ scan.id }}</td>
                         <td class="px-4 py-2.5">
-                            <span class="inline-flex items-center gap-1 text-xs font-medium px-2 py-0.5 rounded-full {{ 'bg-blue-100 text-blue-700 dark:bg-blue-900/50 dark:text-blue-300' if scan.source == 'radarr' else 'bg-green-100 text-green-700 dark:bg-green-900/50 dark:text-green-300' }}">
+                            <span class="inline-flex items-center gap-1 text-xs font-medium px-2 py-0.5 rounded-md {{ 'bg-purple-100 text-purple-700 dark:bg-purple-900/50 dark:text-purple-300' if scan.source == 'radarr' else 'bg-cyan-100 text-cyan-700 dark:bg-cyan-900/50 dark:text-cyan-300' }}">
                                 {{ scan.source }}
                             </span>
                         </td>
@@ -313,7 +313,7 @@
                             </span>
                         </td>
                         <td class="px-4 py-2.5 font-medium {{ 'text-amber-600 dark:text-amber-400' if scan.broken > 0 else 'text-gray-700 dark:text-gray-300' }}">{{ scan.broken }}</td>
-                        <td class="px-4 py-2.5 text-gray-500 dark:text-gray-400 text-xs">{{ scan.created_at }}</td>
+                        <td class="px-4 py-2.5 text-gray-500 dark:text-gray-400 text-xs">{{ scan.created_at|date_fr }}</td>
                     </tr>
                     {% endfor %}
                 </tbody>
@@ -323,12 +323,12 @@
             {% for scan in recent_scans %}
             <div class="flex items-center gap-3 py-2.5 border-b border-gray-100 dark:border-gray-800 last:border-b-0">
                 <span class="text-xs text-gray-400 dark:text-gray-500 shrink-0">#{{ scan.id }}</span>
-                <span class="inline-flex items-center gap-1 text-xs font-medium px-2 py-0.5 rounded-full shrink-0 {{ 'bg-blue-100 text-blue-700 dark:bg-blue-900/50 dark:text-blue-300' if scan.source == 'radarr' else 'bg-green-100 text-green-700 dark:bg-green-900/50 dark:text-green-300' }}">
+                <span class="inline-flex items-center gap-1 text-xs font-medium px-2 py-0.5 rounded-md shrink-0 {{ 'bg-purple-100 text-purple-700 dark:bg-purple-900/50 dark:text-purple-300' if scan.source == 'radarr' else 'bg-cyan-100 text-cyan-700 dark:bg-cyan-900/50 dark:text-cyan-300' }}">
                     {{ scan.source }}
                 </span>
                 <div class="flex-1 min-w-0 text-sm text-gray-600 dark:text-gray-400">
                     <span class="font-medium text-gray-800 dark:text-gray-200">{{ scan.mode }}</span>
-                    <span class="ml-2">{{ scan.created_at }}</span>
+                    <span class="ml-2">{{ scan.created_at|date_fr }}</span>
                 </div>
                 <span class="inline-flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-full font-medium shrink-0
                     {% if scan.status == 'completed' %}bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300

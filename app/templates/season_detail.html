@@ -1,0 +1,350 @@
+{% extends "base.html" %}
+{% block title %}Saison {{ info.season }} — {{ info.media_title }} — SymlinkRepair{% endblock %}
+{% block content %}
+<div x-data="{
+  copyIcon: '{{ copy_icon|e }}',
+  clipboardCopy(text) {
+    if(navigator.clipboard) navigator.clipboard.writeText(text);
+    else { const el = document.createElement('input'); el.value = text; el.style.cssText = 'position:fixed;opacity:0'; document.body.appendChild(el); el.select(); document.execCommand('copy'); document.body.removeChild(el); }
+  },
+  seasonProcessStep: 'initial',
+  seasonProcessMsg: '',
+  seasonVerifyMsg: '',
+  seasonIgnoreStep: 'initial',
+  seasonIgnoreMsg: '',
+  seasonRecheckMsg: '',
+  seasonFixMsg: '',
+  async processSeason() {
+    this.seasonProcessMsg = 'Traitement en cours...';
+    try {
+      const r = await fetch('/api/results/batch', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({action: 'process_season', series_id: {{ info.series_id }}, season: {{ info.season }}})
+      });
+      const d = await r.json();
+      if(d.ok) { this.seasonProcessMsg = '✅ Traitement terminé — ' + d.affected + '/' + d.total + ' traités' + (d.search_triggered ? ', recherche lancée' : ''); setTimeout(() => window.location.reload(), 1500); }
+      else { this.seasonProcessMsg = '❌ ' + (d.error || 'Échec'); }
+    } catch(e) { this.seasonProcessMsg = '⚠️ Erreur réseau'; }
+  },
+  async verifySeason() {
+    this.seasonVerifyMsg = 'Vérification en cours...';
+    try {
+      const r = await fetch('/api/results/batch', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({action: 'verify_season', series_id: {{ info.series_id }}, season: {{ info.season }}})
+      });
+      const d = await r.json();
+      if(d.ok) { this.seasonVerifyMsg = '✅ Vérification terminée — ' + d.verified + '/' + d.total + ' valides'; setTimeout(() => window.location.reload(), 1500); }
+      else { this.seasonVerifyMsg = '❌ ' + (d.error || 'Échec'); }
+    } catch(e) { this.seasonVerifyMsg = '⚠️ Erreur réseau'; }
+  },
+  async ignoreSeason() {
+    this.seasonIgnoreMsg = 'Ignore en cours...';
+    try {
+      const r = await fetch('/api/results/batch', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({action: 'ignore_season', series_id: {{ info.series_id }}, season: {{ info.season }}})
+      });
+      const d = await r.json();
+      if(d.ok) { this.seasonIgnoreMsg = '✅ ' + d.affected + ' épisode(s) ignoré(s)' + (d.verifier_stopped ? ', ' + d.verifier_stopped + ' cycle(s) arrêté(s)' : ''); setTimeout(() => window.location.reload(), 1500); }
+      else { this.seasonIgnoreMsg = '❌ ' + (d.error || 'Échec'); }
+    } catch(e) { this.seasonIgnoreMsg = '⚠️ Erreur réseau'; }
+  },
+  async recheckSeason() {
+    this.seasonRecheckMsg = 'Mise en surveillance...';
+    try {
+      const r = await fetch('/api/results/batch', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({action: 'recheck_season', series_id: {{ info.series_id }}, season: {{ info.season }}})
+      });
+      const d = await r.json();
+      if(d.ok) { this.seasonRecheckMsg = '✅ ' + d.affected + ' épisode(s) remis en surveillance'; setTimeout(() => window.location.reload(), 1500); }
+      else { this.seasonRecheckMsg = '❌ ' + (d.error || 'Échec'); }
+    } catch(e) { this.seasonRecheckMsg = '⚠️ Erreur réseau'; }
+  },
+  async fixSeason() {
+    this.seasonFixMsg = 'Marquage en cours...';
+    try {
+      const r = await fetch('/api/results/batch', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({action: 'fix_season', series_id: {{ info.series_id }}, season: {{ info.season }}})
+      });
+      const d = await r.json();
+      if(d.ok) { this.seasonFixMsg = '✅ ' + d.affected + ' épisode(s) marqué(s) remplacé'; setTimeout(() => window.location.reload(), 1500); }
+      else { this.seasonFixMsg = '❌ ' + (d.error || 'Échec'); }
+    } catch(e) { this.seasonFixMsg = '⚠️ Erreur réseau'; }
+  }
+}">
+    <a href="/results?source=sonarr&series_id={{ info.series_id }}&season={{ info.season }}"
+       class="inline-flex items-center gap-1.5 text-brand-600 dark:text-brand-400 text-sm font-medium hover:underline mb-4">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M10.5 19.5L3 12m0 0l7.5-7.5M3 12h18"/>
+        </svg>
+        Retour aux résultats
+    </a>
+
+    {# === Header card === #}
+    <div class="bg-white dark:bg-gray-900 rounded-xl shadow-sm border border-gray-200 dark:border-gray-800 p-4 sm:p-6 mb-4">
+        <div class="flex items-center gap-3 mb-3">
+            <span class="inline-flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-md font-medium whitespace-nowrap bg-cyan-100 text-cyan-700 dark:bg-cyan-900/50 dark:text-cyan-300">
+                <span class="w-1.5 h-1.5 rounded-full bg-cyan-500"></span>
+                sonarr
+            </span>
+            <h2 class="text-lg sm:text-xl font-semibold text-gray-800 dark:text-gray-200 truncate">{{ info.media_title }}</h2>
+            <button @click="
+                clipboardCopy($el.getAttribute('data-title'));
+                $el.innerHTML = '<svg class=\'w-4 h-4 text-green-500 shrink-0\' fill=\'none\' stroke=\'currentColor\' viewBox=\'0 0 24 24\' stroke-width=\'2\'><path stroke-linecap=\'round\' stroke-linejoin=\'round\' d=\'M4.5 12.75l6 6 9-13.5\'/></svg>';
+                setTimeout(() => $el.innerHTML = copyIcon, 1500);
+            " data-title="{{ info.media_title }}"
+                    class="p-1 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors shrink-0"
+                    title="Copier le titre" type="button">
+                {{ copy_icon|safe }}
+            </button>
+            <span class="text-xs font-mono bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 px-2 py-0.5 rounded shrink-0">S{{ info.season }}</span>
+            <span class="text-xs text-gray-500 dark:text-gray-400 whitespace-nowrap shrink-0 ml-auto">{{ replaced }}/{{ total }}</span>
+        </div>
+
+        {# === Stats === #}
+        <div class="flex flex-wrap gap-2 mb-3">
+            <span class="inline-flex items-center gap-1 text-xs font-medium px-2 py-0.5 rounded-full bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300">{{ total }} total</span>
+            {% if replaced %}<span class="inline-flex items-center gap-1 text-xs font-medium px-2 py-0.5 rounded-full bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300">{{ replaced }} remplacé{{ 's' if replaced > 1 }}</span>{% endif %}
+            {% if detected %}<span class="inline-flex items-center gap-1 text-xs font-medium px-2 py-0.5 rounded-full bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300">{{ detected }} détecté{{ 's' if detected > 1 }}</span>{% endif %}
+            {% if surveillance %}<span class="inline-flex items-center gap-1 text-xs font-medium px-2 py-0.5 rounded-full bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300">{{ surveillance }} surveillance</span>{% endif %}
+            {% if failed %}<span class="inline-flex items-center gap-1 text-xs font-medium px-2 py-0.5 rounded-full bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300">{{ failed }} échoué{{ 's' if failed > 1 }}</span>{% endif %}
+            {% if ignored %}<span class="inline-flex items-center gap-1 text-xs font-medium px-2 py-0.5 rounded-full bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400">{{ ignored }} ignoré{{ 's' if ignored > 1 }}</span>{% endif %}
+        </div>
+
+        {# === Progress bar === #}
+        <div class="h-2 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden mb-4">
+            <div class="h-full bg-green-500 rounded-full transition-all" style="width:{{ (replaced / total * 100) if total > 0 else 0 }}%"></div>
+        </div>
+
+        {# === Season actions === #}
+        <div class="flex flex-wrap gap-2 pt-3 border-t border-gray-100 dark:border-gray-800">
+            <div x-show="seasonProcessStep === 'initial'" x-cloak>
+                <button @click="seasonProcessStep = 'confirm'"
+                        class="bg-red-500 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-red-600 transition-colors">
+                    Traiter toute la saison
+                </button>
+            </div>
+            <div x-show="seasonProcessStep === 'confirm'" x-cloak class="w-full">
+                <div class="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl p-3">
+                    <p class="text-sm text-red-700 dark:text-red-300 mb-2">
+                        Supprimer tous les fichiers de la saison dans Sonarr et lancer une recherche de remplacement ?
+                    </p>
+                    <div class="flex flex-wrap gap-2">
+                        <button @click="seasonProcessStep = 'initial'" class="bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 px-3 py-1.5 rounded-lg text-sm hover:bg-gray-200 dark:hover:bg-gray-700">Annuler</button>
+                        <button @click="seasonProcessStep = 'initial'; processSeason()"
+                                class="bg-red-600 text-white px-3 py-1.5 rounded-lg text-sm font-medium">Confirmer</button>
+                    </div>
+                </div>
+            </div>
+            <button @click="verifySeason()"
+                    class="bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 px-4 py-2 rounded-lg text-sm font-medium hover:bg-blue-200 dark:hover:bg-blue-900/50 transition-colors">
+                Vérifier les symlinks
+            </button>
+            <div x-show="seasonIgnoreStep === 'initial'" x-cloak>
+                <button @click="seasonIgnoreStep = 'confirm'"
+                        class="bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 px-4 py-2 rounded-lg text-sm font-medium hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors">
+                    Tout ignorer
+                </button>
+            </div>
+            <div x-show="seasonIgnoreStep === 'confirm'" x-cloak class="w-full">
+                <div class="bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl p-3">
+                    <p class="text-sm text-gray-700 dark:text-gray-300 mb-2">
+                        Ignorer tous les épisodes de la saison ? Les cycles de vérification en cours seront arrêtés.
+                    </p>
+                    <div class="flex flex-wrap gap-2">
+                        <button @click="seasonIgnoreStep = 'initial'" class="bg-white dark:bg-gray-900 text-gray-700 dark:text-gray-300 px-3 py-1.5 rounded-lg text-sm border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800">Annuler</button>
+                        <button @click="seasonIgnoreStep = 'initial'; ignoreSeason()"
+                                class="bg-gray-600 text-white px-3 py-1.5 rounded-lg text-sm font-medium hover:bg-gray-700 transition-colors">Confirmer</button>
+                    </div>
+                </div>
+            </div>
+            <button @click="recheckSeason()"
+                    class="bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300 px-4 py-2 rounded-lg text-sm font-medium hover:bg-amber-200 dark:hover:bg-amber-900/50 transition-colors">
+                Tout mettre en surveillance
+            </button>
+            <button @click="fixSeason()"
+                    class="bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300 px-4 py-2 rounded-lg text-sm font-medium hover:bg-green-200 dark:hover:bg-green-900/50 transition-colors">
+                Tout marquer remplacé
+            </button>
+            <div x-text="seasonProcessMsg" class="w-full text-sm text-gray-600 dark:text-gray-400"></div>
+            <div x-text="seasonVerifyMsg" class="w-full text-sm text-gray-600 dark:text-gray-400"></div>
+            <div x-text="seasonIgnoreMsg" class="w-full text-sm text-gray-600 dark:text-gray-400"></div>
+            <div x-text="seasonRecheckMsg" class="w-full text-sm text-gray-600 dark:text-gray-400"></div>
+            <div x-text="seasonFixMsg" class="w-full text-sm text-gray-600 dark:text-gray-400"></div>
+        </div>
+
+        {# === Retryer info === #}
+        {% if retryer.enabled %}
+        <div class="mt-4 pt-4 border-t border-gray-100 dark:border-gray-800">
+            <div class="flex items-center gap-2 mb-3">
+                <div class="w-2 h-2 rounded-full bg-amber-500"></div>
+                <span class="text-sm font-medium text-gray-700 dark:text-gray-300">Re-tentatives automatiques</span>
+            </div>
+            <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                <div class="bg-gray-50 dark:bg-gray-800 rounded-lg p-3">
+                    <div class="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-1">Statut</div>
+                    <div class="font-medium text-gray-800 dark:text-gray-200">{{ surveillance + failed }} en cours / {{ ignored }} ignoré / {{ replaced }} remplacé</div>
+                </div>
+                <div class="bg-gray-50 dark:bg-gray-800 rounded-lg p-3">
+                    <div class="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-1">Intervalle</div>
+                    <div class="font-medium text-gray-800 dark:text-gray-200">{{ retryer.interval_minutes }} min</div>
+                </div>
+                <div class="bg-gray-50 dark:bg-gray-800 rounded-lg p-3">
+                    <div class="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-1">Max/jour</div>
+                    <div class="font-medium text-gray-800 dark:text-gray-200">{{ retryer.max_daily_retries }} tentatives</div>
+                </div>
+            </div>
+            <div class="text-xs text-gray-400 dark:text-gray-500 mt-2">
+                Les items en surveillance ou non remplacés sont re-tentés automatiquement toutes les {{ retryer.interval_minutes }} min (max {{ retryer.max_daily_retries }}/jour).
+            </div>
+        </div>
+        {% endif %}
+    </div>
+
+    {# === Episodes list === #}
+    <div class="bg-white dark:bg-gray-900 rounded-xl shadow-sm border border-gray-200 dark:border-gray-800 divide-y divide-gray-100 dark:divide-gray-800/50">
+        {% for ep in episodes %}
+        <div x-data="{ expanded: false }">
+            {# === Episode header (always visible) === #}
+            <div @click="expanded = !expanded"
+                 class="flex items-center gap-2.5 px-3 sm:pl-6 py-2 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors text-sm min-w-0 cursor-pointer"
+                 style="border-left:4px solid {% if ep.status == 'détecté' %}#f59e0b{% elif ep.status == 'ignoré' %}#9ca3af{% elif ep.status == 'remplacé' %}#22c55e{% elif ep.status == 'surveillance' %}#3b82f6{% else %}#ef4444{% endif %}">
+                <span class="font-mono text-xs text-gray-500 dark:text-gray-400 shrink-0 w-10">E{{ '%02d' % (ep.episode or 0) }}</span>
+                <span class="font-mono text-xs text-gray-800 dark:text-gray-200 truncate min-w-0 flex-1">{{ ep.symlink_path|path_filename }}</span>
+                <span class="font-mono text-[10px] text-gray-400 dark:text-gray-500 truncate max-w-[200px] hidden sm:block">{{ ep.symlink_path }}</span>
+
+                {% if ep.created_at %}
+                <span class="ml-auto text-[10px] text-gray-400 dark:text-gray-500 shrink-0 whitespace-nowrap">{{ ep.created_at|date_fr }}</span>
+                {% endif %}
+
+                <div class="relative shrink-0" x-data="{ menuOpen: false }" @click.outside="menuOpen = false" @click.stop>
+                    <button @click.stop="menuOpen = !menuOpen"
+                            class="p-1.5 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 border border-transparent hover:border-gray-200 dark:hover:border-gray-700 transition-colors">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M12 6.75a.75.75 0 110-1.5.75.75 0 010 1.5zM12 12.75a.75.75 0 110-1.5.75.75 0 010 1.5zM12 18.75a.75.75 0 110-1.5.75.75 0 010 1.5z"/>
+                        </svg>
+                    </button>
+                    <div x-show="menuOpen" x-cloak
+                         class="absolute right-0 top-full mt-1 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg py-1 min-w-[180px] z-10">
+                        <a href="/results/{{ ep.id }}" @click.stop
+                           class="block px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800">Voir le détail</a>
+                        <button @click.stop="
+                            fetch('/api/results/{{ ep.id }}/verify-fs', {method:'POST'}).then(r=>r.json()).then(d=>{
+                                if(d.status_updated || d.valid) { menuOpen = false; window.location.reload(); }
+                                else alert(d.reason || 'Échec');
+                            });
+                            menuOpen = false"
+                                class="block w-full text-left px-4 py-2 text-sm text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800">Vérifier</button>
+                        {% if ep.status in ('détecté','surveillance','ignoré','non_remplacé','échoué') %}
+                        <button @click.stop="
+                            fetch('/api/results/{{ ep.id }}/process', {method:'POST'}).then(r=>r.json()).then(d=>{
+                                if(d.ok) { menuOpen = false; window.location.reload(); }
+                                else alert(d.error || 'Échec');
+                            });
+                            menuOpen = false"
+                                class="block w-full text-left px-4 py-2 text-sm text-amber-600 dark:text-amber-400 hover:bg-gray-50 dark:hover:bg-gray-800">Traiter</button>
+                        {% endif %}
+                        {% if ep.status in ('non_remplacé','échoué','détecté','ignoré') %}
+                        <button @click.stop="
+                            fetch('/api/results/{{ ep.id }}/fix', {method:'POST'}).then(r=>r.json()).then(d=>{
+                                if(d.ok) { menuOpen = false; window.location.reload(); }
+                                else alert(d.error || 'Échec');
+                            });
+                            menuOpen = false"
+                                class="block w-full text-left px-4 py-2 text-sm text-green-600 dark:text-green-400 hover:bg-gray-50 dark:hover:bg-gray-800">Marquer remplacé</button>
+                        {% endif %}
+                        {% if ep.status != 'remplacé' %}
+                        <button @click.stop="
+                            fetch('/api/results/{{ ep.id }}/ignore', {method:'POST'}).then(r=>r.json()).then(d=>{
+                                if(d.ok) { menuOpen = false; window.location.reload(); }
+                                else alert(d.error || 'Échec');
+                            });
+                            menuOpen = false"
+                                class="block w-full text-left px-4 py-2 text-sm text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800">Ignorer</button>
+                        {% endif %}
+                        {% if ep.status in ('non_remplacé','échoué','ignoré') %}
+                        <button @click.stop="
+                            fetch('/api/results/{{ ep.id }}/recheck', {method:'POST'}).then(r=>r.json()).then(d=>{
+                                if(d.ok) { menuOpen = false; window.location.reload(); }
+                                else alert(d.error || 'Échec');
+                            });
+                            menuOpen = false"
+                                class="block w-full text-left px-4 py-2 text-sm text-amber-600 dark:text-amber-400 hover:bg-gray-50 dark:hover:bg-gray-800">Surveiller</button>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+
+            {# === Episode detail (expandable) === #}
+            <div x-show="expanded" x-cloak
+                 class="border-t border-gray-100 dark:border-gray-800 bg-gray-50/50 dark:bg-gray-800/20 px-3 sm:pl-10 py-3 space-y-2 text-xs">
+                <div class="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                    <div>
+                        <span class="text-gray-500 dark:text-gray-400 uppercase tracking-wider">Statut</span>
+                        <div class="font-medium text-gray-800 dark:text-gray-200">{{ ep.status }}</div>
+                    </div>
+                    {% if ep.action %}
+                    <div>
+                        <span class="text-gray-500 dark:text-gray-400 uppercase tracking-wider">Action</span>
+                        <div class="font-medium text-gray-800 dark:text-gray-200">{{ ep.action }}</div>
+                    </div>
+                    {% endif %}
+                    {% if ep.search_count is defined %}
+                    <div>
+                        <span class="text-gray-500 dark:text-gray-400 uppercase tracking-wider">Recherches</span>
+                        <div class="font-medium text-gray-800 dark:text-gray-200">{{ ep.search_count }}</div>
+                    </div>
+                    {% endif %}
+                    {% if ep.file_id %}
+                    <div>
+                        <span class="text-gray-500 dark:text-gray-400 uppercase tracking-wider">File ID</span>
+                        <div class="font-mono text-gray-700 dark:text-gray-300">{{ ep.file_id }}</div>
+                    </div>
+                    {% endif %}
+                    {% if ep.action_date %}
+                    <div>
+                        <span class="text-gray-500 dark:text-gray-400 uppercase tracking-wider">Date d'action</span>
+                        <div class="font-medium text-gray-800 dark:text-gray-200">{{ ep.action_date|date_fr }}</div>
+                    </div>
+                    {% endif %}
+                </div>
+                <div>
+                    <div class="flex items-center justify-between">
+                        <span class="text-gray-500 dark:text-gray-400 uppercase tracking-wider">Chemin</span>
+                        <button @click.stop="
+                            clipboardCopy($el.getAttribute('data-path'));
+                            $el.textContent = 'Copié !';
+                            setTimeout(() => $el.textContent = 'Copier', 1500);
+                        " data-path="{{ ep.symlink_path }}"
+                                class="text-brand-600 dark:text-brand-400 hover:underline font-medium">Copier</button>
+                    </div>
+                    <div class="font-mono text-gray-600 dark:text-gray-300 break-all mt-0.5">{{ ep.symlink_path }}</div>
+                </div>
+                {% if ep.target_path %}
+                <div>
+                    <div class="flex items-center justify-between">
+                        <span class="text-gray-500 dark:text-gray-400 uppercase tracking-wider">Cible</span>
+                        <button @click.stop="
+                            clipboardCopy($el.getAttribute('data-path'));
+                            $el.textContent = 'Copié !';
+                            setTimeout(() => $el.textContent = 'Copier', 1500);
+                        " data-path="{{ ep.target_path }}"
+                                class="text-brand-600 dark:text-brand-400 hover:underline font-medium">Copier</button>
+                    </div>
+                    <div class="font-mono text-gray-600 dark:text-gray-300 break-all mt-0.5">{{ ep.target_path }}</div>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+{% endblock %}

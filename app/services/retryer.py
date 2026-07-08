@@ -51,7 +51,7 @@ async def _retryer_loop():
                 cursor = await db.execute(
                     "SELECT id, source, media_title, movie_id, series_id, season,"
                     " search_count, action_date"
-                    " FROM results WHERE status = 'non_remplacé'"
+                    " FROM results WHERE status IN ('non_remplacé','surveillance')"
                     " ORDER BY action_date ASC"
                 )
                 rows = [dict(r) for r in await cursor.fetchall()]

@@ -61,8 +61,10 @@ def get_version() -> str:
 
     version_file = Path(__file__).resolve().parent.parent / "VERSION"
     if version_file.exists():
-        _APP_VERSION = version_file.read_text().strip()
-        return _APP_VERSION
+        ver = version_file.read_text().strip()
+        if ver:
+            _APP_VERSION = ver
+            return _APP_VERSION
 
     desc, branch, sha = _git_describe()
     if desc:
@@ -81,9 +83,22 @@ def get_version() -> str:
 
 def get_version_info() -> dict:
     docker_hash = None
-    hash_file = Path(__file__).resolve().parent.parent / "DOCKER_HASH"
-    if hash_file.exists():
-        docker_hash = hash_file.read_text().strip() or None
+    sock = Path("/var/run/docker.sock")
+    if sock.exists():
+        try:
+            hostname = os.uname().nodename
+            result = subprocess.run(
+                ["docker", "inspect", "--format", "{{.Image}}", hostname],
+                capture_output=True, text=True, timeout=5,
+            )
+            if result.returncode == 0:
+                docker_hash = result.stdout.strip()
+        except Exception:
+            pass
+    if not docker_hash:
+        hash_file = Path(__file__).resolve().parent.parent / "DOCKER_HASH"
+        if hash_file.exists():
+            docker_hash = hash_file.read_text().strip() or None
     if not docker_hash:
         docker_hash = os.environ.get("DOCKER_HASH")
     return {

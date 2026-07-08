@@ -42,4 +42,12 @@
   padding-bottom: env(safe-area-inset-bottom, 0px);
 }
 
+/* === Status border bands (non-Tailwind fallback) === */
+.border-l-4 { border-left-width: 4px; border-style: solid; }
+.border-l-amber-500 { border-left-color: #f59e0b; }
+.border-l-green-500 { border-left-color: #22c55e; }
+.border-l-blue-500 { border-left-color: #3b82f6; }
+.border-l-red-500 { border-left-color: #ef4444; }
+.border-l-gray-400 { border-left-color: #9ca3af; }
+
 /* === Sidebar transition === */

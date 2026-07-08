@@ -15,6 +15,9 @@ test:
 docker:
 	docker compose up --build
 
+dev-docker:
+	docker compose -f docker-compose.dev.yml up --build
+
 deploy:
 	git push origin main
 

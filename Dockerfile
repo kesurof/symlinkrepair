@@ -21,10 +21,10 @@ COPY . .
 
 ARG VERSION
 ENV APP_VERSION=${VERSION}
-RUN echo "$VERSION" > /app/VERSION 2>/dev/null || true
+RUN test -n "$VERSION" && echo "$VERSION" > /app/VERSION 2>/dev/null || true
 
 ARG DOCKER_HASH
-RUN echo "$DOCKER_HASH" > /app/DOCKER_HASH 2>/dev/null || true
+RUN test -n "$DOCKER_HASH" && echo "$DOCKER_HASH" > /app/DOCKER_HASH 2>/dev/null || true
 
 EXPOSE 8000
 

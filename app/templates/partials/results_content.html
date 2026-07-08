@@ -6,21 +6,18 @@
      style="display:none"></div>
 
 {% if items %}
-<div class="space-y-2">
+<div class="space-y-3">
     {% for display in items %}
     {% if display.type is defined and display.type == "group" %}
     {# === Season group accordion === #}
-    <div x-data="{ expanded: false }"
-         class="bg-white dark:bg-gray-900 rounded-xl shadow-sm border border-gray-200 dark:border-gray-800">
+      <div x-data="{ expanded: false }"
+          class="bg-white dark:bg-gray-900 rounded-xl shadow-sm border border-gray-200 dark:border-gray-800">
         {# Group header #}
-        <div class="p-3 flex items-center gap-1.5 cursor-pointer select-none border-l-4
-          {% if display.replaced_count == display.episode_count %}border-l-green-500
-          {% elif display.failed_count > 0 %}border-l-red-500
-          {% else %}border-l-amber-500{% endif %}"
+        <div class="p-3 flex items-center gap-1.5 cursor-pointer select-none"
+             style="border-left:4px solid {% if display.replaced_count == display.episode_count %}#22c55e{% elif display.failed_count > 0 %}#ef4444{% elif display.surveillance_count == display.episode_count %}#3b82f6{% else %}#f59e0b{% endif %}"
              @click="expanded = !expanded">
-            <svg x-show="expanded" class="w-4 h-4 text-gray-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M19.5 8.25l-7.5 7.5-7.5-7.5"/></svg>
-            <svg x-show="!expanded" x-cloak class="w-4 h-4 text-gray-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5"/></svg>
-            <span class="inline-flex items-center gap-1 text-xs font-medium px-2 py-0.5 rounded-full bg-green-100 text-green-700 dark:bg-green-900/50 dark:text-green-300 shrink-0">
+
+            <span class="inline-flex items-center gap-1 text-xs font-medium px-2 py-0.5 rounded-md bg-cyan-100 text-cyan-700 dark:bg-cyan-900/50 dark:text-cyan-300 shrink-0">
                 {{ display.source if display.source is defined else 'sonarr' }}
             </span>
             <span class="font-medium text-sm text-gray-800 dark:text-gray-200 truncate min-w-0">{{ display.media_title }}</span>
@@ -35,24 +32,17 @@
             </button>
             <span class="text-xs font-mono bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 px-1.5 py-0.5 rounded shrink-0">S{{ display.season }}</span>
             <span class="text-xs text-gray-500 dark:text-gray-400 whitespace-nowrap shrink-0">{{ display.replaced_count }}/{{ display.episode_count }}</span>
-            {% if display.episodes and display.episodes[0].created_at %}
-            <span class="text-[10px] text-gray-400 dark:text-gray-500 shrink-0 whitespace-nowrap">· {{ display.episodes[0].created_at[:10] }}</span>
-            {% endif %}
-            <div class="flex-1 h-1.5 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden max-w-[60px] shrink-0">
-                <div class="h-full bg-green-500 rounded-full transition-all" style="width:{{ (display.replaced_count / display.episode_count * 100) if display.episode_count > 0 else 0 }}%"></div>
-            </div>
+
             <div class="ml-auto flex items-center gap-1.5 shrink-0" @click.stop>
+                {% if display.episodes and display.episodes[0].created_at %}
+                <span class="text-[10px] text-gray-400 dark:text-gray-500 shrink-0 whitespace-nowrap">{{ display.episodes[0].created_at|date_fr }}</span>
+                {% endif %}
                 {% if showBatch %}
                 <input type="checkbox"
                        @change="toggleGroup({{ display.series_id }}, {{ display.season }}, $el.checked)"
                        class="rounded border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800">
                 {% else %}
-                {% if display.replaced_count == display.episode_count %}
-                <span class="text-xs text-green-600 dark:text-green-400 font-medium flex items-center gap-1 whitespace-nowrap">
-                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5"/></svg>
-                    Tout remplacé
-                </span>
-                {% endif %}
+
                 <div class="relative" x-data="{ menuOpen: false }" @click.outside="menuOpen = false" @click.stop>
                     <button @click.stop="menuOpen = !menuOpen"
                             class="p-1.5 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 border border-transparent hover:border-gray-200 dark:hover:border-gray-700 transition-colors">
@@ -62,7 +52,7 @@
                     </button>
                     <div x-show="menuOpen" x-cloak
                          class="absolute right-0 top-full mt-1 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg py-1 min-w-[180px] z-10">
-                        <a href="/results?source=sonarr&series_id={{ display.series_id }}&season={{ display.season }}" @click.stop
+                        <a href="/season/{{ display.series_id }}/{{ display.season }}" @click.stop
                            class="block px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800">Détails de la saison</a>
                         <button @click.stop="groupSeasonAction({{ display.series_id }}, {{ display.season }}, 'verify'); menuOpen = false"
                                 class="block w-full text-left px-4 py-2 text-sm text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800">Vérifier les épisodes</button>
@@ -70,6 +60,12 @@
                         <button @click.stop="groupSeasonAction({{ display.series_id }}, {{ display.season }}, 'process'); menuOpen = false"
                                 class="block w-full text-left px-4 py-2 text-sm text-amber-600 dark:text-amber-400 hover:bg-gray-50 dark:hover:bg-gray-800">Traiter la saison</button>
                         {% endif %}
+                        <button @click.stop="groupSeasonAction({{ display.series_id }}, {{ display.season }}, 'fix'); menuOpen = false"
+                                class="block w-full text-left px-4 py-2 text-sm text-green-600 dark:text-green-400 hover:bg-gray-50 dark:hover:bg-gray-800">Marquer toute la saison remplacée</button>
+                        <button @click.stop="groupSeasonAction({{ display.series_id }}, {{ display.season }}, 'recheck'); menuOpen = false"
+                                class="block w-full text-left px-4 py-2 text-sm text-amber-600 dark:text-amber-400 hover:bg-gray-50 dark:hover:bg-gray-800">Mettre toute la saison en surveillance</button>
+                        <button @click.stop="groupSeasonAction({{ display.series_id }}, {{ display.season }}, 'ignore'); menuOpen = false"
+                                class="block w-full text-left px-4 py-2 text-sm text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800">Ignorer toute la saison</button>
                     </div>
                 </div>
                 {% endif %}
@@ -79,14 +75,10 @@
         {# Episodes list (collapsible) #}
         <div x-show="expanded" x-cloak class="border-t border-gray-100 dark:border-gray-800 divide-y divide-gray-100 dark:divide-gray-800/50">
             {% for ep in display.episodes %}
-            <div data-ep-id="{{ ep.id }}" data-ep-series="{{ display.series_id }}" data-ep-season="{{ display.season }}"
+             <div data-ep-id="{{ ep.id }}" data-ep-series="{{ display.series_id }}" data-ep-season="{{ display.season }}"
                  @click="showBatch && toggle({{ ep.id }})"
-                 class="flex items-center gap-2.5 px-3 sm:pl-6 py-2 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors text-sm min-w-0 border-l-4
-                   {% if ep.status == 'détecté' %}border-l-amber-500
-                   {% elif ep.status == 'ignoré' %}border-l-gray-400
-                   {% elif ep.status == 'remplacé' %}border-l-green-500
-                   {% elif ep.status == 'surveillance' %}border-l-blue-500
-                   {% else %}border-l-red-500{% endif %}"
+                 class="flex items-center gap-2.5 px-3 sm:pl-6 py-2 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors text-sm min-w-0"
+                 style="border-left:4px solid {% if ep.status == 'détecté' %}#f59e0b{% elif ep.status == 'ignoré' %}#9ca3af{% elif ep.status == 'remplacé' %}#22c55e{% elif ep.status == 'surveillance' %}#3b82f6{% else %}#ef4444{% endif %}"
                  :class="{'bg-brand-50/50 dark:bg-brand-900/10': selected.includes({{ ep.id }})}">
                 {% if showBatch %}
                 <div @click.stop class="shrink-0">
@@ -100,23 +92,8 @@
                 <span class="font-mono text-xs text-gray-400 dark:text-gray-500 truncate min-w-0 flex-1">{{ ep.symlink_path }}</span>
 
                 {% if ep.created_at %}
-                <span class="text-[10px] text-gray-400 dark:text-gray-500 shrink-0 whitespace-nowrap">{{ ep.created_at[:16] }}</span>
+                <span class="ml-auto text-[10px] text-gray-400 dark:text-gray-500 shrink-0 whitespace-nowrap">{{ ep.created_at|date_fr }}</span>
                 {% endif %}
-                <span class="inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full font-medium shrink-0
-                    {% if ep.status == 'détecté' %}bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300
-                    {% elif ep.status == 'ignoré' %}bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400
-                    {% elif ep.status == 'remplacé' %}bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300
-                    {% elif ep.status == 'surveillance' %}bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300
-                    {% else %}bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300{% endif %}">
-                    <span class="w-1.5 h-1.5 rounded-full
-                        {% if ep.status == 'détecté' %}bg-amber-500
-                        {% elif ep.status == 'ignoré' %}bg-gray-400
-                        {% elif ep.status == 'remplacé' %}bg-green-500
-                        {% elif ep.status == 'surveillance' %}bg-blue-500
-                        {% else %}bg-red-500{% endif %}">
-                    </span>
-                    {{ ep.status }}
-                </span>
 
                 <div class="relative shrink-0" x-data="{ menuOpen: false }" @click.outside="menuOpen = false" @click.stop>
                     <button @click.stop="menuOpen = !menuOpen"
@@ -135,15 +112,15 @@
                         <button @click.stop="itemAction({{ ep.id }}, 'process'); menuOpen = false"
                                 class="block w-full text-left px-4 py-2 text-sm text-amber-600 dark:text-amber-400 hover:bg-gray-50 dark:hover:bg-gray-800">Traiter</button>
                         {% endif %}
-                        {% if ep.status in ('non_remplacé','échoué','détecté') %}
+                        {% if ep.status in ('non_remplacé','échoué','détecté','ignoré') %}
                         <button @click.stop="itemAction({{ ep.id }}, 'fix'); menuOpen = false"
                                 class="block w-full text-left px-4 py-2 text-sm text-green-600 dark:text-green-400 hover:bg-gray-50 dark:hover:bg-gray-800">Marquer remplacé</button>
                         {% endif %}
-                        {% if ep.status not in ('ignoré','remplacé','surveillance') %}
+                        {% if ep.status != 'remplacé' %}
                         <button @click.stop="itemAction({{ ep.id }}, 'ignore'); menuOpen = false"
                                 class="block w-full text-left px-4 py-2 text-sm text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800">Ignorer</button>
                         {% endif %}
-                        {% if ep.status in ('non_remplacé','échoué') %}
+                        {% if ep.status in ('non_remplacé','échoué','ignoré') %}
                         <button @click.stop="itemAction({{ ep.id }}, 'recheck'); menuOpen = false"
                                 class="block w-full text-left px-4 py-2 text-sm text-amber-600 dark:text-amber-400 hover:bg-gray-50 dark:hover:bg-gray-800">Surveiller</button>
                         {% endif %}
@@ -159,14 +136,10 @@
     {% else %}
     {# === Single item (Radarr or non-season Sonarr) === #}
     {% set item = display.item if display.item is defined else display %}
-    <div @click="showBatch && toggle({{ item.id }})"
-         class="bg-white dark:bg-gray-900 rounded-xl shadow-sm border border-gray-200 dark:border-gray-800 border-l-4
-           {% if item.status == 'détecté' %}border-l-amber-500
-           {% elif item.status == 'ignoré' %}border-l-gray-400
-           {% elif item.status == 'remplacé' %}border-l-green-500
-            {% elif item.status == 'surveillance' %}border-l-blue-500
-           {% else %}border-l-red-500{% endif %}
-           hover:shadow-md transition-shadow"
+     <div x-data="{ expanded: false }"
+          @click="if(showBatch) toggle({{ item.id }}); expanded = !expanded"
+          class="bg-white dark:bg-gray-900 shadow-sm hover:shadow-md transition-shadow"
+          style="border-left:4px solid {% if item.status == 'détecté' %}#f59e0b{% elif item.status == 'ignoré' %}#9ca3af{% elif item.status == 'remplacé' %}#22c55e{% elif item.status == 'surveillance' %}#3b82f6{% else %}#ef4444{% endif %}"
          :class="{'ring-2 ring-brand-500/30 bg-brand-50/50 dark:bg-brand-900/10': selected.includes({{ item.id }})}">
         <div class="px-3 py-2.5">
             {% if showBatch %}
@@ -179,7 +152,7 @@
             {% endif %}
 
             <div class="flex items-center gap-1.5 min-w-0">
-                <span class="inline-flex items-center gap-1 text-xs font-medium px-2 py-0.5 rounded-full shrink-0 {{ 'bg-blue-100 text-blue-700 dark:bg-blue-900/50 dark:text-blue-300' if item.source == 'radarr' else 'bg-green-100 text-green-700 dark:bg-green-900/50 dark:text-green-300' }}">
+                <span class="inline-flex items-center gap-1 text-xs font-medium px-2 py-0.5 rounded-md shrink-0 {{ 'bg-purple-100 text-purple-700 dark:bg-purple-900/50 dark:text-purple-300' if item.source == 'radarr' else 'bg-cyan-100 text-cyan-700 dark:bg-cyan-900/50 dark:text-cyan-300' }}">
                     {{ item.source }}
                 </span>
                 <a href="/results/{{ item.id }}" @click.stop
@@ -201,23 +174,9 @@
                 {% endif %}
 
                 <div class="ml-auto flex items-center gap-1 shrink-0">
-                    <span class="inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full font-medium whitespace-nowrap
-                        {% if item.status == 'détecté' %}bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300
-                        {% elif item.status == 'ignoré' %}bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400
-                        {% elif item.status == 'remplacé' %}bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300
-                        {% elif item.status == 'surveillance' %}bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300
-                        {% else %}bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300{% endif %}">
-                        <span class="w-1.5 h-1.5 rounded-full
-                            {% if item.status == 'détecté' %}bg-amber-500
-                            {% elif item.status == 'ignoré' %}bg-gray-400
-                            {% elif item.status == 'remplacé' %}bg-green-500
-                            {% elif item.status == 'surveillance' %}bg-blue-500
-                            {% else %}bg-red-500{% endif %}">
-                        </span>
-                        {{ item.status }}
-                    </span>
+
                     {% if item.created_at %}
-                    <span class="text-[10px] text-gray-400 dark:text-gray-500 shrink-0 whitespace-nowrap">· {{ item.created_at[:16] }}</span>
+                    <span class="text-[10px] text-gray-400 dark:text-gray-500 shrink-0 whitespace-nowrap">· {{ item.created_at|date_fr }}</span>
                     {% endif %}
                     <div class="relative" x-data="{ menuOpen: false }" @click.outside="menuOpen = false" @click.stop>
                         <button @click.stop="menuOpen = !menuOpen"
@@ -236,15 +195,15 @@
                             <button @click.stop="itemAction({{ item.id }}, 'process'); menuOpen = false"
                                     class="block w-full text-left px-4 py-2 text-sm text-amber-600 dark:text-amber-400 hover:bg-gray-50 dark:hover:bg-gray-800">Traiter{% if item.search_count %} ({{ item.search_count }}){% endif %}</button>
                             {% endif %}
-                            {% if item.status in ('non_remplacé','échoué','détecté') %}
+                            {% if item.status in ('non_remplacé','échoué','détecté','ignoré') %}
                             <button @click.stop="itemAction({{ item.id }}, 'fix'); menuOpen = false"
                                     class="block w-full text-left px-4 py-2 text-sm text-green-600 dark:text-green-400 hover:bg-gray-50 dark:hover:bg-gray-800">Marquer remplacé</button>
                             {% endif %}
-                            {% if item.status not in ('ignoré','remplacé','surveillance') %}
+                            {% if item.status != 'remplacé' %}
                             <button @click.stop="itemAction({{ item.id }}, 'ignore'); menuOpen = false"
                                     class="block w-full text-left px-4 py-2 text-sm text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800">Ignorer</button>
                             {% endif %}
-                            {% if item.status in ('non_remplacé','échoué') %}
+                            {% if item.status in ('non_remplacé','échoué','ignoré') %}
                             <button @click.stop="itemAction({{ item.id }}, 'recheck'); menuOpen = false"
                                     class="block w-full text-left px-4 py-2 text-sm text-amber-600 dark:text-amber-400 hover:bg-gray-50 dark:hover:bg-gray-800">Surveiller</button>
                             {% endif %}
@@ -256,7 +215,7 @@
             </div>
 
             {# === Path line === #}
-            <div class="flex items-center gap-1 mt-1 {{ 'ml-6' if not showBatch else 'ml-8' }}">
+            <div x-show="expanded" x-cloak class="flex items-center gap-1 mt-1 {{ 'ml-6' if not showBatch else 'ml-8' }}">
                 <span class="text-[10px] text-gray-300 dark:text-gray-600 shrink-0">·</span>
                 <span class="font-mono text-[11px] text-gray-500 dark:text-gray-400 truncate max-w-full min-w-0"
                       style="direction:rtl;text-align:left;unicode-bidi:plaintext">{{ item.symlink_path }}</span>
@@ -269,8 +228,6 @@
                         title="Copier le chemin" type="button">
                     {{ copy_icon|safe }}
                 </button>
-                <span class="text-[10px] text-gray-300 dark:text-gray-600 shrink-0">·</span>
-                <span class="text-[11px] text-gray-500 dark:text-gray-400 shrink-0 whitespace-nowrap">{{ item.media_type or '—' }}{% if item.season %} · S{{ item.season }}{% endif %}</span>
             </div>
         </div>
     </div>
@@ -284,7 +241,7 @@
         Page {{ page }} / {{ total_pages }}
     </div>
     <div class="flex gap-1">
-        {% set qp = "source=" + active_source + "&status=" + active_status + "&season=" + active_season + "&q=" + active_q + "&per_page=" + per_page|string + ("&dedup=0" if show_duplicates else "") + ("&scan_id=" + active_scan_id|string if active_scan_id else "") %}
+        {% set qp = "source=" + active_source + "&status=" + active_status + "&season=" + active_season + "&series_id=" + active_series_id|string + "&q=" + active_q + "&per_page=" + per_page|string + ("&dedup=0" if show_duplicates else "") + ("&scan_id=" + active_scan_id|string if active_scan_id else "") %}
         <button hx-get="/results?page={{ page - 1 }}&{{ qp }}"
                 hx-target="#results-content" hx-push-url="true"
                 {% if page <= 1 %}disabled{% endif %}

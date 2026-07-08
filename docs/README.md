@@ -11,6 +11,13 @@ docs/
 ├── frontend.md             ← Organisation des pages et composants
 ├── redesign-ui.md          ← Refonte UI (sidebar + bottom nav + dark mode)
 ├── security.md             ← Modèle de sécurité
+├── screenshots/
+│   ├── dashboard.png       ← Dashboard
+│   ├── results.png         ← Liste des résultats
+│   ├── scan.png            ← Page de scan
+│   ├── reports.png         ← Historique des scans
+│   ├── season_detail.png   ← Détail d'une saison
+│   └── result_detail.png   ← Détail d'un fichier
 ├── scripts/
 │   ├── radarr_cleanup.md   ← Script Radarr existant
 │   └── sonarr_cleanup.md   ← Script Sonarr existant
@@ -25,35 +32,35 @@ AllDebrid / Decypharr dans les bibliothèques Radarr et Sonarr.
 ## Quick start
 
 ```bash
-make dev        # Lancer en dev sur http://localhost:8000
+make dev        # Lancer en dev (uvicorn --reload) sur http://localhost:8000
+make dev-docker # Lancer en dev avec Docker (build local + --reload)
 make test       # Lancer les tests
-make docker     # Lancer avec Docker
+make docker     # Lancer avec Docker (image ghcr pré-buildée)
 make deploy     # Pusher le code sur GitHub (sans build Docker)
 ```
 
 ## Docker Compose — développement local
 
-Un fichier `docker-compose.dev.yml` (ignoré par git) est disponible en local.
-Il correspond à l'ancienne configuration avec réseau traefik et montage `/home/...` :
+`docker-compose.dev.yml` est versionné dans git pour le développement.  
+Il build l'image localement et monte le code source (`./app:/app/app`) pour que `--reload` fonctionne.
+
+**Prérequis** : le réseau Docker externe `traefik_proxy` doit exister.
 
 ```bash
+make dev-docker
+# ou
 docker compose -f docker-compose.dev.yml up --build
-```
-
-Relancer localement avec build
-
-```bash
-docker compose down 2>&1 && docker compose -f docker-compose.dev.yml up --build 2>&1
 ```
 
 | Particularité | Prod (`docker-compose.yml`) | Dev (`docker-compose.dev.yml`) |
 |---|---|---|
+| Image | `ghcr.io/...` (pré-buildée) | Build local |
+| Rechargement auto | Non | Oui (`--reload`) |
 | Restart auto | `unless-stopped` | Non |
 | Healthcheck | Oui (`/health`) | Non |
-| Fichier `.env` | Charge `.env` | Non |
-| Réseau traefik | Non | Oui (externe) |
-| Montage `/home/...` | Non (commenté) | Oui |
-| Versionné dans git | Oui | Non (`.gitignore`) |
+| Réseau traefik | Non | Oui (externe `traefik_proxy`) |
+| Montage `/home` | Non | Oui |
+| Versionné dans git | Oui | Oui |
 
 ## Publier une nouvelle version
 
