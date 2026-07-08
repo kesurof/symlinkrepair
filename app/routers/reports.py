@@ -163,7 +163,8 @@ async def stats_history(db: Connection = Depends(get_db), days: int = 30):
     cursor = await db.execute(
         "SELECT DATE(action_date) as day,"
         "  SUM(CASE WHEN status = 'remplacé' THEN 1 ELSE 0 END) as replaced,"
-        "  SUM(CASE WHEN status IN ('non_remplacé','surveillance') THEN 1 ELSE 0 END) as not_replaced"
+        "  SUM(CASE WHEN status IN ('non_remplacé','surveillance')"
+        "    THEN 1 ELSE 0 END) as not_replaced"
         " FROM results"
         " WHERE action_date IS NOT NULL AND status IN ('remplacé','non_remplacé','surveillance')"
         "  AND action_date >= DATE('now', ? || ' days')"
