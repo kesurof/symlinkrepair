@@ -168,6 +168,10 @@
                     <span class="text-gray-500 dark:text-gray-400">Tag</span>
                     <span class="font-mono text-gray-800 dark:text-gray-200" x-text="vi.tag || '—'"></span>
                 </div>
+                <div class="flex justify-between" x-show="vi.docker_hash">
+                    <span class="text-gray-500 dark:text-gray-400">Image</span>
+                    <span class="font-mono text-[10px] text-gray-800 dark:text-gray-200 truncate max-w-[160px]" x-text="vi.docker_hash" :title="vi.docker_hash"></span>
+                </div>
             </div>
             <div class="px-6 py-4 border-t border-gray-200 dark:border-gray-800 flex justify-end">
                 <button @click="helpVersion = false" class="bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 px-4 py-2 rounded-lg text-sm font-medium hover:bg-gray-200 dark:hover:bg-gray-700">Fermer</button>

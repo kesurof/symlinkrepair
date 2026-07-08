@@ -1,3 +1,4 @@
+import os
 import subprocess
 from pathlib import Path
 
@@ -79,8 +80,15 @@ def get_version() -> str:
 
 
 def get_version_info() -> dict:
+    docker_hash = None
+    hash_file = Path(__file__).resolve().parent.parent / "DOCKER_HASH"
+    if hash_file.exists():
+        docker_hash = hash_file.read_text().strip() or None
+    if not docker_hash:
+        docker_hash = os.environ.get("DOCKER_HASH")
     return {
         "version": get_version(),
         "commit": _GIT_COMMIT,
         "tag": _GIT_TAG,
+        "docker_hash": docker_hash,
     }
