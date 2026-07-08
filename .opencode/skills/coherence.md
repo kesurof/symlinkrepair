@@ -145,10 +145,14 @@ Vérifie que les routes FastAPI dans le code sont documentées dans `AGENTS.md` 
 python3 << 'PYEOF'
 import re, subprocess
 
+def normalize(r):
+    """Normalise les noms de paramètres pour comparaison."""
+    return re.sub(r'\{[^}]+\}', '{p}', r)
+
 # Routes depuis AGENTS.md
 with open('AGENTS.md') as f:
     agents = f.read()
-routes_agents = set(re.findall(r'^- `(GET|POST|PUT|DELETE) (/\S+)`', agents, re.MULTILINE))
+routes_agents = set(re.findall(r'^- `(GET|POST|PUT|DELETE) (/\S*)`', agents, re.MULTILINE))
 routes_agents = {f"{m[0]} {m[1].rstrip('`')}" for m in routes_agents}
 
 # Routes depuis docs/api.md
@@ -165,14 +169,23 @@ for line in r.stdout.splitlines():
     if m:
         routes_code.add(f"{m.group(1).upper()} {m.group(2)}")
 
-# Vérifie
-for rt in sorted(routes_code - routes_agents):
-    print(f"  ⚠️  Route '{rt}' dans le code mais pas dans AGENTS.md")
-for rt in sorted(routes_code - routes_api):
-    print(f"  ⚠️  Route '{rt}' dans le code mais pas dans docs/api.md")
-if routes_code <= routes_agents:
+# Normalise pour la comparaison
+norm_code = {normalize(r): r for r in routes_code}
+norm_agents = {normalize(r): r for r in routes_agents}
+norm_api = {normalize(r): r for r in routes_api}
+
+# Vérifie (comparaison normalisée)
+for n, orig in sorted(norm_code.items()):
+    if n not in norm_agents:
+        print(f"  ⚠️  Route '{orig}' dans le code mais pas dans AGENTS.md")
+    elif norm_agents[n] != orig:
+        print(f"  ℹ️  Route '{norm_agents[n]}' dans AGENTS.md → code utilise '{orig}'")
+for n, orig in sorted(norm_code.items()):
+    if n not in norm_api:
+        print(f"  ⚠️  Route '{orig}' dans le code mais pas dans docs/api.md")
+if set(norm_code.keys()) <= set(norm_agents.keys()):
     print("  ✅ AGENTS.md: routes OK")
-if routes_code <= routes_api:
+if set(norm_code.keys()) <= set(norm_api.keys()):
     print("  ✅ docs/api.md: routes OK")
 PYEOF
 ```

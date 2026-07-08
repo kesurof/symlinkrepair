@@ -70,7 +70,7 @@ make deploy
 - `GET /config` — Configuration + explorateur de dossiers
 - `GET /scan` — Page de scan (complet + rapide fusionnés)
 - `GET /results` — Liste des résultats (avec pagination, filtres)
-- `GET /results/{id}` — Détail d'un résultat
+- `GET /results/{result_id}` — Détail d'un résultat
 - `GET /reports` — Historique des scans
 - `GET /fastscan` → redirect 301 vers `/scan?mode=fast`
 
@@ -80,14 +80,13 @@ make deploy
 - `POST /api/fast-scan` — Scan rapide éphémère
 
 ### Actions résultats
-- `POST /api/results/{id}/ignore` — Ignorer un résultat
-- `POST /api/results/{id}/fix` — Marquer manuellement comme corrigé
-- `POST /api/results/{id}/recheck` — Remettre en file d'attente (`recherche`)
-- `POST /api/results/{id}/verify-fs` — Vérifier le symlink sur le filesystem (→ `remplacé` si valide)
-- `POST /api/results/{id}/process` — Traitement réel : DELETE API + recherche
-- `GET /api/results/{id}/verifier` — Statut du cycle de vérification
-- `POST /api/results/{id}/stop-verifier` — Arrêter le cycle de vérification (→ `non_remplacé` / `abandon`)
-- `POST /api/results/{id}/verify-fs` — Vérifier le symlink sur le filesystem (→ `remplacé` si valide)
+- `POST /api/results/{result_id}/ignore` — Ignorer un résultat
+- `POST /api/results/{result_id}/fix` — Marquer manuellement comme corrigé
+- `POST /api/results/{result_id}/recheck` — Remettre en file d'attente (`recherche`)
+- `POST /api/results/{result_id}/verify-fs` — Vérifier le symlink sur le filesystem (→ `remplacé` si valide)
+- `POST /api/results/{result_id}/process` — Traitement réel : DELETE API + recherche
+- `GET /api/results/{result_id}/verifier` — Statut du cycle de vérification
+- `POST /api/results/{result_id}/stop-verifier` — Arrêter le cycle de vérification (→ `non_remplacé` / `abandon`)
 - `POST /api/results/batch` — Action groupée (process/fix/ignore/delete/recheck/process_season/verify_season)
 - `GET /api/results/ids` — IDs filtrés (pour selectAll batch)
 - `GET /api/results/recent` — Résultats récents pour le dashboard
@@ -95,7 +94,9 @@ make deploy
 ### Configuration
 - `GET /api/config` — Lire la config (secrets masqués)
 - `POST /api/config` — Sauvegarder la config
-- `GET /api/browse?path=...` — Explorateur de dossiers
+- `GET /api/browse` — Explorateur de dossiers (avec paramètre optionnel `?path=`)
+- `GET /api/config/default-browse-roots` — Racines de navigation par défaut
+- `POST /api/browse/validate` — Valider un chemin d'accès
 - `POST /api/config/test-radarr` — Tester connexion Radarr
 - `POST /api/config/test-sonarr` — Tester connexion Sonarr
 
@@ -104,6 +105,8 @@ make deploy
 
 ### Statistiques
 - `GET /api/stats` — Statistiques globales
+- `GET /api/stats/history` — Historique des stats (30/90 jours)
+- `GET /api/stats/top-affected` — Contenus les plus impactés
 - `GET /api/scans/ids` — IDs filtrés des scans (pour selectAll batch)
 - `POST /api/scans/delete` — Supprimer des scans et leurs résultats
 

@@ -42,7 +42,7 @@
 |---------|--------|-------------|
 | GET | `/api/config` | Lire la configuration (clés API masquées) |
 | POST | `/api/config` | Sauvegarder la configuration |
-| GET | `/api/browse?path=...` | Explorateur de dossiers |
+| GET | `/api/browse` | Explorateur de dossiers (avec paramètre optionnel `?path=`) |
 | GET | `/api/config/default-browse-roots` | Racines de navigation par défaut |
 | POST | `/api/browse/validate` | Valider un chemin d'accès |
 | POST | `/api/config/test-radarr` | Tester connexion Radarr |
@@ -60,6 +60,7 @@
 |---------|--------|-------------|
 | GET | `/api/stats` | Statistiques globales |
 | GET | `/api/stats/history` | Historique des stats (30/90 jours) |
+| GET | `/api/stats/top-affected` | Contenus les plus impactés |
 | GET | `/api/scans/ids` | IDs filtrés des scans (pour selectAll batch) |
 | POST | `/api/scans/delete` | Supprimer des scans et leurs résultats |
 
