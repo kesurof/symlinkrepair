@@ -106,7 +106,7 @@
                            class="block px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800">Voir le détail</a>
                         <button @click.stop="itemAction({{ ep.id }}, 'verify-fs'); menuOpen = false"
                                 class="block w-full text-left px-4 py-2 text-sm text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800">Vérifier</button>
-                        {% if ep.status in ('détecté','recherche','ignoré','non_remplacé','échoué') %}
+                        {% if ep.status in ('détecté','recherche','en_attente','ignoré','non_remplacé','échoué') %}
                         <button @click.stop="itemAction({{ ep.id }}, 'process'); menuOpen = false"
                                 class="block w-full text-left px-4 py-2 text-sm text-amber-600 dark:text-amber-400 hover:bg-gray-50 dark:hover:bg-gray-800">Traiter</button>
                         {% endif %}
@@ -193,7 +193,7 @@
                         {{ item.status }}
                     </span>
 
-                    {% if item.status not in ('remplacé','en_attente') %}
+                    {% if item.status not in ('remplacé',) %}
                     <button @click.stop="itemAction({{ item.id }}, 'verify-fs')"
                             class="text-xs px-1.5 py-0.5 rounded font-medium bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors shrink-0">
                         Vérifier
@@ -217,7 +217,7 @@
                                class="block px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800">Voir le détail</a>
                             <button @click.stop="itemAction({{ item.id }}, 'verify-fs'); menuOpen = false"
                                     class="block w-full text-left px-4 py-2 text-sm text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800">Vérifier</button>
-                            {% if item.status in ('détecté','recherche','ignoré','non_remplacé','échoué') %}
+                            {% if item.status in ('détecté','recherche','en_attente','ignoré','non_remplacé','échoué') %}
                             <button @click.stop="itemAction({{ item.id }}, 'process'); menuOpen = false"
                                     class="block w-full text-left px-4 py-2 text-sm text-amber-600 dark:text-amber-400 hover:bg-gray-50 dark:hover:bg-gray-800">Traiter{% if item.search_count %} ({{ item.search_count }}){% endif %}</button>
                             {% endif %}

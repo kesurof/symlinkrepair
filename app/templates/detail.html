@@ -129,7 +129,7 @@
         {# === Actions === #}
         <div class="mt-6 pt-4 border-t border-gray-100 dark:border-gray-800" id="action-buttons">
             <div class="flex flex-wrap gap-2">
-                {% if item.status in ('détecté','recherche','ignoré','non_remplacé','échoué') %}
+                {% if item.status in ('détecté','recherche','en_attente','ignoré','non_remplacé','échoué') %}
                 <div x-show="processStep === 'initial'" x-cloak>
                     <button @click="processStep = 'confirm'"
                             class="bg-red-500 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-red-600 transition-colors">
