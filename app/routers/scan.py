@@ -91,6 +91,40 @@ async def trigger_scan(
         inserted += 1
     await db.commit()
 
+    # Backfill metadata for results that couldn't be matched (EpisodeFiles gone)
+    await db.execute(
+        "UPDATE results SET"
+        " series_id = COALESCE(results.series_id, ("
+        "   SELECT series_id FROM results r2"
+        "   WHERE r2.symlink_path = results.symlink_path"
+        "   AND r2.source = results.source"
+        "   AND r2.series_id IS NOT NULL AND r2.id != results.id LIMIT 1"
+        " )),"
+        " season = COALESCE(results.season, ("
+        "   SELECT season FROM results r2"
+        "   WHERE r2.symlink_path = results.symlink_path"
+        "   AND r2.source = results.source"
+        "   AND r2.season IS NOT NULL AND r2.id != results.id LIMIT 1"
+        " )),"
+        " file_id = COALESCE(results.file_id, ("
+        "   SELECT file_id FROM results r2"
+        "   WHERE r2.symlink_path = results.symlink_path"
+        "   AND r2.source = results.source"
+        "   AND r2.file_id IS NOT NULL AND r2.id != results.id LIMIT 1"
+        " )),"
+        " media_title = CASE WHEN results.media_title IS NULL OR results.media_title = '' THEN ("
+        "   SELECT media_title FROM results r2"
+        "   WHERE r2.symlink_path = results.symlink_path"
+        "   AND r2.source = results.source"
+        "   AND r2.media_title IS NOT NULL AND r2.media_title != '' AND r2.id != results.id LIMIT 1"
+        " ) ELSE results.media_title END"
+        " WHERE scan_id = ?"
+        " AND (series_id IS NULL OR season IS NULL"
+        "   OR file_id IS NULL OR media_title IS NULL OR media_title = '')",
+        (scan_id,),
+    )
+    await db.commit()
+
     if inserted == 0:
         await db.execute(
             "UPDATE scans SET summary = 'Aucun nouveau symlink cassé' WHERE id = ?",
