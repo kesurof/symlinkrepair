@@ -83,11 +83,11 @@ async def results_page(
 
     r_columns = (
         "r.id, r.source, r.media_title, r.media_type, r.season, r.episode,"
-        " r.symlink_path, r.status, r.action, r.search_count, r.series_id, r.file_id"
+        " r.symlink_path, r.status, r.action, r.search_count, r.series_id, r.file_id, r.created_at"
     )
     columns = (
         "id, source, media_title, media_type, season, episode,"
-        " symlink_path, status, action, search_count, series_id, file_id"
+        " symlink_path, status, action, search_count, series_id, file_id, created_at"
     )
 
     if group_season:

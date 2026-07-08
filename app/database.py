@@ -65,11 +65,18 @@ async def init_db():
             CREATE INDEX IF NOT EXISTS idx_scans_created ON scans(created_at);
         """)
 
-        for col in ("movie_id", "series_id", "search_count"):
+        for col in ("movie_id", "series_id", "search_count", "created_at"):
             try:
-                await db.execute(f"ALTER TABLE results ADD COLUMN {col} INTEGER DEFAULT 0")
+                coltype = "INTEGER DEFAULT 0" if col != "created_at" else "TEXT"
+                await db.execute(f"ALTER TABLE results ADD COLUMN {col} {coltype}")
             except Exception:
                 pass
+
+        await db.execute(
+            "UPDATE results SET created_at = ("
+            "  SELECT created_at FROM scans WHERE scans.id = results.scan_id"
+            ") WHERE created_at IS NULL"
+        )
 
         for old, new in [
             ("detected", "détecté"),
