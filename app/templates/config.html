@@ -243,45 +243,137 @@
 
         {# === ALLDEBRID === #}
         <section class="bg-white dark:bg-gray-900 rounded-xl shadow-sm border border-gray-200 dark:border-gray-800">
-            <div class="flex items-center gap-2 p-4 border-b border-gray-100 dark:border-gray-800">
-                <svg class="w-5 h-5 text-orange-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.5">
-                    <path stroke-linecap="round" stroke-linejoin="round" d="M13.19 8.688a4.5 4.5 0 011.242 7.244l-4.5 4.5a4.5 4.5 0 01-6.364-6.364l1.757-1.757m13.35-.622l1.757-1.757a4.5 4.5 0 00-6.364-6.364l-4.5 4.5a4.5 4.5 0 001.242 7.244"/>
-                </svg>
-                <h3 class="font-medium text-gray-800 dark:text-gray-200">AllDebrid — Orphelins</h3>
+            <div class="flex items-center justify-between p-4 border-b border-gray-100 dark:border-gray-800">
+                <div class="flex items-center gap-2">
+                    <svg class="w-5 h-5 text-orange-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.5">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M13.19 8.688a4.5 4.5 0 011.242 7.244l-4.5 4.5a4.5 4.5 0 01-6.364-6.364l1.757-1.757m13.35-.622l1.757-1.757a4.5 4.5 0 00-6.364-6.364l-4.5 4.5a4.5 4.5 0 001.242 7.244"/>
+                    </svg>
+                    <h3 class="font-medium text-gray-800 dark:text-gray-200">AllDebrid — Orphelins</h3>
+                </div>
+                <button @click="addAllDebridInstance()"
+                        class="text-xs text-brand-600 dark:text-brand-400 hover:underline font-medium">➕ Ajouter une instance</button>
             </div>
-            <div class="p-4 space-y-3">
-                <label class="flex items-center gap-2 cursor-pointer">
-                    <input type="checkbox" x-model="cfg.alldebrid.enabled" class="rounded border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800">
-                    <span class="text-sm text-gray-700 dark:text-gray-300">Nettoyage automatique activé</span>
-                </label>
-                <div>
-                    <label class="block text-sm text-gray-500 dark:text-gray-400 mb-1">Clé API</label>
-                    <div class="flex gap-2">
-                        <input :type="showAllDebridKey ? 'text' : 'password'" x-model="cfg.alldebrid.api_key"
-                               class="flex-1 border border-gray-200 dark:border-gray-700 rounded-lg px-3 py-2 text-sm font-mono bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-200">
-                        <button @click="showAllDebridKey = !showAllDebridKey" class="text-xs text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300 shrink-0 px-2">
-                            <span x-text="showAllDebridKey ? 'Masquer' : 'Afficher'"></span>
-                        </button>
+
+            <div class="divide-y divide-gray-100 dark:divide-gray-800">
+                <template x-for="(inst, idx) in cfg.alldebrid.instances" :key="idx">
+                    <div class="p-4 space-y-3">
+                        <div class="flex items-center justify-between">
+                            <div class="flex items-center gap-2">
+                                <input type="checkbox" x-model="inst.enabled"
+                                       class="rounded border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800">
+                                <span class="text-sm font-medium text-gray-700 dark:text-gray-300" x-text="inst.name || 'Instance ' + (idx + 1)"></span>
+                            </div>
+                            <button @click="cfg.alldebrid.instances.splice(idx, 1)"
+                                    class="text-red-400 hover:text-red-600 text-sm p-1" title="Supprimer">✕</button>
+                        </div>
+
+                        <div class="grid sm:grid-cols-2 gap-3">
+                            <div>
+                                <label class="block text-sm text-gray-500 dark:text-gray-400 mb-1">Nom</label>
+                                <input type="text" x-model="inst.name" placeholder="alldebrid-01"
+                                       class="w-full border border-gray-200 dark:border-gray-700 rounded-lg px-3 py-2 text-sm bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-200">
+                            </div>
+                            <div>
+                                <label class="block text-sm text-gray-500 dark:text-gray-400 mb-1">Clé API</label>
+                                <div class="flex gap-2">
+                                    <input :type="'showADKey' + idx === showADKey ? 'text' : 'password'"
+                                           x-model="inst.api_key"
+                                           class="flex-1 border border-gray-200 dark:border-gray-700 rounded-lg px-3 py-2 text-sm font-mono bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-200">
+                                    <button @click="showADKey = 'showADKey' + idx"
+                                            class="text-xs text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300 shrink-0 px-2">
+                                        <span x-text="showADKey === 'showADKey' + idx ? 'Masquer' : 'Afficher'"></span>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div>
+                            <label class="block text-sm text-gray-500 dark:text-gray-400 mb-1">Dossiers à scanner</label>
+                            <div class="space-y-1.5">
+                                <template x-for="(root, ri) in inst.library_roots" :key="'adlr'+idx+ri">
+                                    <div class="flex items-center gap-2 px-3 py-1.5 bg-gray-50 dark:bg-gray-800 rounded-lg text-sm">
+                                        <svg class="w-4 h-4 shrink-0 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.5">
+                                            <path stroke-linecap="round" stroke-linejoin="round" d="M2.25 12.75V12A2.25 2.25 0 014.5 9.75h15A2.25 2.25 0 0121.75 12v.75m-8.69-6.44l-2.12-2.12a1.5 1.5 0 00-1.061-.44H4.5A2.25 2.25 0 002.25 6v12a2.25 2.25 0 002.25 2.25h15A2.25 2.25 0 0021.75 18V9a2.25 2.25 0 00-2.25-2.25h-5.379a1.5 1.5 0 01-1.06-.44z"/>
+                                        </svg>
+                                        <span class="flex-1 font-mono text-xs text-gray-600 dark:text-gray-300 truncate" x-text="root"></span>
+                                        <button @click="inst.library_roots.splice(ri, 1)" class="text-red-400 hover:text-red-600 text-sm p-0.5 shrink-0">✕</button>
+                                    </div>
+                                </template>
+                            </div>
+                            <div class="flex gap-2 mt-1.5">
+                                <input type="text" x-model="adLibInputs[idx]"
+                                       placeholder="Taper un chemin..."
+                                       @keydown.enter.prevent="inst.library_roots.push(adLibInputs[idx]); adLibInputs[idx] = ''"
+                                       class="flex-1 border border-gray-200 dark:border-gray-700 rounded-lg px-3 py-1.5 text-sm bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-200 placeholder-gray-400">
+                                <button @click="inst.library_roots.push(adLibInputs[idx]); adLibInputs[idx] = ''"
+                                        class="bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg px-3 py-1.5 text-sm text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700">➕</button>
+                                <button @click="openADBrowser(idx, 'library_roots')"
+                                        class="bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg px-3 py-1.5 text-sm text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700">📂</button>
+                            </div>
+                        </div>
+
+                        <div>
+                            <label class="block text-sm text-gray-500 dark:text-gray-400 mb-1">Préfixes cibles (AllDebrid mount)</label>
+                            <div class="space-y-1.5">
+                                <template x-for="(p, pi) in inst.target_prefixes" :key="'adtp'+idx+pi">
+                                    <div class="flex items-center gap-2 px-3 py-1.5 bg-gray-50 dark:bg-gray-800 rounded-lg text-sm">
+                                        <svg class="w-4 h-4 shrink-0 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.5">
+                                            <path stroke-linecap="round" stroke-linejoin="round" d="M13.19 8.688a4.5 4.5 0 011.242 7.244l-4.5 4.5a4.5 4.5 0 01-6.364-6.364l1.757-1.757m13.35-.622l1.757-1.757a4.5 4.5 0 00-6.364-6.364l-4.5 4.5a4.5 4.5 0 001.242 7.244"/>
+                                        </svg>
+                                        <span class="flex-1 font-mono text-xs text-gray-600 dark:text-gray-300 truncate" x-text="p"></span>
+                                        <button @click="inst.target_prefixes.splice(pi, 1)" class="text-red-400 hover:text-red-600 text-sm p-0.5 shrink-0">✕</button>
+                                    </div>
+                                </template>
+                            </div>
+                            <div class="flex gap-2 mt-1.5">
+                                <input type="text" x-model="adPrefInputs[idx]"
+                                       placeholder="/mnt/..."
+                                       @keydown.enter.prevent="inst.target_prefixes.push(adPrefInputs[idx]); adPrefInputs[idx] = ''"
+                                       class="flex-1 border border-gray-200 dark:border-gray-700 rounded-lg px-3 py-1.5 text-sm bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-200 placeholder-gray-400">
+                                <button @click="inst.target_prefixes.push(adPrefInputs[idx]); adPrefInputs[idx] = ''"
+                                        class="bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg px-3 py-1.5 text-sm text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700">➕</button>
+                                <button @click="openADBrowser(idx, 'target_prefixes', '/mnt')"
+                                        class="bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg px-3 py-1.5 text-sm text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700">📂</button>
+                            </div>
+                        </div>
+
+                        <div class="grid grid-cols-2 gap-3">
+                            <div>
+                                <label class="block text-sm text-gray-500 dark:text-gray-400 mb-1">Âge min (heures)</label>
+                                <input type="number" x-model="inst.min_age_hours" min="0" max="720"
+                                       class="w-24 border border-gray-200 dark:border-gray-700 rounded-lg px-3 py-2 text-sm bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-200">
+                            </div>
+                            <div>
+                                <label class="block text-sm text-gray-500 dark:text-gray-400 mb-1">Rate limit (s)</label>
+                                <input type="number" x-model="inst.rate_limit" min="0.1" max="5" step="0.1"
+                                       class="w-24 border border-gray-200 dark:border-gray-700 rounded-lg px-3 py-2 text-sm bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-200">
+                            </div>
+                        </div>
                     </div>
-                </div>
-                <div>
-                    <label class="block text-sm text-gray-500 dark:text-gray-400 mb-1">Dossier médias (medias_base)</label>
-                    <input type="text" x-model="cfg.alldebrid.medias_base" placeholder="/home/kesurof/Medias"
-                           class="w-full border border-gray-200 dark:border-gray-700 rounded-lg px-3 py-2 text-sm bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-200">
-                </div>
-                <div x-show="cfg.alldebrid.enabled" class="space-y-3 border-t border-gray-100 dark:border-gray-800 pt-3">
+                </template>
+            </div>
+
+            <div class="p-4 border-t border-gray-100 dark:border-gray-800 space-y-3">
+                <label class="flex items-start gap-3 cursor-pointer">
+                    <input type="checkbox" x-model="cfg.alldebrid.auto_enabled"
+                           class="mt-0.5 rounded border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800">
                     <div>
-                        <label class="block text-sm text-gray-500 dark:text-gray-400 mb-1">Horaire de déclenchement</label>
+                        <span class="text-sm font-medium text-gray-700 dark:text-gray-300">Analyse automatique</span>
+                        <p class="text-xs text-amber-600 dark:text-amber-400 mt-0.5">
+                            ⚠️ Le mode automatique supprime les orphelins sans confirmation.
+                            Il est recommandé de nettoyer manuellement depuis la page Orphelins.
+                        </p>
+                    </div>
+                </label>
+                <template x-if="cfg.alldebrid.auto_enabled">
+                    <div>
+                        <label class="block text-sm text-gray-500 dark:text-gray-400 mb-1">
+                            Horaire (format 24h · fuseau horaire du serveur)
+                        </label>
                         <input type="time" x-model="cfg.alldebrid.schedule_time"
                                class="w-32 border border-gray-200 dark:border-gray-700 rounded-lg px-3 py-2 text-sm bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-200">
                     </div>
-                    <div>
-                        <label class="block text-sm text-gray-500 dark:text-gray-400 mb-1">Âge minimum (heures)</label>
-                        <input type="number" x-model="cfg.alldebrid.min_age_hours" min="0" max="720"
-                               class="w-24 border border-gray-200 dark:border-gray-700 rounded-lg px-3 py-2 text-sm bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-200">
-                        <p class="text-xs text-gray-400 dark:text-gray-500 mt-1">Les magnets plus jeunes que ce seuil sont protégés de la suppression.</p>
-                    </div>
-                </div>
+                </template>
             </div>
         </section>
 
@@ -668,12 +760,16 @@ function configApp() {
                verifier: { enabled: true, interval_minutes: 3, max_duration_minutes: 60 },
                retryer: { enabled: false, interval_minutes: 60, max_daily_retries: 3 },
                 rechecker: { enabled: true, interval_minutes: 5 },
-                alldebrid: { api_key: '', enabled: false, medias_base: '', schedule_time: '03:00', min_age_hours: 24, rate_limit: 0.2 },
+                alldebrid: { instances: [], auto_enabled: false, schedule_time: '03:00' },
                 browse_roots: ['/home', '/mnt', '/data'] },
          showRadarrKey: false,
          showSonarrKey: false,
-         showAllDebridKey: false,
+         showADKey: false,
          showWebhook: false,
+         adLibInputs: [],
+         adPrefInputs: [],
+         adBrowserIdx: null,
+         adBrowserField: null,
         radarrTest: '',
         radarrOk: false,
         sonarrTest: '',
@@ -744,6 +840,41 @@ function configApp() {
             this.browseRootsInput = '';
         },
 
+        addAllDebridInstance() {
+            this.cfg.alldebrid.instances.push({
+                name: '', api_key: '', enabled: false,
+                library_roots: [], target_prefixes: [],
+                min_age_hours: 24, rate_limit: 0.2
+            });
+            this.adLibInputs.push('');
+            this.adPrefInputs.push('');
+        },
+
+        async openADBrowser(idx, field, startPath) {
+            this.adBrowserIdx = idx;
+            this.adBrowserField = field;
+            this.browserError = '';
+            this.browserSelected = [];
+            if (startPath) {
+                this.browserPath = startPath;
+            } else {
+                const resp = await fetch('/api/config/default-browse-roots');
+                const data = await resp.json();
+                const roots = data.roots;
+                this.browserPath = roots.length ? roots[0] : '/';
+            }
+            this.loadBrowser(this.browserPath);
+            this.$refs.browserModal.showModal();
+        },
+
+        confirmADBrowser() {
+            const inst = this.cfg.alldebrid.instances[this.adBrowserIdx];
+            const arr = inst[this.adBrowserField];
+            const allPaths = [...new Set([...this.browserSelected, ...arr])];
+            inst[this.adBrowserField] = allPaths;
+            this.$refs.browserModal.close();
+        },
+
         completeness(source) {
             const s = this.cfg[source];
             let c = 0;
@@ -778,6 +909,8 @@ function configApp() {
         },
 
         async openBrowser(source, field, startPath) {
+            this.adBrowserIdx = null;
+            this.adBrowserField = null;
             this.browserSource = source;
             this.browserField = field;
             this.browserError = '';
@@ -814,9 +947,15 @@ function configApp() {
         },
 
         confirmBrowser() {
-            const arr = this.cfg[this.browserSource][this.browserField];
-            const allPaths = [...new Set([...this.browserSelected, ...arr])];
-            this.cfg[this.browserSource][this.browserField] = allPaths;
+            if (this.adBrowserIdx !== null) {
+                this.confirmADBrowser();
+            } else {
+                const arr = this.cfg[this.browserSource][this.browserField];
+                const allPaths = [...new Set([...this.browserSelected, ...arr])];
+                this.cfg[this.browserSource][this.browserField] = allPaths;
+            }
+            this.adBrowserIdx = null;
+            this.adBrowserField = null;
             this.$refs.browserModal.close();
         }
     }

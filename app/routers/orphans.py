@@ -1,7 +1,7 @@
 import logging
 
 from aiosqlite import Connection
-from fastapi import APIRouter, Depends, Request
+from fastapi import APIRouter, Depends, Form, Request
 from fastapi.responses import HTMLResponse, JSONResponse
 
 from app.database import get_db
@@ -14,105 +14,76 @@ logger = logging.getLogger(__name__)
 router = APIRouter()
 
 
-def _collect_prefixes(config) -> list[str]:
+def _collect_fallback_prefixes(config) -> list[str]:
     prefixes = set()
     for src in (config.radarr, config.sonarr):
         prefixes.update(src.target_prefixes)
     return list(prefixes)
 
 
-async def _store_scan(db: Connection, detector_result, mode: str) -> int:
+async def _compute_stats(db: Connection) -> dict:
+    cursor = await db.execute("SELECT COUNT(*) FROM orphan_magnets")
+    total_magnets = (await cursor.fetchone())[0]
     cursor = await db.execute(
-        "INSERT INTO scans (source, mode, status, total, broken, processed, summary, completed_at)"
-        " VALUES (?, ?, ?, ?, ?, 0, ?, datetime('now'))",
-        (
-            "alldebrid",
-            mode,
-            "completed",
-            detector_result.total_magnets,
-            detector_result.orphan_count,
-            (
-                f"{detector_result.used_count} used,"
-                f" {detector_result.protected_count} protected,"
-                f" {detector_result.orphan_count} orphans"
-            ),
-        ),
+        "SELECT COUNT(*) FROM orphan_magnets WHERE status = 'orphan'"
     )
-    scan_id = cursor.lastrowid
-
-    for cand in detector_result.orphans + detector_result.protected + detector_result.used:
-        await db.execute(
-            "INSERT INTO orphan_magnets"
-            " (scan_id, magnet_id, primary_name, status, age_hours, is_hash)"
-            " VALUES (?, ?, ?, ?, ?, ?)",
-            (
-                scan_id,
-                cand.magnet_id,
-                cand.primary_name,
-                cand.status,
-                cand.age_hours,
-                1 if is_hash_name(cand.primary_name) else 0,
-            ),
-        )
-    return scan_id
+    orphan_count = (await cursor.fetchone())[0]
+    cursor = await db.execute(
+        "SELECT COUNT(*) FROM orphan_magnets WHERE status = 'used'"
+    )
+    used_count = (await cursor.fetchone())[0]
+    cursor = await db.execute(
+        "SELECT COUNT(*) FROM orphan_magnets WHERE status = 'protected'"
+    )
+    protected_count = (await cursor.fetchone())[0]
+    return {
+        "total_magnets": total_magnets,
+        "orphan_count": orphan_count,
+        "used_count": used_count,
+        "protected_count": protected_count,
+    }
 
 
 @router.get("/orphans", response_class=HTMLResponse)
 async def orphans_page(request: Request, db: Connection = Depends(get_db)):
     config = load_config()
     ad = config.alldebrid
-    configured = bool(ad.api_key and ad.medias_base)
-
-    cursor = await db.execute(
-        "SELECT COUNT(*) FROM orphan_magnets WHERE status = 'orphan'"
+    configured = any(
+        inst.enabled and inst.api_key and inst.library_roots
+        for inst in ad.instances
     )
-    orphan_count = (await cursor.fetchone())[0]
 
-    cursor = await db.execute(
-        "SELECT id, status, total, broken, processed, created_at"
-        " FROM scans WHERE source = 'alldebrid'"
-        " ORDER BY id DESC LIMIT 5"
-    )
-    recent_scans = [dict(r) for r in await cursor.fetchall()]
+    stats = await _compute_stats(db)
+
+    instance_names = [
+        i.name for i in ad.instances if i.name
+    ]
 
     return templates.TemplateResponse(
         request,
         "orphans.html",
         {
             "configured": configured,
-            "orphan_count": orphan_count,
-            "recent_scans": recent_scans,
-            "medias_base": ad.medias_base,
             "schedule_time": ad.schedule_time,
-            "min_age_hours": ad.min_age_hours,
+            "instance_names": instance_names,
+            **stats,
         },
     )
 
 
-@router.get("/api/orphans/content")
-async def orphans_content(
-    request: Request,
-    db: Connection = Depends(get_db),
-    status: str = "",
-    q: str = "",
-    page: int = 1,
-    per_page: int = 50,
-):
+async def _build_content_query(q: str, page: int, per_page: int, db: Connection):
     if page < 1:
         page = 1
     if per_page < 1:
         per_page = 50
 
-    where = "WHERE 1=1"
+    where = "WHERE status = 'orphan'"
     params = []
 
-    if status:
-        where += " AND status = ?"
-        params.append(status)
     if q:
-        where += " AND (primary_name LIKE ? OR magnet_id LIKE ?)"
+        where += " AND (primary_name LIKE ? OR magnet_id LIKE ? OR notes LIKE ?)"
         like = f"%{q}%"
-        params.extend([like, like])
+        params.extend([like, like, like])
 
     count_cursor = await db.execute(
         f"SELECT COUNT(*) FROM orphan_magnets {where}", params
@@ -125,7 +96,7 @@ async def orphans_content(
     offset = (page - 1) * per_page
     cursor = await db.execute(
         f"SELECT id, magnet_id, primary_name, status, age_hours, is_hash,"
-        f" action, action_date, created_at"
+        f" action, action_date, created_at, notes"
         f" FROM orphan_magnets {where}"
         f" ORDER BY id DESC LIMIT ? OFFSET ?",
         params + [per_page, offset],
@@ -133,89 +104,175 @@ async def orphans_content(
     rows = await cursor.fetchall()
     magnets = [dict(r) for r in rows]
 
-    is_htmx = request.headers.get("hx-request") == "true"
-    template = "partials/orphans_content.html" if is_htmx else "orphans.html"
-
-    return templates.TemplateResponse(
-        request,
-        template,
-        {
-            "magnets": magnets,
-            "active_status": status,
-            "active_q": q,
-            "page": page,
-            "per_page": per_page,
-            "total": total,
-            "total_pages": total_pages,
-        },
-    )
-
-
-@router.post("/api/orphans/scan")
-async def run_orphan_scan(db: Connection = Depends(get_db)):
-    config = load_config()
-    ad = config.alldebrid
-
-    if not ad.api_key:
-        return JSONResponse(
-            {"ok": False, "error": "Clé API AllDebrid non configurée"}, status_code=400)
-    if not ad.medias_base:
-        return JSONResponse(
-            {"ok": False, "error": "medias_base non configuré"}, status_code=400)
-
-    prefixes = _collect_prefixes(config)
-    if not prefixes:
-        return JSONResponse(
-            {"ok": False, "error": "Aucun target_prefixes configuré (Radarr/Sonarr)"},
-            status_code=400)
-
-    detector = OrphanDetector(
-        medias_base=ad.medias_base,
-        target_prefixes=list(set(prefixes)),
-        api_key=ad.api_key,
-        min_age_hours=ad.min_age_hours,
-        rate_limit=ad.rate_limit,
-    )
-
-    try:
-        result = await detector.run()
-    except Exception as e:
-        logger.error("Orphan scan failed: %s", e)
-        return JSONResponse({"ok": False, "error": str(e)}, status_code=500)
-
-    scan_id = await _store_scan(db, result, "manual")
-    await db.commit()
-
     return {
-        "ok": True,
-        "scan_id": scan_id,
-        "total_magnets": result.total_magnets,
-        "used_count": result.used_count,
-        "protected_count": result.protected_count,
-        "orphan_count": result.orphan_count,
-        "duration": round(result.duration, 1),
+        "magnets": magnets,
+        "active_q": q,
+        "page": page,
+        "per_page": per_page,
+        "total": total,
+        "total_pages": total_pages,
     }
 
 
-@router.post("/api/orphans/delete-all")
-async def delete_all_orphans(db: Connection = Depends(get_db)):
+@router.get("/api/orphans/content")
+async def orphans_content(
+    request: Request,
+    db: Connection = Depends(get_db),
+    q: str = "",
+    page: int = 1,
+    per_page: int = 50,
+):
+    ctx = await _build_content_query(q, page, per_page, db)
+
+    is_htmx = request.headers.get("hx-request") == "true"
+    template = "partials/orphans_content.html" if is_htmx else "orphans.html"
+
+    return templates.TemplateResponse(request, template, ctx)
+
+
+@router.post("/api/orphans/scan")
+async def run_orphan_scan(
+    request: Request,
+    db: Connection = Depends(get_db),
+    instance: str = Form(""),
+):
     config = load_config()
     ad = config.alldebrid
-    if not ad.api_key:
-        return JSONResponse({"ok": False, "error": "Clé API non configurée"}, status_code=400)
+    is_htmx = request.headers.get("hx-request") == "true"
+
+    if instance:
+        enabled = [
+            i for i in ad.instances
+            if i.name == instance and i.enabled and i.api_key and i.library_roots
+        ]
+        if not enabled:
+            return JSONResponse(
+                {"ok": False, "error": f"Instance «{instance}» introuvable ou inactive"},
+                status_code=400,
+            )
+    else:
+        enabled = [i for i in ad.instances if i.enabled and i.api_key and i.library_roots]
+
+    if not enabled:
+        return JSONResponse(
+            {"ok": False, "error": "Aucune instance AllDebrid active configurée"},
+            status_code=400,
+        )
+
+    await db.execute("DELETE FROM orphan_magnets")
+    await db.commit()
+
+    fallback = _collect_fallback_prefixes(config)
+    results = []
+    total_orphans = 0
+    total_magnets = 0
+
+    for inst in enabled:
+        detector = OrphanDetector(inst, fallback_prefixes=fallback)
+        try:
+            result = await detector.run()
+        except Exception as e:
+            logger.error("Orphan scan failed for %s: %s", inst.name, e)
+            return JSONResponse(
+                {"ok": False, "error": f"{inst.name}: {e}"}, status_code=500,
+            )
+        for cand in result.orphans + result.protected + result.used:
+            await db.execute(
+                "INSERT INTO orphan_magnets"
+                " (magnet_id, primary_name, status, age_hours, is_hash, notes)"
+                " VALUES (?, ?, ?, ?, ?, ?)",
+                (
+                    cand.magnet_id,
+                    cand.primary_name,
+                    cand.status,
+                    cand.age_hours,
+                    1 if is_hash_name(cand.primary_name) else 0,
+                    inst.name,
+                ),
+            )
+        results.append(result)
+        total_orphans += result.orphan_count
+        total_magnets += result.total_magnets
+
+    await db.commit()
+
+    if is_htmx:
+        stats = await _compute_stats(db)
+        ctx = await _build_content_query("", 1, 50, db)
+        ctx.update(stats)
+        ctx["scan_ok"] = True
+        ctx["scan_instances"] = [
+            {
+                "name": r.instance_name,
+                "total_magnets": r.total_magnets,
+                "used": r.used_count,
+                "protected": r.protected_count,
+                "orphans": r.orphan_count,
+                "duration": round(r.duration, 1),
+            }
+            for r in results
+        ]
+        ctx["scan_orphan_count"] = total_orphans
+        ctx["oob_stats"] = True
+        return templates.TemplateResponse(
+            request, "partials/orphans_content.html", ctx,
+        )
+
+    return {
+        "ok": True,
+        "total_magnets": total_magnets,
+        "orphan_count": total_orphans,
+        "instances": [
+            {
+                "name": r.instance_name,
+                "total_magnets": r.total_magnets,
+                "used": r.used_count,
+                "protected": r.protected_count,
+                "orphans": r.orphan_count,
+                "duration": round(r.duration, 1),
+            }
+            for r in results
+        ],
+    }
+
+
+@router.post("/api/orphans/delete-instance")
+async def delete_instance_orphans(
+    request: Request,
+    db: Connection = Depends(get_db),
+    instance_name: str = Form(""),
+):
+    config = load_config()
+    is_htmx = request.headers.get("hx-request") == "true"
 
     cursor = await db.execute(
-        "SELECT id, magnet_id, primary_name FROM orphan_magnets WHERE status = 'orphan'"
+        "SELECT id, magnet_id FROM orphan_magnets WHERE status = 'orphan' AND notes = ?",
+        (instance_name,),
     )
     rows = await cursor.fetchall()
     if not rows:
+        if is_htmx:
+            stats = await _compute_stats(db)
+            ctx = await _build_content_query("", 1, 50, db)
+            ctx.update(stats)
+            ctx["oob_stats"] = True
+            return templates.TemplateResponse(
+                request, "partials/orphans_content.html", ctx,
+            )
         return {"ok": True, "deleted": 0, "errors": 0}
 
     magnets = [dict(r) for r in rows]
+
+    inst = next(
+        (i for i in config.alldebrid.instances if i.name == instance_name and i.api_key),
+        None,
+    )
+    if not inst:
+        return JSONResponse({"ok": False, "error": f"Instance {instance_name} introuvable ou inactive"}, status_code=400)
+
     deleted = 0
     errors = 0
-
-    async with AllDebridAPI(ad.api_key, ad.rate_limit) as api:
+    async with AllDebridAPI(inst.api_key, inst.rate_limit) as api:
         for m in magnets:
             try:
                 ok = await api.delete_magnet(m["magnet_id"])
@@ -231,122 +288,14 @@ async def delete_all_orphans(db: Connection = Depends(get_db)):
                 errors += 1
 
     await db.commit()
-    return {"ok": True, "deleted": deleted, "errors": errors}
 
-
-@router.post("/api/orphans/{magnet_id}/delete")
-async def delete_orphan(magnet_id: int, db: Connection = Depends(get_db)):
-    config = load_config()
-    ad = config.alldebrid
-    if not ad.api_key:
-        return JSONResponse({"ok": False, "error": "Clé API non configurée"}, status_code=400)
-
-    cursor = await db.execute(
-        "SELECT id, magnet_id, primary_name FROM orphan_magnets WHERE id = ?", (magnet_id,)
-    )
-    row = await cursor.fetchone()
-    if not row:
-        return JSONResponse({"ok": False, "error": "Magnét introuvable"}, status_code=404)
-    m = dict(row)
-
-    async with AllDebridAPI(ad.api_key, ad.rate_limit) as api:
-        ok = await api.delete_magnet(m["magnet_id"])
-
-    if ok:
-        await db.execute(
-            "UPDATE orphan_magnets SET status = 'supprimé', action = 'deleted',"
-            " action_date = datetime('now') WHERE id = ?",
-            (m["id"],),
+    if is_htmx:
+        stats = await _compute_stats(db)
+        ctx = await _build_content_query("", 1, 50, db)
+        ctx.update(stats)
+        ctx["oob_stats"] = True
+        return templates.TemplateResponse(
+            request, "partials/orphans_content.html", ctx,
         )
-        await db.commit()
-        return {"ok": True}
-    return JSONResponse({"ok": False, "error": "Échec de la suppression"}, status_code=500)
 
 
-@router.post("/api/orphans/{magnet_id}/ignore")
-async def ignore_orphan(magnet_id: int, db: Connection = Depends(get_db)):
-    cursor = await db.execute(
-        "SELECT id FROM orphan_magnets WHERE id = ?", (magnet_id,)
-    )
-    if not await cursor.fetchone():
-        return JSONResponse({"ok": False, "error": "Magnét introuvable"}, status_code=404)
-
-    await db.execute(
-        "UPDATE orphan_magnets SET status = 'ignoré', action = 'ignored',"
-        " action_date = datetime('now') WHERE id = ?",
-        (magnet_id,),
-    )
-    await db.commit()
-    return {"ok": True}
-
-
-@router.post("/api/orphans/batch")
-async def batch_orphan_action(request: Request, db: Connection = Depends(get_db)):
-    body = await request.json()
-    action = body.get("action", "")
-    ids = body.get("ids", [])
-
-    if action not in ("delete", "ignore"):
-        return JSONResponse({"ok": False, "error": "Action invalide"}, status_code=400)
-
-    if action == "ignore":
-        placeholders = ",".join("?" for _ in ids)
-        await db.execute(
-            f"UPDATE orphan_magnets SET status = 'ignoré', action = 'ignored',"
-            f" action_date = datetime('now') WHERE id IN ({placeholders})",
-            ids,
-        )
-        await db.commit()
-        return {"ok": True, "affected": len(ids)}
-
-    if action == "delete":
-        config = load_config()
-        ad = config.alldebrid
-        if not ad.api_key:
-            return JSONResponse({"ok": False, "error": "Clé API non configurée"}, status_code=400)
-
-        placeholders = ",".join("?" for _ in ids)
-        cursor = await db.execute(
-            f"SELECT id, magnet_id FROM orphan_magnets WHERE id IN ({placeholders})", ids
-        )
-        rows = [dict(r) for r in await cursor.fetchall()]
-
-        deleted = 0
-        async with AllDebridAPI(ad.api_key, ad.rate_limit) as api:
-            for m in rows:
-                try:
-                    ok = await api.delete_magnet(m["magnet_id"])
-                    if ok:
-                        deleted += 1
-                        await db.execute(
-                            "UPDATE orphan_magnets SET status = 'supprimé', action = 'deleted',"
-                            " action_date = datetime('now') WHERE id = ?",
-                            (m["id"],),
-                        )
-                except Exception as e:
-                    logger.warning("Batch delete failed for %s: %s", m["magnet_id"], e)
-
-        await db.commit()
-        return {"ok": True, "deleted": deleted, "total": len(rows)}
-
-
-@router.get("/api/orphans/stats")
-async def orphans_stats(db: Connection = Depends(get_db)):
-    cursor = await db.execute(
-        "SELECT"
-        " (SELECT COUNT(*) FROM orphan_magnets) AS total,"
-        " (SELECT COUNT(*) FROM orphan_magnets WHERE status = 'orphan') AS orphan_count,"
-        " (SELECT COUNT(*) FROM orphan_magnets WHERE status = 'used') AS used_count,"
-        " (SELECT COUNT(*) FROM orphan_magnets WHERE status = 'protected') AS protected_count,"
-        " (SELECT COUNT(*) FROM orphan_magnets WHERE status = 'supprimé') AS deleted_count"
-    )
-    stats = dict(await cursor.fetchone())
-
-    cursor = await db.execute(
-        "SELECT id, status, total, broken, processed, created_at"
-        " FROM scans WHERE source = 'alldebrid'"
-        " ORDER BY id DESC LIMIT 1"
-    )
-    last = await cursor.fetchone()
-    stats["last_scan"] = dict(last) if last else None
-    return stats

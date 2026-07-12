@@ -1,7 +1,7 @@
 {% extends "base.html" %}
 {% block title %}Orphelins AllDebrid — SymlinkRepair{% endblock %}
 {% block content %}
-<div x-data="orphansApp()">
+<div>
     <div class="flex items-center justify-between mb-6">
         <h2 class="text-lg font-semibold text-gray-800 dark:text-gray-200">Orphelins AllDebrid</h2>
         <a href="https://alldebrid.com" target="_blank"
@@ -15,230 +15,134 @@
 
     {% if not configured %}
     <div class="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-xl p-4 text-sm text-amber-700 dark:text-amber-400 mb-6">
-        Configuration requise : renseigne la clé API AllDebrid et le dossier <code class="font-mono bg-amber-100 dark:bg-amber-900/30 px-1 rounded">medias_base</code>
+        Configuration requise : ajoute au moins une instance AllDebrid avec une clé API et des dossiers de scan
         dans les <a href="/config" class="underline font-medium">paramètres</a>.
     </div>
     {% endif %}
 
-    {# === Status card === #}
+    {# === Stats cards === #}
     <div class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
-        <div class="bg-white dark:bg-gray-900 rounded-xl shadow-sm border border-gray-200 dark:border-gray-800 p-4 text-center">
-            <div class="text-2xl font-bold text-gray-800 dark:text-gray-200" x-text="stats.total_magnets ?? '—'"></div>
-            <div class="text-xs text-gray-500 dark:text-gray-400">Magnets AllDebrid</div>
+        <div class="bg-white dark:bg-gray-900 rounded-xl shadow-sm border border-gray-200 dark:border-gray-800 p-4">
+            <div class="flex items-center gap-3">
+                <div class="w-10 h-10 rounded-lg bg-brand-100 dark:bg-brand-900/30 flex items-center justify-center shrink-0">
+                    <svg class="w-5 h-5 text-brand-600 dark:text-brand-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.5">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M20.25 6.375c0 2.278-3.694 4.125-8.25 4.125S3.75 8.653 3.75 6.375m16.5 0c0-2.278-3.694-4.125-8.25-4.125S3.75 4.097 3.75 6.375m16.5 0v11.25c0 2.278-3.694 4.125-8.25 4.125s-8.25-1.847-8.25-4.125V6.375m16.5 0v3.75m-16.5-3.75v3.75m16.5 0v3.75C20.25 16.153 16.556 18 12 18s-8.25-1.847-8.25-4.125v-3.75m16.5 0c0 2.278-3.694 4.125-8.25 4.125s-8.25-1.847-8.25-4.125"/>
+                    </svg>
+                </div>
+                <div class="min-w-0">
+                    <div id="stats-total" class="text-xl font-bold text-gray-800 dark:text-gray-200">{{ total_magnets }}</div>
+                    <div class="text-xs text-gray-500 dark:text-gray-400 truncate">Magnets AllDebrid</div>
+                </div>
+            </div>
         </div>
-        <div class="bg-white dark:bg-gray-900 rounded-xl shadow-sm border border-gray-200 dark:border-gray-800 p-4 text-center">
-            <div class="text-2xl font-bold text-green-600 dark:text-green-400" x-text="stats.used_count ?? '—'"></div>
-            <div class="text-xs text-gray-500 dark:text-gray-400">Utilisés</div>
+        <div class="bg-white dark:bg-gray-900 rounded-xl shadow-sm border border-gray-200 dark:border-gray-800 p-4">
+            <div class="flex items-center gap-3">
+                <div class="w-10 h-10 rounded-lg bg-green-100 dark:bg-green-900/30 flex items-center justify-center shrink-0">
+                    <svg class="w-5 h-5 text-green-600 dark:text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.5">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                    </svg>
+                </div>
+                <div class="min-w-0">
+                    <div id="stats-used" class="text-xl font-bold text-green-600 dark:text-green-400">{{ used_count }}</div>
+                    <div class="text-xs text-gray-500 dark:text-gray-400 truncate">Utilisés</div>
+                </div>
+            </div>
         </div>
-        <div class="bg-white dark:bg-gray-900 rounded-xl shadow-sm border border-gray-200 dark:border-gray-800 p-4 text-center">
-            <div class="text-2xl font-bold text-blue-600 dark:text-blue-400" x-text="stats.protected_count ?? '—'"></div>
-            <div class="text-xs text-gray-500 dark:text-gray-400">Protégés</div>
+        <div class="bg-white dark:bg-gray-900 rounded-xl shadow-sm border border-gray-200 dark:border-gray-800 p-4">
+            <div class="flex items-center gap-3">
+                <div class="w-10 h-10 rounded-lg bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center shrink-0">
+                    <svg class="w-5 h-5 text-blue-600 dark:text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.5">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M16.5 10.5V6.75a4.5 4.5 0 10-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 002.25-2.25v-6.75a2.25 2.25 0 00-2.25-2.25H6.75a2.25 2.25 0 00-2.25 2.25v6.75a2.25 2.25 0 002.25 2.25z"/>
+                    </svg>
+                </div>
+                <div class="min-w-0">
+                    <div id="stats-protected" class="text-xl font-bold text-blue-600 dark:text-blue-400">{{ protected_count }}</div>
+                    <div class="text-xs text-gray-500 dark:text-gray-400 truncate">Protégés</div>
+                </div>
+            </div>
         </div>
-        <div class="bg-white dark:bg-gray-900 rounded-xl shadow-sm border border-gray-200 dark:border-gray-800 p-4 text-center">
-            <div class="text-2xl font-bold text-red-600 dark:text-red-400" x-text="stats.orphan_count ?? '—'"></div>
-            <div class="text-xs text-gray-500 dark:text-gray-400">Orphelins</div>
-        </div>
-    </div>
-
-    {# === Actions === #}
-    <div class="flex flex-wrap gap-3 mb-6">
-        <button @click="scanOrphans()" :disabled="scanning || !configured"
-                class="bg-brand-600 text-white px-5 py-2.5 rounded-lg text-sm font-medium hover:bg-brand-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed inline-flex items-center gap-2">
-            <svg x-show="!scanning" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
-                <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z"/>
-            </svg>
-            <svg x-show="scanning" class="w-4 h-4 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0l3.181 3.183a8.25 8.25 0 0013.803-3.7M4.031 9.865a8.25 8.25 0 0113.803-3.7l3.181 3.182"/>
-            </svg>
-            <span x-text="scanning ? 'Analyse en cours...' : 'Rechercher les orphelins'"></span>
-        </button>
-
-        <button @click="confirmDeleteAll = true" :disabled="(stats.orphan_count ?? 0) === 0 || deleting"
-                class="bg-red-600 text-white px-5 py-2.5 rounded-lg text-sm font-medium hover:bg-red-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed inline-flex items-center gap-2">
-            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
-                <path stroke-linecap="round" stroke-linejoin="round" d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 00-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 00-7.5 0"/>
-            </svg>
-            <span x-text="deleting ? 'Suppression...' : 'Supprimer les orphelins'"></span>
-        </button>
-    </div>
-
-    {# === Scan result toast === #}
-    <div x-show="scanResult" x-cloak
-         class="mb-6 rounded-xl p-4 text-sm"
-         :class="scanResult?.ok ? 'bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 text-green-700 dark:text-green-400' : 'bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 text-red-700 dark:text-red-400'">
-        <span x-text="scanResult?.ok ? '✓ Scan terminé : ' + (scanResult?.orphan_count ?? 0) + ' orphelins trouvés' : '✗ ' + (scanResult?.error || 'Erreur inconnue')"></span>
-    </div>
-
-    <div class="bg-white dark:bg-gray-900 rounded-xl shadow-sm border border-gray-200 dark:border-gray-800 overflow-hidden">
-        {# === Filtres === #}
-        <div class="p-4 border-b border-gray-100 dark:border-gray-800 flex flex-wrap gap-2 items-center">
-            <select x-model="filterStatus" @change="loadContent()"
-                    class="border border-gray-200 dark:border-gray-700 rounded-lg px-3 py-1.5 text-sm bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-200">
-                <option value="">Tous les statuts</option>
-                <option value="orphan">Orphelins</option>
-                <option value="used">Utilisés</option>
-                <option value="protected">Protégés</option>
-                <option value="supprimé">Supprimés</option>
-                <option value="ignoré">Ignorés</option>
-            </select>
-            <input type="text" x-model="filterQ" @keydown.enter="loadContent()"
-                   placeholder="Rechercher..."
-                   class="flex-1 min-w-[200px] border border-gray-200 dark:border-gray-700 rounded-lg px-3 py-1.5 text-sm bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-200 placeholder-gray-400">
-            <span class="text-xs text-gray-400 dark:text-gray-500" x-text="'(' + (total || 0) + ' résultats)'"></span>
-        </div>
-
-        {# === Liste = via HTMX partial === #}
-        <div id="orphans-content"
-             hx-get="/api/orphans/content"
-             hx-trigger="load"
-             hx-target="#orphans-content"
-             hx-swap="outerHTML">
-            {% include "partials/orphans_content.html" %}
-        </div>
-    </div>
-
-    {# === Modal confirmation suppression === #}
-    <div x-show="confirmDeleteAll" class="fixed inset-0 bg-black/40 dark:bg-black/60 flex items-end md:items-center justify-center z-50" @click.self="confirmDeleteAll = false" x-cloak>
-        <div class="bg-white dark:bg-gray-900 rounded-t-2xl md:rounded-2xl shadow-xl p-6 w-full md:max-w-sm md:mx-4 slide-up">
-            <h3 class="font-semibold text-gray-800 dark:text-gray-200 mb-2">Supprimer les orphelins</h3>
-            <p class="text-sm text-gray-600 dark:text-gray-400 mb-4">
-                Supprimer <strong x-text="stats.orphan_count ?? 0"></strong> magnets orphelins sur AllDebrid ?
-                Cette action est irréversible.
-            </p>
-            <div class="flex gap-2 justify-end">
-                <button @click="confirmDeleteAll = false"
-                        class="flex-1 md:flex-none bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 px-4 py-2.5 rounded-lg text-sm font-medium hover:bg-gray-200 dark:hover:bg-gray-700">Annuler</button>
-                <button @click="deleteAllOrphans(); confirmDeleteAll = false"
-                        class="flex-1 md:flex-none bg-red-600 text-white px-4 py-2.5 rounded-lg text-sm font-medium hover:bg-red-700">Confirmer</button>
+        <div class="bg-white dark:bg-gray-900 rounded-xl shadow-sm border border-gray-200 dark:border-gray-800 p-4">
+            <div class="flex items-center gap-3">
+                <div class="w-10 h-10 rounded-lg bg-red-100 dark:bg-red-900/30 flex items-center justify-center shrink-0">
+                    <svg class="w-5 h-5 text-red-600 dark:text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.5">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z"/>
+                    </svg>
+                </div>
+                <div class="min-w-0">
+                    <div id="stats-orphan" class="text-xl font-bold text-red-600 dark:text-red-400">{{ orphan_count }}</div>
+                    <div class="text-xs text-gray-500 dark:text-gray-400 truncate">Orphelins</div>
+                </div>
             </div>
         </div>
     </div>
 
-    {# === Derniers scans === #}
-    {% if recent_scans %}
-    <div class="mt-8 bg-white dark:bg-gray-900 rounded-xl shadow-sm border border-gray-200 dark:border-gray-800 p-5">
-        <div class="flex items-center gap-2 mb-4">
-            <svg class="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.5">
-                <path stroke-linecap="round" stroke-linejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z"/>
+    {# === Actions === #}
+    <div class="flex flex-wrap items-center gap-3 mb-6">
+        <div class="relative">
+            <svg class="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.5">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a7.5 7.5 0 0114.998 0A17.933 17.933 0 0112 21.75c-2.676 0-5.216-.584-7.499-1.632z"/>
             </svg>
-            <h3 class="font-medium text-gray-800 dark:text-gray-200">Derniers scans AllDebrid</h3>
+            <select id="scan-instance" name="instance"
+                    class="border border-gray-200 dark:border-gray-700 rounded-lg pl-9 pr-3 py-2.5 text-sm bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-200 appearance-none">
+                <option value="">Toutes les instances</option>
+                {% for name in instance_names %}
+                <option value="{{ name }}">{{ name }}</option>
+                {% endfor %}
+            </select>
         </div>
-        <div class="overflow-x-auto rounded-lg border border-gray-200 dark:border-gray-700">
-            <table class="w-full text-sm">
-                <thead class="bg-gray-50 dark:bg-gray-800 text-left">
-                    <tr>
-                        <th class="px-4 py-2.5 font-medium text-gray-600 dark:text-gray-400 text-xs uppercase">#</th>
-                        <th class="px-4 py-2.5 font-medium text-gray-600 dark:text-gray-400 text-xs uppercase">Statut</th>
-                        <th class="px-4 py-2.5 font-medium text-gray-600 dark:text-gray-400 text-xs uppercase">Total</th>
-                        <th class="px-4 py-2.5 font-medium text-gray-600 dark:text-gray-400 text-xs uppercase">Orphelins</th>
-                        <th class="px-4 py-2.5 font-medium text-gray-600 dark:text-gray-400 text-xs uppercase">Traités</th>
-                        <th class="px-4 py-2.5 font-medium text-gray-600 dark:text-gray-400 text-xs uppercase">Date</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for scan in recent_scans %}
-                    <tr class="border-t border-gray-100 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800/30">
-                        <td class="px-4 py-2.5 text-gray-500 dark:text-gray-400">{{ scan.id }}</td>
-                        <td class="px-4 py-2.5">
-                            <span class="inline-flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-full font-medium
-                                {% if scan.status == 'completed' %}bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300
-                                {% elif scan.status == 'running' %}bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300
-                                {% else %}bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300{% endif %}">
-                                <span class="w-1.5 h-1.5 rounded-full
-                                    {% if scan.status == 'completed' %}bg-green-500
-                                    {% elif scan.status == 'running' %}bg-blue-500
-                                    {% else %}bg-red-500{% endif %}"></span>
-                                {{ scan.status }}
-                            </span>
-                        </td>
-                        <td class="px-4 py-2.5 text-gray-700 dark:text-gray-300">{{ scan.total }}</td>
-                        <td class="px-4 py-2.5 font-medium text-red-600 dark:text-red-400">{{ scan.broken }}</td>
-                        <td class="px-4 py-2.5 text-gray-700 dark:text-gray-300">{{ scan.processed }}</td>
-                        <td class="px-4 py-2.5 text-gray-500 dark:text-gray-400 text-xs">{{ scan.created_at|date_fr }}</td>
-                    </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
+        <button hx-post="/api/orphans/scan"
+                hx-target="#orphans-content"
+                hx-swap="outerHTML"
+                hx-include="#scan-instance"
+                hx-indicator="this"
+                {% if not configured %}disabled{% endif %}
+                class="bg-brand-600 text-white px-5 py-2.5 rounded-lg text-sm font-medium hover:bg-brand-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed inline-flex items-center gap-2">
+            <svg class="htmx-indicator w-4 h-4 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0l3.181 3.183a8.25 8.25 0 0013.803-3.7M4.031 9.865a8.25 8.25 0 0113.803-3.7l3.181 3.182"/>
+            </svg>
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z"/>
+            </svg>
+            <span class="loading-text text-sm">Analyse en cours...</span>
+            <span class="default-text text-sm">Rechercher les orphelins</span>
+        </button>
+    </div>
+
+    {# === Scan result === #}
+    <div id="scan-result" class="mb-6"></div>
+
+    {# === Liste === #}
+    <div class="bg-white dark:bg-gray-900 rounded-xl shadow-sm border border-gray-200 dark:border-gray-800 overflow-hidden">
+        <div id="orphans-filters" class="p-4 border-b border-gray-100 dark:border-gray-800 flex flex-wrap gap-2 items-center">
+            <div class="relative flex-1 min-w-[200px]">
+                <svg class="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.5">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z"/>
+                </svg>
+                <input type="text" id="filter-q"
+                       placeholder="Rechercher un magnét..."
+                       onkeydown="if(event.key==='Enter') hxFilterOrphans()"
+                       class="w-full border border-gray-200 dark:border-gray-700 rounded-lg pl-9 pr-3 py-1.5 text-sm bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-200 placeholder-gray-400">
+            </div>
+        </div>
+
+        <div id="orphans-content">
+            {% include "partials/orphans_content.html" %}
         </div>
     </div>
-    {% endif %}
+
 </div>
-
+<style>
+.loading-text { display: none; }
+button.htmx-request .loading-text { display: inline; }
+button.htmx-request .default-text { display: none; }
+button.htmx-request svg:not(.htmx-indicator) { display: none; }
+</style>
 <script>
-function orphansApp() {
-    return {
-        scanning: false,
-        deleting: false,
-        confirmDeleteAll: false,
-        scanResult: null,
-        stats: { total_magnets: 0, used_count: 0, protected_count: 0, orphan_count: 0, deleted_count: 0 },
-        filterStatus: '',
-        filterQ: '',
-        page: 1,
-        perPage: 50,
-        total: 0,
-        totalPages: 1,
-
-        async init() {
-            await this.loadStats();
-        },
-
-        async loadStats() {
-            try {
-                const resp = await fetch('/api/orphans/stats');
-                const data = await resp.json();
-                this.stats = data;
-                this.stats.total_magnets = (data.used_count || 0) + (data.protected_count || 0) + (data.orphan_count || 0);
-            } catch(e) {
-                console.error('Stats error', e);
-            }
-        },
-
-        async loadContent() {
-            this.page = 1;
-            const params = new URLSearchParams({
-                status: this.filterStatus,
-                q: this.filterQ,
-                page: this.page,
-                per_page: this.perPage
-            });
-            const resp = await fetch(`/api/orphans/content?${params}`);
-            const html = await resp.text();
-            document.getElementById('orphans-content').outerHTML = html;
-        },
-
-        async scanOrphans() {
-            this.scanning = true;
-            this.scanResult = null;
-            try {
-                const resp = await fetch('/api/orphans/scan', { method: 'POST' });
-                const data = await resp.json();
-                this.scanResult = data;
-                if (data.ok) {
-                    await this.loadStats();
-                    await this.loadContent();
-                }
-            } catch(e) {
-                this.scanResult = { ok: false, error: e.message };
-            }
-            this.scanning = false;
-        },
-
-        async deleteAllOrphans() {
-            this.deleting = true;
-            try {
-                const resp = await fetch('/api/orphans/delete-all', { method: 'POST' });
-                const data = await resp.json();
-                if (data.ok) {
-                    await this.loadStats();
-                    await this.loadContent();
-                }
-            } catch(e) {
-                console.error('Delete error', e);
-            }
-            this.deleting = false;
-        },
-    };
+function hxFilterOrphans() {
+    const q = document.getElementById('filter-q').value;
+    const params = new URLSearchParams();
+    if (q) params.set('q', q);
+    htmx.ajax('GET', '/api/orphans/content?' + params.toString(), {target: '#orphans-content'});
 }
 </script>
 {% endblock %}

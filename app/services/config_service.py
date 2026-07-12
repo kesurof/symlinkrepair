@@ -37,9 +37,13 @@ def save_config(cfg: AppConfig):
         stored_val = stored.get(section, {}).get("api_key", "")
         raw[section]["api_key"] = resolve_key(val, stored_val)
 
-    ad_val = raw.get("alldebrid", {}).get("api_key", "")
-    ad_stored = stored.get("alldebrid", {}).get("api_key", "")
-    raw["alldebrid"]["api_key"] = resolve_key(ad_val, ad_stored)
+    ad_instances = raw.get("alldebrid", {}).get("instances", [])
+    stored_instances = stored.get("alldebrid", {}).get("instances", [])
+    for i, inst in enumerate(ad_instances):
+        stored_val = ""
+        if i < len(stored_instances):
+            stored_val = stored_instances[i].get("api_key", "")
+        inst["api_key"] = resolve_key(inst.get("api_key", ""), stored_val)
 
     webhook = raw.get("discord", {}).get("webhook", "")
     stored_webhook = stored.get("discord", {}).get("webhook", "")
@@ -75,8 +79,9 @@ def public_config() -> dict:
         radarr["api_key"] = mask_secret(radarr["api_key"])
     if sonarr.get("api_key"):
         sonarr["api_key"] = mask_secret(sonarr["api_key"])
-    if alldebrid.get("api_key"):
-        alldebrid["api_key"] = mask_secret(alldebrid["api_key"])
+    for inst in alldebrid.get("instances", []):
+        if inst.get("api_key"):
+            inst["api_key"] = mask_secret(inst["api_key"])
     if discord.get("webhook"):
         discord["webhook"] = mask_secret(discord["webhook"])
     cfg["browse_roots"] = raw.get("browse_roots", cfg.get("browse_roots", []))

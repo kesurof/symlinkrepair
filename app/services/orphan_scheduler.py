@@ -1,6 +1,7 @@
 import asyncio
 import logging
 from datetime import datetime, timezone
+from pathlib import Path
 
 import aiosqlite
 
@@ -12,130 +13,137 @@ from app.services.discord import send_webhook
 logger = logging.getLogger(__name__)
 
 _scheduler_task: asyncio.Task | None = None
+_STATE_FILE = Path(DATABASE_PATH).parent / ".orphan_auto_state"
 
 
-async def _delete_orphans_from_result(api_key, result, rate_limit):
+def _collect_fallback_prefixes(config) -> list[str]:
+    prefixes = set()
+    for src in (config.radarr, config.sonarr):
+        prefixes.update(src.target_prefixes)
+    return list(prefixes)
+
+
+async def _delete_orphans_from_instance(inst, magnet_ids):
     from app.services.alldebrid import AllDebridAPI
     deleted = 0
     errors = 0
-    async with AllDebridAPI(api_key, rate_limit) as api:
-        for cand in result.orphans:
+    if not magnet_ids:
+        return deleted, errors
+    async with AllDebridAPI(inst.api_key, inst.rate_limit) as api:
+        for mid in magnet_ids:
             try:
-                ok = await api.delete_magnet(cand.magnet_id)
+                ok = await api.delete_magnet(mid)
                 if ok:
                     deleted += 1
-                    await asyncio.sleep(rate_limit)
+                    await asyncio.sleep(inst.rate_limit)
                 else:
                     errors += 1
             except Exception as e:
-                logger.warning("Delete failed for %s: %s", cand.magnet_id, e)
+                logger.warning("Delete failed for %s: %s", mid, e)
                 errors += 1
     return deleted, errors
 
 
 async def _run_orphan_scan():
     config = load_config()
-    ad = config.alldebrid
-    if not ad.enabled or not ad.api_key or not ad.medias_base:
-        logger.debug("Orphan scheduler: not enabled or missing config")
+    active = [
+        i for i in config.alldebrid.instances
+        if i.enabled and i.api_key and i.library_roots
+    ]
+    if not active:
+        logger.debug("Orphan scheduler: no active instances")
         return
 
-    prefixes = []
-    for src in (config.radarr, config.sonarr):
-        prefixes.extend(src.target_prefixes)
-    if not prefixes:
-        logger.warning("Orphan scheduler: no target_prefixes configured")
-        return
-
+    fallback = _collect_fallback_prefixes(config)
     from app.services.orphan_detector import OrphanDetector
-    detector = OrphanDetector(
-        medias_base=ad.medias_base,
-        target_prefixes=list(set(prefixes)),
-        api_key=ad.api_key,
-        min_age_hours=ad.min_age_hours,
-        rate_limit=ad.rate_limit,
-    )
-
-    result = await detector.run()
 
     db = await aiosqlite.connect(str(DATABASE_PATH))
     db.row_factory = aiosqlite.Row
     try:
-        cursor = await db.execute(
-            "INSERT INTO scans"
-            " (source, mode, status, total, broken, processed, summary, completed_at)"
-            " VALUES (?, ?, ?, ?, ?, 0, ?, datetime('now'))",
-            (
-                "alldebrid",
-                "auto",
-                "completed",
-                result.total_magnets,
-                result.orphan_count,
-                (
-                    f"{result.used_count} used, {result.protected_count} protected,"
-                    f" {result.orphan_count} orphans"
-                ),
-            ),
-        )
-        scan_id = cursor.lastrowid
-
-        for cand in result.orphans + result.protected + result.used:
-            await db.execute(
-            "INSERT INTO orphan_magnets"
-            " (scan_id, magnet_id, primary_name, status, age_hours, is_hash)"
-            " VALUES (?, ?, ?, ?, ?, ?)",
-                (
-                    scan_id,
-                    cand.magnet_id,
-                    cand.primary_name,
-                    cand.status,
-                    cand.age_hours,
-                    1 if is_hash_name(cand.primary_name) else 0,
-                ),
-            )
-
-        if result.orphans:
-            logger.info("Auto-deleting %d orphans...", result.orphan_count)
-            deleted, errs = await _delete_orphans_from_result(ad.api_key, result, ad.rate_limit)
-            await db.execute(
-                "UPDATE scans SET processed = ? WHERE id = ?",
-                (deleted, scan_id),
-            )
-            for cand in result.orphans:
-                await db.execute(
-                    "UPDATE orphan_magnets SET status = ?, action = 'deleted',"
-                    " action_date = datetime('now')"
-                    " WHERE scan_id = ? AND magnet_id = ?",
-                    ("supprimé", scan_id, cand.magnet_id),
-                )
-            logger.info("Auto-delete done: %d deleted, %d errors", deleted, errs)
-
+        await db.execute("DELETE FROM orphan_magnets")
         await db.commit()
 
-        if result.orphan_count > 0 and config.discord.enabled and config.discord.webhook:
-            payload = {
-                "embeds": [{
-                    "title": "🤖 Nettoyage AllDebrid automatique",
-                    "description": f"{result.orphan_count} magnets orphelins supprimés",
-                    "color": 0x57F287,
-                    "fields": [
-                        {
-                            "name": "Total magnets",
-                            "value": str(result.total_magnets),
-                            "inline": True,
-                        },
-                        {"name": "Utilisés", "value": str(result.used_count), "inline": True},
-                        {"name": "Protégés", "value": str(result.protected_count), "inline": True},
-                        {
-                            "name": "Orphelins supprimés",
-                            "value": str(result.orphan_count),
-                            "inline": True,
-                        },
-                    ],
-                    "timestamp": datetime.now(timezone.utc).isoformat().replace("+00:00", "Z"),
-                }]
-            }
-            await send_webhook(config.discord.webhook, payload)
+        for inst in active:
+            detector = OrphanDetector(inst, fallback_prefixes=fallback)
+            result = await detector.run()
+            if result.total_magnets == 0:
+                continue
+
+            orphan_ids = []
+            for cand in result.orphans + result.protected + result.used:
+                await db.execute(
+                    "INSERT INTO orphan_magnets"
+                    " (magnet_id, primary_name, status, age_hours, is_hash, notes)"
+                    " VALUES (?, ?, ?, ?, ?, ?)",
+                    (
+                        cand.magnet_id,
+                        cand.primary_name,
+                        cand.status,
+                        cand.age_hours,
+                        1 if is_hash_name(cand.primary_name) else 0,
+                        inst.name,
+                    ),
+                )
+                if cand.status == "orphan":
+                    orphan_ids.append(cand.magnet_id)
+
+            if orphan_ids:
+                logger.info(
+                    "[%s] Auto-deleting %d orphans...", inst.name, len(orphan_ids),
+                )
+                deleted, errs = await _delete_orphans_from_instance(inst, orphan_ids)
+                await db.execute(
+                    "UPDATE orphan_magnets SET status = 'supprimé', action = 'deleted',"
+                    " action_date = datetime('now')"
+                    " WHERE notes = ? AND magnet_id IN ("
+                    + ",".join("?" for _ in orphan_ids)
+                    + ")",
+                    (inst.name, *orphan_ids),
+                )
+                logger.info(
+                    "[%s] Auto-delete done: %d deleted, %d errors",
+                    inst.name, deleted, errs,
+                )
+
+            await db.commit()
+
+            if result.orphan_count > 0 and config.discord.enabled and config.discord.webhook:
+                payload = {
+                    "embeds": [{
+                        "title": f"🤖 AllDebrid auto — {inst.name}",
+                        "description": f"{result.orphan_count} magnets orphelins supprimés",
+                        "color": 0x57F287,
+                        "fields": [
+                            {
+                                "name": "Total magnets",
+                                "value": str(result.total_magnets),
+                                "inline": True,
+                            },
+                            {
+                                "name": "Utilisés",
+                                "value": str(result.used_count),
+                                "inline": True,
+                            },
+                            {
+                                "name": "Protégés",
+                                "value": str(result.protected_count),
+                                "inline": True,
+                            },
+                            {
+                                "name": "Orphelins supprimés",
+                                "value": str(result.orphan_count),
+                                "inline": True,
+                            },
+                        ],
+                        "timestamp": datetime.now(timezone.utc)
+                        .isoformat()
+                        .replace("+00:00", "Z"),
+                    }]
+                }
+                await send_webhook(config.discord.webhook, payload)
+
+        _STATE_FILE.parent.mkdir(parents=True, exist_ok=True)
+        _STATE_FILE.write_text(datetime.now().strftime("%Y-%m-%d"))
 
     finally:
         await db.close()
@@ -153,19 +161,11 @@ async def _should_run_today(schedule_time: str) -> bool:
     if now.hour != target_hour or now.minute != target_minute:
         return False
 
-    db = await aiosqlite.connect(str(DATABASE_PATH))
     try:
-        cursor = await db.execute(
-            "SELECT created_at FROM scans WHERE source = 'alldebrid'"
-            " AND created_at >= DATE('now') ORDER BY id DESC LIMIT 1"
-        )
-        row = await cursor.fetchone()
-        if row is None:
-            return True
-        last = datetime.fromisoformat(row[0])
-        return last.date() < now.date()
-    finally:
-        await db.close()
+        last = _STATE_FILE.read_text().strip()
+        return last != now.strftime("%Y-%m-%d")
+    except (FileNotFoundError, OSError):
+        return True
 
 
 async def _orphan_scheduler_loop():
@@ -174,9 +174,11 @@ async def _orphan_scheduler_loop():
         try:
             config = load_config()
             ad = config.alldebrid
-            if ad.enabled and ad.api_key and ad.medias_base:
+            if ad.instances and ad.auto_enabled:
                 if await _should_run_today(ad.schedule_time):
-                    logger.info("Triggering orphan scan (scheduled time=%s)", ad.schedule_time)
+                    logger.info(
+                        "Triggering orphan scan (scheduled time=%s)", ad.schedule_time,
+                    )
                     await _run_orphan_scan()
         except Exception as e:
             logger.error("Orphan scheduler loop error: %s", e)

@@ -53,13 +53,20 @@ class RecheckerConfig(BaseModel):
     interval_minutes: int = 5
 
 
-class AllDebridConfig(BaseModel):
+class AllDebridInstanceConfig(BaseModel):
+    name: str = ""
     api_key: str = ""
     enabled: bool = False
-    medias_base: str = ""
-    schedule_time: str = "03:00"
+    library_roots: list[str] = []
+    target_prefixes: list[str] = []
     min_age_hours: int = 24
     rate_limit: float = 0.2
+
+
+class AllDebridConfig(BaseModel):
+    instances: list[AllDebridInstanceConfig] = []
+    auto_enabled: bool = False
+    schedule_time: str = "03:00"
 
 
 class AppConfig(BaseModel):

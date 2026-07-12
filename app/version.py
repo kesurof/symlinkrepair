@@ -60,7 +60,7 @@ def get_version() -> str:
         return _APP_VERSION
 
     version_file = Path(__file__).resolve().parent.parent / "VERSION"
-    if version_file.exists():
+    if version_file.exists() and version_file.is_file():
         ver = version_file.read_text().strip()
         if ver:
             _APP_VERSION = ver
