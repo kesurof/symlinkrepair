@@ -79,20 +79,9 @@ def scan_library_roots(
     return results, total, matching, broken
 
 
-def _extract_group(target_path: str) -> str:
-    marker = "/alldebrid/"
-    try:
-        idx = target_path.index(marker) + len(marker)
-        end = target_path.index("/", idx) if "/" in target_path[idx:] else len(target_path)
-        return target_path[:end]
-    except ValueError:
-        return str(Path(target_path).parent)
-
-
 def analyze_symlink_targets(root: str) -> dict:
     root_path = Path(root).resolve()
     targets: Counter[str] = Counter()
-    total = 0
     broken = 0
     broken_dirs: Counter[str] = Counter()
 
@@ -103,16 +92,14 @@ def analyze_symlink_targets(root: str) -> dict:
             if not os.path.islink(link_path):
                 continue
 
-            total += 1
             raw_target = os.readlink(link_path)
             target = Path(raw_target)
             if not target.is_absolute():
                 target = Path(dirpath) / target
 
             target = Path(os.path.abspath(target))
-            group = _extract_group(str(target))
+            group = str(target.parent)
             targets[group] += 1
-
             if not target.exists():
                 broken += 1
                 broken_dirs[group] += 1
@@ -123,6 +110,6 @@ def analyze_symlink_targets(root: str) -> dict:
 
     return {
         "target_dirs": target_list,
-        "total": total,
+        "total": sum(targets.values()),
         "broken": broken,
     }
