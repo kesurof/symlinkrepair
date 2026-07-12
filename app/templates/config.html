@@ -322,6 +322,23 @@
                         Relance automatiquement une recherche pour les éléments non remplacés.
                     </p>
                 </div>
+                <div class="border-t border-gray-100 dark:border-gray-800 pt-4">
+                    <h4 class="text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">Re-vérification automatique</h4>
+                    <label class="flex items-center gap-2 cursor-pointer">
+                        <input type="checkbox" x-model="cfg.rechecker.enabled" class="rounded border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800">
+                        <span class="text-sm text-gray-700 dark:text-gray-300">Vérifier périodiquement les résultats non résolus</span>
+                    </label>
+                    <div x-show="cfg.rechecker.enabled" class="mt-3 ml-6 space-y-3">
+                        <div>
+                            <label class="block text-sm text-gray-500 dark:text-gray-400 mb-1">Intervalle (minutes)</label>
+                            <input type="number" x-model="cfg.rechecker.interval_minutes" min="1" max="480"
+                                   class="w-24 border border-gray-200 dark:border-gray-700 rounded-lg px-3 py-2 text-sm bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-200">
+                        </div>
+                    </div>
+                    <p class="text-xs text-gray-400 dark:text-gray-500 mt-2">
+                        Vérifie sur le filesystem si les symlinks en attente (détecté, surveillance, non_remplacé) ont été remplacés automatiquement par Radarr/Sonarr, sans action manuelle.
+                    </p>
+                </div>
             </div>
         </section>
 
@@ -602,6 +619,7 @@ function configApp() {
                scheduler: { radarr_enabled: false, radarr_interval_hours: 3, sonarr_enabled: false, sonarr_interval_hours: 3 },
                verifier: { enabled: true, interval_minutes: 3, max_duration_minutes: 60 },
                retryer: { enabled: false, interval_minutes: 60, max_daily_retries: 3 },
+               rechecker: { enabled: true, interval_minutes: 5 },
                browse_roots: ['/home', '/mnt', '/data'] },
         showRadarrKey: false,
         showSonarrKey: false,

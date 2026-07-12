@@ -137,6 +137,8 @@ make deploy
 | `verifier_fail` | Vérificateur : symlink non remplacé |
 | `abandon` | Cycle de vérification arrêté manuellement |
 | `auto_fix` | Traitement : symlink déjà valide |
+| `auto_verified` | Rechecker automatique : symlink remplacé |
+| `auto_verified_sibling` | Rechecker : synchronisation doublon |
 | `verify_fs` | Vérification filesystem manuelle |
 | `recheck` | Action "Revérifier" |
 | `cleaned_duplicate` | Migration : doublon nettoyé |

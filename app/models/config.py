@@ -48,6 +48,11 @@ class RetryerConfig(BaseModel):
     max_daily_retries: int = 6
 
 
+class RecheckerConfig(BaseModel):
+    enabled: bool = True
+    interval_minutes: int = 5
+
+
 class AppConfig(BaseModel):
     radarr: RadarrConfig = RadarrConfig()
     sonarr: SonarrConfig = SonarrConfig()
@@ -56,4 +61,5 @@ class AppConfig(BaseModel):
     scheduler: SchedulerConfig = SchedulerConfig()
     verifier: VerifierConfig = VerifierConfig()
     retryer: RetryerConfig = RetryerConfig()
+    rechecker: RecheckerConfig = RecheckerConfig()
     browse_roots: list[str] = ["/home", "/mnt", "/data"]
