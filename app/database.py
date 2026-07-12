@@ -60,9 +60,25 @@ async def init_db():
                 FOREIGN KEY (scan_id) REFERENCES scans(id)
             );
 
+            CREATE TABLE IF NOT EXISTS orphan_magnets (
+                id              INTEGER PRIMARY KEY AUTOINCREMENT,
+                scan_id         INTEGER,
+                magnet_id       TEXT NOT NULL,
+                primary_name    TEXT,
+                status          TEXT NOT NULL DEFAULT 'orphelin',
+                age_hours       REAL,
+                is_hash         INTEGER DEFAULT 0,
+                action          TEXT,
+                action_date     TEXT,
+                notes           TEXT,
+                created_at      TEXT DEFAULT (datetime('now')),
+                FOREIGN KEY (scan_id) REFERENCES scans(id)
+            );
+
             CREATE INDEX IF NOT EXISTS idx_results_scan ON results(scan_id);
             CREATE INDEX IF NOT EXISTS idx_results_status ON results(status);
             CREATE INDEX IF NOT EXISTS idx_scans_created ON scans(created_at);
+            CREATE INDEX IF NOT EXISTS idx_orphan_magnets_status ON orphan_magnets(status);
         """)
 
         for col in ("movie_id", "series_id", "search_count", "created_at"):

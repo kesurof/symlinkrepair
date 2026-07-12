@@ -10,7 +10,9 @@ from starlette.requests import Request
 from app.database import init_db
 from app.error_handlers import general_error_handler, not_found_handler
 from app.logging_config import setup_logging
-from app.routers import api_config, config_ui, health, reports, results, scan, web
+from app.routers import api_config, config_ui, health, orphans, reports, results, scan, web
+from app.services.orphan_scheduler import start as start_orphan_scheduler
+from app.services.orphan_scheduler import stop as stop_orphan_scheduler
 from app.services.rechecker import start as start_rechecker
 from app.services.rechecker import stop as stop_rechecker
 from app.services.retryer import start as start_retryer
@@ -33,9 +35,11 @@ async def lifespan(app: FastAPI):
     start_verifier()
     start_retryer()
     start_rechecker()
+    start_orphan_scheduler()
     logger.info("SymlinkRepair started")
     yield
     logger.info("SymlinkRepair shutting down")
+    stop_orphan_scheduler()
     stop_rechecker()
     stop_retryer()
     stop_verifier()
@@ -65,6 +69,7 @@ app.include_router(api_config.router)
 app.include_router(scan.router)
 app.include_router(results.router)
 app.include_router(reports.router)
+app.include_router(orphans.router)
 
 static_dir = Path(__file__).resolve().parent / "static"
 if static_dir.exists():

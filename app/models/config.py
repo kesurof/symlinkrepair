@@ -53,9 +53,19 @@ class RecheckerConfig(BaseModel):
     interval_minutes: int = 5
 
 
+class AllDebridConfig(BaseModel):
+    api_key: str = ""
+    enabled: bool = False
+    medias_base: str = ""
+    schedule_time: str = "03:00"
+    min_age_hours: int = 24
+    rate_limit: float = 0.2
+
+
 class AppConfig(BaseModel):
     radarr: RadarrConfig = RadarrConfig()
     sonarr: SonarrConfig = SonarrConfig()
+    alldebrid: AllDebridConfig = AllDebridConfig()
     discord: DiscordConfig = DiscordConfig()
     defaults: DefaultsConfig = DefaultsConfig()
     scheduler: SchedulerConfig = SchedulerConfig()

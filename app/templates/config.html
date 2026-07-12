@@ -241,6 +241,50 @@
             </div>
         </section>
 
+        {# === ALLDEBRID === #}
+        <section class="bg-white dark:bg-gray-900 rounded-xl shadow-sm border border-gray-200 dark:border-gray-800">
+            <div class="flex items-center gap-2 p-4 border-b border-gray-100 dark:border-gray-800">
+                <svg class="w-5 h-5 text-orange-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.5">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M13.19 8.688a4.5 4.5 0 011.242 7.244l-4.5 4.5a4.5 4.5 0 01-6.364-6.364l1.757-1.757m13.35-.622l1.757-1.757a4.5 4.5 0 00-6.364-6.364l-4.5 4.5a4.5 4.5 0 001.242 7.244"/>
+                </svg>
+                <h3 class="font-medium text-gray-800 dark:text-gray-200">AllDebrid — Orphelins</h3>
+            </div>
+            <div class="p-4 space-y-3">
+                <label class="flex items-center gap-2 cursor-pointer">
+                    <input type="checkbox" x-model="cfg.alldebrid.enabled" class="rounded border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800">
+                    <span class="text-sm text-gray-700 dark:text-gray-300">Nettoyage automatique activé</span>
+                </label>
+                <div>
+                    <label class="block text-sm text-gray-500 dark:text-gray-400 mb-1">Clé API</label>
+                    <div class="flex gap-2">
+                        <input :type="showAllDebridKey ? 'text' : 'password'" x-model="cfg.alldebrid.api_key"
+                               class="flex-1 border border-gray-200 dark:border-gray-700 rounded-lg px-3 py-2 text-sm font-mono bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-200">
+                        <button @click="showAllDebridKey = !showAllDebridKey" class="text-xs text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300 shrink-0 px-2">
+                            <span x-text="showAllDebridKey ? 'Masquer' : 'Afficher'"></span>
+                        </button>
+                    </div>
+                </div>
+                <div>
+                    <label class="block text-sm text-gray-500 dark:text-gray-400 mb-1">Dossier médias (medias_base)</label>
+                    <input type="text" x-model="cfg.alldebrid.medias_base" placeholder="/home/kesurof/Medias"
+                           class="w-full border border-gray-200 dark:border-gray-700 rounded-lg px-3 py-2 text-sm bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-200">
+                </div>
+                <div x-show="cfg.alldebrid.enabled" class="space-y-3 border-t border-gray-100 dark:border-gray-800 pt-3">
+                    <div>
+                        <label class="block text-sm text-gray-500 dark:text-gray-400 mb-1">Horaire de déclenchement</label>
+                        <input type="time" x-model="cfg.alldebrid.schedule_time"
+                               class="w-32 border border-gray-200 dark:border-gray-700 rounded-lg px-3 py-2 text-sm bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-200">
+                    </div>
+                    <div>
+                        <label class="block text-sm text-gray-500 dark:text-gray-400 mb-1">Âge minimum (heures)</label>
+                        <input type="number" x-model="cfg.alldebrid.min_age_hours" min="0" max="720"
+                               class="w-24 border border-gray-200 dark:border-gray-700 rounded-lg px-3 py-2 text-sm bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-200">
+                        <p class="text-xs text-gray-400 dark:text-gray-500 mt-1">Les magnets plus jeunes que ce seuil sont protégés de la suppression.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
         {# === AUTOMATISATION === #}
         <section class="bg-white dark:bg-gray-900 rounded-xl shadow-sm border border-gray-200 dark:border-gray-800">
             <div class="flex items-center gap-2 p-4 border-b border-gray-100 dark:border-gray-800">
@@ -623,11 +667,13 @@ function configApp() {
                scheduler: { radarr_enabled: false, radarr_interval_hours: 3, sonarr_enabled: false, sonarr_interval_hours: 3 },
                verifier: { enabled: true, interval_minutes: 3, max_duration_minutes: 60 },
                retryer: { enabled: false, interval_minutes: 60, max_daily_retries: 3 },
-               rechecker: { enabled: true, interval_minutes: 5 },
-               browse_roots: ['/home', '/mnt', '/data'] },
-        showRadarrKey: false,
-        showSonarrKey: false,
-        showWebhook: false,
+                rechecker: { enabled: true, interval_minutes: 5 },
+                alldebrid: { api_key: '', enabled: false, medias_base: '', schedule_time: '03:00', min_age_hours: 24, rate_limit: 0.2 },
+                browse_roots: ['/home', '/mnt', '/data'] },
+         showRadarrKey: false,
+         showSonarrKey: false,
+         showAllDebridKey: false,
+         showWebhook: false,
         radarrTest: '',
         radarrOk: false,
         sonarrTest: '',

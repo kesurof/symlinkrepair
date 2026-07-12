@@ -1,0 +1,109 @@
+<div id="orphans-content" class="fade-in">
+    {% if magnets %}
+    <div class="overflow-x-auto">
+        <table class="w-full text-sm">
+            <thead class="bg-gray-50 dark:bg-gray-800 text-left">
+                <tr>
+                    <th class="px-4 py-2.5 font-medium text-gray-600 dark:text-gray-400 text-xs uppercase w-10">
+                        <input type="checkbox" @click="document.querySelectorAll('.orphan-check').forEach(c => c.checked = $el.checked)"
+                               class="rounded border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800">
+                    </th>
+                    <th class="px-4 py-2.5 font-medium text-gray-600 dark:text-gray-400 text-xs uppercase">Nom</th>
+                    <th class="px-4 py-2.5 font-medium text-gray-600 dark:text-gray-400 text-xs uppercase">ID Magnet</th>
+                    <th class="px-4 py-2.5 font-medium text-gray-600 dark:text-gray-400 text-xs uppercase">Statut</th>
+                    <th class="px-4 py-2.5 font-medium text-gray-600 dark:text-gray-400 text-xs uppercase">Âge</th>
+                    <th class="px-4 py-2.5 font-medium text-gray-600 dark:text-gray-400 text-xs uppercase">Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for m in magnets %}
+                <tr class="border-t border-gray-100 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800/30 transition-colors">
+                    <td class="px-4 py-2.5">
+                        <input type="checkbox" class="orphan-check rounded border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800"
+                               value="{{ m.id }}">
+                    </td>
+                    <td class="px-4 py-2.5">
+                        <div class="flex items-center gap-2">
+                            {% if m.is_hash %}
+                            <span class="text-xs font-mono bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300 px-1.5 py-0.5 rounded">HASH</span>
+                            {% endif %}
+                            <span class="font-medium text-gray-800 dark:text-gray-200 truncate max-w-[250px]" title="{{ m.primary_name }}">{{ m.primary_name or '—' }}</span>
+                        </div>
+                    </td>
+                    <td class="px-4 py-2.5 font-mono text-xs text-gray-500 dark:text-gray-400">{{ m.magnet_id }}</td>
+                    <td class="px-4 py-2.5">
+                        <span class="inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full font-medium
+                            {% if m.status == 'orphan' %}bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300
+                            {% elif m.status == 'used' %}bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300
+                            {% elif m.status == 'protected' %}bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300
+                            {% elif m.status == 'supprimé' %}bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400
+                            {% else %}bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400{% endif %}">
+                            <span class="w-1.5 h-1.5 rounded-full
+                                {% if m.status == 'orphan' %}bg-red-500
+                                {% elif m.status == 'used' %}bg-green-500
+                                {% elif m.status == 'protected' %}bg-blue-500
+                                {% else %}bg-gray-400{% endif %}"></span>
+                            {{ m.status }}
+                        </span>
+                    </td>
+                    <td class="px-4 py-2.5 text-gray-500 dark:text-gray-400">
+                        {% if m.age_hours is not none %}
+                            {{ "%.1f"|format(m.age_hours) }}h
+                        {% else %}
+                            —
+                        {% endif %}
+                    </td>
+                    <td class="px-4 py-2.5">
+                        <div class="flex gap-1" x-data="{ deleting: false, ignoring: false }">
+                            {% if m.status in ('orphan', 'protected') %}
+                            <button @click="deleting = true; fetch('/api/orphans/{{ m.id }}/delete', {method:'POST'}).then(r=>r.json()).then(d=>{ if(d.ok) location.reload() })"
+                                    :disabled="deleting"
+                                    class="text-red-500 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300 text-xs font-medium disabled:opacity-50">
+                                <span x-show="!deleting">Supprimer</span>
+                                <span x-show="deleting">...</span>
+                            </button>
+                            <button @click="ignoring = true; fetch('/api/orphans/{{ m.id }}/ignore', {method:'POST'}).then(r=>r.json()).then(d=>{ if(d.ok) location.reload() })"
+                                    :disabled="ignoring"
+                                    class="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300 text-xs font-medium disabled:opacity-50">
+                                <span x-show="!ignoring">Ignorer</span>
+                                <span x-show="ignoring">...</span>
+                            </button>
+                            {% else %}
+                            <span class="text-xs text-gray-400 dark:text-gray-500">—</span>
+                            {% endif %}
+                        </div>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    {# === Pagination === #}
+    {% if total_pages > 1 %}
+    <div class="flex items-center justify-between px-4 py-3 border-t border-gray-100 dark:border-gray-800">
+        <span class="text-xs text-gray-500 dark:text-gray-400">{{ total }} résultats — page {{ page }}/{{ total_pages }}</span>
+        <div class="flex gap-1">
+            {% if page > 1 %}
+            <button hx-get="/api/orphans/content?page={{ page - 1 }}&per_page={{ per_page }}&status={{ active_status }}&q={{ active_q }}"
+                    hx-target="#orphans-content" hx-swap="outerHTML"
+                    class="px-3 py-1 text-xs rounded-lg bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700">←</button>
+            {% endif %}
+            {% if page < total_pages %}
+            <button hx-get="/api/orphans/content?page={{ page + 1 }}&per_page={{ per_page }}&status={{ active_status }}&q={{ active_q }}"
+                    hx-target="#orphans-content" hx-swap="outerHTML"
+                    class="px-3 py-1 text-xs rounded-lg bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700">→</button>
+            {% endif %}
+        </div>
+    </div>
+    {% endif %}
+
+    {% else %}
+    <div class="p-8 text-center text-sm text-gray-400 dark:text-gray-500">
+        <svg class="w-10 h-10 mx-auto mb-3 text-gray-300 dark:text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.5">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z"/>
+        </svg>
+        Aucun résultat. Lance une analyse pour détecter les orphelins.
+    </div>
+    {% endif %}
+</div>
