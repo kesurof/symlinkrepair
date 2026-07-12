@@ -1,545 +1,463 @@
 {% extends "base.html" %}
 {% block title %}Paramètres — SymlinkRepair{% endblock %}
+
+{% macro text_input(label, model, placeholder) %}
+<div>
+    <label class="block text-sm text-gray-500 dark:text-gray-400 mb-1">{{ label }}</label>
+    <input type="text" x-model="{{ model }}" placeholder="{{ placeholder }}"
+           class="w-full border border-gray-200 dark:border-gray-700 rounded-lg px-3 py-2 text-sm bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-200 placeholder-gray-400">
+</div>
+{% endmacro %}
+
+{% macro password_input(label, model, show_var) %}
+<div>
+    <label class="block text-sm text-gray-500 dark:text-gray-400 mb-1">{{ label }}</label>
+    <div class="flex gap-2">
+        <input :type="{{ show_var }} ? 'text' : 'password'" x-model="{{ model }}"
+               class="flex-1 border border-gray-200 dark:border-gray-700 rounded-lg px-3 py-2 text-sm font-mono bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-200">
+        <button @click="{{ show_var }} = !{{ show_var }}"
+                class="text-xs text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300 shrink-0 px-2">
+            <span x-text="{{ show_var }} ? 'Masquer' : 'Afficher'"></span>
+        </button>
+    </div>
+</div>
+{% endmacro %}
+
+{% macro path_list(items, remove_action) %}
+<div class="space-y-1.5">
+    <template x-for="(item, i) in {{ items }}" :key="'pl'+i">
+        <div class="flex items-center gap-2 px-3 py-1.5 bg-gray-50 dark:bg-gray-800 rounded-lg text-sm">
+            <svg class="w-4 h-4 shrink-0 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.5">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M2.25 12.75V12A2.25 2.25 0 014.5 9.75h15A2.25 2.25 0 0121.75 12v.75m-8.69-6.44l-2.12-2.12a1.5 1.5 0 00-1.061-.44H4.5A2.25 2.25 0 002.25 6v12a2.25 2.25 0 002.25 2.25h15A2.25 2.25 0 0021.75 18V9a2.25 2.25 0 00-2.25-2.25h-5.379a1.5 1.5 0 01-1.06-.44z"/>
+            </svg>
+            <span class="flex-1 font-mono text-xs text-gray-600 dark:text-gray-300 truncate" x-text="item"></span>
+            <button @click="{{ remove_action }}" class="text-red-400 hover:text-red-600 text-sm p-0.5 shrink-0">✕</button>
+        </div>
+    </template>
+</div>
+{% endmacro %}
+
+{% macro path_input(input_model, placeholder, add_action, browse_action) %}
+<div class="flex gap-2 mt-1.5">
+    <input type="text" x-model="{{ input_model }}" placeholder="{{ placeholder }}"
+           @keydown.enter.prevent="{{ add_action }}"
+           class="flex-1 border border-gray-200 dark:border-gray-700 rounded-lg px-3 py-1.5 text-sm bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-200 placeholder-gray-400">
+    <button @click="{{ add_action }}"
+            class="bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg px-3 py-1.5 text-sm text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700">➕</button>
+    <button @click="{{ browse_action }}"
+            class="bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg px-3 py-1.5 text-sm text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700">📂</button>
+</div>
+{% endmacro %}
+
+{% macro checkbox_input(label, model) %}
+<label class="flex items-center gap-2 cursor-pointer">
+    <input type="checkbox" x-model="{{ model }}" class="rounded border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800">
+    <span class="text-sm text-gray-700 dark:text-gray-300">{{ label }}</span>
+</label>
+{% endmacro %}
+
+{% macro number_input(label, model, min, max) %}
+<div>
+    <label class="block text-sm text-gray-500 dark:text-gray-400 mb-1">{{ label }}</label>
+    <input type="number" x-model="{{ model }}" min="{{ min }}" max="{{ max }}"
+           class="w-24 border border-gray-200 dark:border-gray-700 rounded-lg px-3 py-2 text-sm bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-200">
+</div>
+{% endmacro %}
+
+{% macro section_header(icon_path, title) %}
+<div class="flex items-center gap-2 p-4 border-b border-gray-100 dark:border-gray-800">
+    <svg class="w-5 h-5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.5">
+        <path stroke-linecap="round" stroke-linejoin="round" d="{{ icon_path }}"/>
+    </svg>
+    <h3 class="font-medium text-gray-800 dark:text-gray-200">{{ title }}</h3>
+</div>
+{% endmacro %}
+
+{% macro server_block(name, icon_color, icon_path, source, show_key, url_placeholder, container_placeholder) %}
+<div class="p-4 border-b border-gray-100 dark:border-gray-800 last:border-b-0">
+    <div class="flex items-center gap-2 mb-4">
+        <svg class="w-4 h-4 {{ icon_color }}" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.5">
+            <path stroke-linecap="round" stroke-linejoin="round" d="{{ icon_path }}"/>
+        </svg>
+        <h4 class="font-medium text-gray-800 dark:text-gray-200 text-sm">{{ name }}</h4>
+        <div class="flex gap-1 ml-auto">
+            <span class="text-xs text-gray-400 dark:text-gray-500" x-text="completeness('{{ source }}') + '/5'"></span>
+            <button @click="test{{ name }}()" class="text-xs text-brand-600 dark:text-brand-400 hover:underline font-medium">Tester</button>
+        </div>
+    </div>
+    <div class="grid sm:grid-cols-2 gap-3">
+        {{ text_input('URL', "cfg." ~ source ~ ".url", url_placeholder) }}
+        {{ password_input('Clé API', "cfg." ~ source ~ ".api_key", show_key) }}
+        {{ text_input('Conteneur Docker', "cfg." ~ source ~ ".container", container_placeholder) }}
+        <div class="sm:col-span-2">
+            <label class="block text-sm text-gray-500 dark:text-gray-400 mb-1">Bibliothèques</label>
+            {{ path_list("cfg." ~ source ~ ".library_roots", "cfg." ~ source ~ ".library_roots.splice(i, 1)") }}
+            {{ path_input(source ~ "LibInput", "Taper un chemin ou coller...", "addManualPath('" ~ source ~ "', 'library_roots', " ~ source ~ "LibInput)", "openBrowser('" ~ source ~ "', 'library_roots')") }}
+        </div>
+        <div class="sm:col-span-2">
+            <label class="block text-sm text-gray-500 dark:text-gray-400 mb-1">Préfixes surveillés</label>
+            {{ path_list("cfg." ~ source ~ ".target_prefixes", "cfg." ~ source ~ ".target_prefixes.splice(i, 1)") }}
+            {{ path_input(source ~ "PrefInput", "/mnt/...", "addManualPath('" ~ source ~ "', 'target_prefixes', " ~ source ~ "PrefInput)", "openBrowser('" ~ source ~ "', 'target_prefixes', '/mnt')") }}
+        </div>
+        <div class="sm:col-span-2">
+            <span x-show="{{ source }}Test" class="text-sm" x-text="{{ source }}Test" :class="{{ source }}Ok ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'"></span>
+        </div>
+    </div>
+</div>
+{% endmacro %}
+
 {% block content %}
 <div x-data="configApp()" x-init="loadConfig()" class="pb-24 md:pb-0">
+
+    {# === HEADER === #}
     <div class="flex items-center justify-between mb-6">
         <h2 class="text-lg font-semibold text-gray-800 dark:text-gray-200">Paramètres</h2>
-        <button @click="helpOpen = !helpOpen"
-                class="w-7 h-7 rounded-full border border-gray-300 dark:border-gray-600 text-gray-400 hover:text-brand-600 dark:hover:text-brand-400 hover:border-brand-600 dark:hover:border-brand-400 flex items-center justify-center transition-colors shrink-0"
-                title="Aide">
-            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
-                <path stroke-linecap="round" stroke-linejoin="round" d="M9.879 7.519c1.171-1.025 3.071-1.025 4.242 0 1.172 1.025 1.172 2.687 0 3.712-.203.179-.43.326-.67.442-.745.361-1.45.999-1.45 1.827v.75M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-9 5.25h.008v.008H12v-.008z"/>
-            </svg>
+        <div class="flex items-center gap-2">
+            <button @click="helpOpen = !helpOpen"
+                    class="w-7 h-7 rounded-full border border-gray-300 dark:border-gray-600 text-gray-400 hover:text-brand-600 dark:hover:text-brand-400 hover:border-brand-600 dark:hover:border-brand-400 flex items-center justify-center transition-colors shrink-0"
+                    title="Aide">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M9.879 7.519c1.171-1.025 3.071-1.025 4.242 0 1.172 1.025 1.172 2.687 0 3.712-.203.179-.43.326-.67.442-.745.361-1.45.999-1.45 1.827v.75M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-9 5.25h.008v.008H12v-.008z"/>
+                </svg>
+            </button>
+            <button @click="wizardStep = 1"
+                    class="inline-flex items-center gap-1.5 bg-brand-100 dark:bg-brand-900/30 text-brand-700 dark:text-brand-300 px-3 py-1.5 rounded-lg text-sm font-medium hover:bg-brand-200 dark:hover:bg-brand-900/50 hover:shadow-sm transition-all">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09zM18.259 8.715L18 9.75l-.259-1.035a3.375 3.375 0 00-2.455-2.456L14.25 6l1.036-.259a3.375 3.375 0 002.455-2.456L18 2.25l.259 1.035a3.375 3.375 0 002.455 2.456L21.75 6l-1.036.259a3.375 3.375 0 00-2.455 2.456z"/>
+                </svg>
+                Assistant
+            </button>
+        </div>
+    </div>
+
+    {# === TABS === #}
+    <div class="flex flex-wrap gap-1 mb-6 p-1 bg-gray-100 dark:bg-gray-800 rounded-lg w-fit">
+        <button @click="activeTab = 'servers'"
+                class="px-4 py-2 text-sm font-medium rounded-md transition-colors duration-150"
+                :class="activeTab === 'servers' ? 'bg-white dark:bg-gray-900 text-gray-800 dark:text-gray-100 shadow-sm' : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'">
+            Serveurs
         </button>
-        <button @click="wizardStep = 1"
-                class="inline-flex items-center gap-1.5 bg-brand-100 dark:bg-brand-900/30 text-brand-700 dark:text-brand-300 px-3 py-1.5 rounded-lg text-sm font-medium hover:bg-brand-200 dark:hover:bg-brand-900/50 hover:shadow-sm transition-all">
-            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
-                <path stroke-linecap="round" stroke-linejoin="round" d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09zM18.259 8.715L18 9.75l-.259-1.035a3.375 3.375 0 00-2.455-2.456L14.25 6l1.036-.259a3.375 3.375 0 002.455-2.456L18 2.25l.259 1.035a3.375 3.375 0 002.455 2.456L21.75 6l-1.036.259a3.375 3.375 0 00-2.455 2.456z"/>
-            </svg>
-            Assistant
+        <button @click="activeTab = 'automation'"
+                class="px-4 py-2 text-sm font-medium rounded-md transition-colors duration-150"
+                :class="activeTab === 'automation' ? 'bg-white dark:bg-gray-900 text-gray-800 dark:text-gray-100 shadow-sm' : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'">
+            Automatisation
+        </button>
+        <button @click="activeTab = 'alldebrid'"
+                class="px-4 py-2 text-sm font-medium rounded-md transition-colors duration-150"
+                :class="activeTab === 'alldebrid' ? 'bg-white dark:bg-gray-900 text-gray-800 dark:text-gray-100 shadow-sm' : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'">
+            AllDebrid
+        </button>
+        <button @click="activeTab = 'general'"
+                class="px-4 py-2 text-sm font-medium rounded-md transition-colors duration-150"
+                :class="activeTab === 'general' ? 'bg-white dark:bg-gray-900 text-gray-800 dark:text-gray-100 shadow-sm' : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'">
+            Général
         </button>
     </div>
 
+    {# === TAB CONTENT === #}
     <div class="space-y-4">
 
-        {# === SERVEURS === #}
-        <section class="bg-white dark:bg-gray-900 rounded-xl shadow-sm border border-gray-200 dark:border-gray-800">
-            <div class="flex items-center justify-between p-4 border-b border-gray-100 dark:border-gray-800">
-                <div class="flex items-center gap-2">
+        {# ===== TAB: SERVEURS ===== #}
+        <div x-show="activeTab === 'servers'">
+            <section class="bg-white dark:bg-gray-900 rounded-xl shadow-sm border border-gray-200 dark:border-gray-800">
+                <div class="flex items-center justify-between p-4 border-b border-gray-100 dark:border-gray-800">
+                    <div class="flex items-center gap-2">
+                        <svg class="w-5 h-5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.5">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M21.75 17.25v-.228a4.5 4.5 0 00-.12-1.03l-2.268-9.64a3.375 3.375 0 00-3.285-2.602H7.923a3.375 3.375 0 00-3.285 2.602l-2.268 9.64a4.5 4.5 0 00-.12 1.03v.228m19.5 0a3 3 0 01-3 3H5.25a3 3 0 01-3-3m19.5 0a3 3 0 00-3-3H5.25a3 3 0 00-3 3m16.5 0h.008v.008h-.008v-.008zm-3 0h.008v.008h-.008v-.008z"/>
+                        </svg>
+                        <h3 class="font-medium text-gray-800 dark:text-gray-200">Serveurs</h3>
+                    </div>
+                    <div class="flex items-center gap-2 text-xs text-gray-400 dark:text-gray-500">
+                        <template x-for="(s, key) in {radarr: cfg.radarr, sonarr: cfg.sonarr}" :key="key">
+                            <span :class="completeness(key) >= 4 ? 'text-green-500' : 'text-gray-400'" x-text="key"></span>
+                        </template>
+                    </div>
+                </div>
+                {{ server_block('Radarr', 'text-blue-500', 'M3.375 19.5h17.25m-17.25 0a1.125 1.125 0 01-1.125-1.125M3.375 19.5h7.5c.621 0 1.125-.504 1.125-1.125m-9.75 0V5.625m0 12.75v-1.5c0-.621.504-1.125 1.125-1.125m18.375 2.625V5.625m0 12.75c0 .621-.504 1.125-1.125 1.125m1.125-1.125v-1.5c0-.621-.504-1.125-1.125-1.125m0 3.75h-7.5A1.125 1.125 0 0112 18.375m9.75-12.75c0-.621-.504-1.125-1.125-1.125H3.375c-.621 0-1.125.504-1.125 1.125m19.5 0v1.5c0 .621-.504 1.125-1.125 1.125M2.25 5.625v1.5c0 .621.504 1.125 1.125 1.125m0 0h17.25', 'radarr', 'showRadarrKey', 'http://radarr:7878', 'radarr') }}
+                {{ server_block('Sonarr', 'text-green-500', 'M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z', 'sonarr', 'showSonarrKey', 'http://sonarr:8989', 'sonarr') }}
+            </section>
+        </div>
+
+        {# ===== TAB: AUTOMATISATION ===== #}
+        <div x-show="activeTab === 'automation'" x-cloak>
+            <section class="bg-white dark:bg-gray-900 rounded-xl shadow-sm border border-gray-200 dark:border-gray-800">
+                <div class="flex items-center gap-2 p-4 border-b border-gray-100 dark:border-gray-800">
                     <svg class="w-5 h-5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.5">
-                        <path stroke-linecap="round" stroke-linejoin="round" d="M21.75 17.25v-.228a4.5 4.5 0 00-.12-1.03l-2.268-9.64a3.375 3.375 0 00-3.285-2.602H7.923a3.375 3.375 0 00-3.285 2.602l-2.268 9.64a4.5 4.5 0 00-.12 1.03v.228m19.5 0a3 3 0 01-3 3H5.25a3 3 0 01-3-3m19.5 0a3 3 0 00-3-3H5.25a3 3 0 00-3 3m16.5 0h.008v.008h-.008v-.008zm-3 0h.008v.008h-.008v-.008z"/>
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z"/>
                     </svg>
-                    <h3 class="font-medium text-gray-800 dark:text-gray-200">Serveurs</h3>
+                    <h3 class="font-medium text-gray-800 dark:text-gray-200">Automatisation</h3>
                 </div>
-                <div class="flex items-center gap-2 text-xs text-gray-400 dark:text-gray-500">
-                    <template x-for="(s, key) in {radarr: cfg.radarr, sonarr: cfg.sonarr}" :key="key">
-                        <span :class="completeness(key) >= 4 ? 'text-green-500' : 'text-gray-400'" x-text="key"></span>
-                    </template>
-                </div>
-            </div>
+                <div class="divide-y divide-gray-100 dark:divide-gray-800">
 
-            {# Radarr #}
-            <div class="p-4 border-b border-gray-100 dark:border-gray-800 last:border-b-0">
-                <div class="flex items-center gap-2 mb-4">
-                    <svg class="w-4 h-4 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.5">
-                        <path stroke-linecap="round" stroke-linejoin="round" d="M3.375 19.5h17.25m-17.25 0a1.125 1.125 0 01-1.125-1.125M3.375 19.5h7.5c.621 0 1.125-.504 1.125-1.125m-9.75 0V5.625m0 12.75v-1.5c0-.621.504-1.125 1.125-1.125m18.375 2.625V5.625m0 12.75c0 .621-.504 1.125-1.125 1.125m1.125-1.125v-1.5c0-.621-.504-1.125-1.125-1.125m0 3.75h-7.5A1.125 1.125 0 0112 18.375m9.75-12.75c0-.621-.504-1.125-1.125-1.125H3.375c-.621 0-1.125.504-1.125 1.125m19.5 0v1.5c0 .621-.504 1.125-1.125 1.125M2.25 5.625v1.5c0 .621.504 1.125 1.125 1.125m0 0h17.25"/>
-                    </svg>
-                    <h4 class="font-medium text-gray-800 dark:text-gray-200 text-sm">Radarr</h4>
-                    <div class="flex gap-1 ml-auto">
-                        <span class="text-xs text-gray-400 dark:text-gray-500" x-text="completeness('radarr') + '/5'"></span>
-                        <button @click="testRadarr()" class="text-xs text-brand-600 dark:text-brand-400 hover:underline font-medium">Tester</button>
-                    </div>
-                </div>
-                <div class="grid sm:grid-cols-2 gap-3">
-                    <div>
-                        <label class="block text-sm text-gray-500 dark:text-gray-400 mb-1">URL</label>
-                        <input type="url" x-model="cfg.radarr.url" placeholder="http://radarr:7878"
-                               class="w-full border border-gray-200 dark:border-gray-700 rounded-lg px-3 py-2 text-sm bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-200 placeholder-gray-400">
-                    </div>
-                    <div>
-                        <label class="block text-sm text-gray-500 dark:text-gray-400 mb-1">Clé API</label>
-                        <div class="flex gap-2">
-                            <input :type="showRadarrKey ? 'text' : 'password'" x-model="cfg.radarr.api_key"
-                                   class="flex-1 border border-gray-200 dark:border-gray-700 rounded-lg px-3 py-2 text-sm font-mono bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-200">
-                            <button @click="showRadarrKey = !showRadarrKey" class="text-xs text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300 shrink-0 px-2">
-                                <span x-text="showRadarrKey ? 'Masquer' : 'Afficher'"></span>
-                            </button>
-                        </div>
-                    </div>
-                    <div>
-                        <label class="block text-sm text-gray-500 dark:text-gray-400 mb-1">Conteneur Docker</label>
-                        <input type="text" x-model="cfg.radarr.container" placeholder="radarr"
-                               class="w-full border border-gray-200 dark:border-gray-700 rounded-lg px-3 py-2 text-sm bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-200">
-                    </div>
-                    <div class="sm:col-span-2">
-                        <label class="block text-sm text-gray-500 dark:text-gray-400 mb-1">Bibliothèques</label>
-                        <div class="space-y-1.5">
-                            <template x-for="(root, i) in cfg.radarr.library_roots" :key="'rl'+i">
-                                <div class="flex items-center gap-2 px-3 py-1.5 bg-gray-50 dark:bg-gray-800 rounded-lg text-sm">
-                                    <svg class="w-4 h-4 shrink-0 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.5">
-                                        <path stroke-linecap="round" stroke-linejoin="round" d="M2.25 12.75V12A2.25 2.25 0 014.5 9.75h15A2.25 2.25 0 0121.75 12v.75m-8.69-6.44l-2.12-2.12a1.5 1.5 0 00-1.061-.44H4.5A2.25 2.25 0 002.25 6v12a2.25 2.25 0 002.25 2.25h15A2.25 2.25 0 0021.75 18V9a2.25 2.25 0 00-2.25-2.25h-5.379a1.5 1.5 0 01-1.06-.44z"/>
-                                    </svg>
-                                    <span class="flex-1 font-mono text-xs text-gray-600 dark:text-gray-300 truncate" x-text="root"></span>
-                                    <button @click="cfg.radarr.library_roots.splice(i, 1)" class="text-red-400 hover:text-red-600 text-sm p-0.5 shrink-0">✕</button>
-                                </div>
-                            </template>
-                        </div>
-                        <div class="flex gap-2 mt-1.5">
-                            <div class="relative flex-1">
-                                <input type="text" x-model="radarrLibInput"
-                                       placeholder="Taper un chemin ou coller..."
-                                       @keydown.enter.prevent="addManualPath('radarr', 'library_roots', radarrLibInput)"
-                                       class="w-full border border-gray-200 dark:border-gray-700 rounded-lg px-3 py-1.5 text-sm bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-200 placeholder-gray-400">
-                            </div>
-                            <button @click="addManualPath('radarr', 'library_roots', radarrLibInput)"
-                                    class="bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg px-3 py-1.5 text-sm text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700">➕</button>
-                            <button @click="openBrowser('radarr', 'library_roots')"
-                                    class="bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg px-3 py-1.5 text-sm text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700">📂</button>
-                        </div>
-                    </div>
-                    <div class="sm:col-span-2">
-                        <label class="block text-sm text-gray-500 dark:text-gray-400 mb-1">Préfixes surveillés</label>
-                        <div class="space-y-1.5">
-                            <template x-for="(p, i) in cfg.radarr.target_prefixes" :key="'rp'+i">
-                                <div class="flex items-center gap-2 px-3 py-1.5 bg-gray-50 dark:bg-gray-800 rounded-lg text-sm">
-                                    <svg class="w-4 h-4 shrink-0 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.5">
-                                        <path stroke-linecap="round" stroke-linejoin="round" d="M13.19 8.688a4.5 4.5 0 011.242 7.244l-4.5 4.5a4.5 4.5 0 01-6.364-6.364l1.757-1.757m13.35-.622l1.757-1.757a4.5 4.5 0 00-6.364-6.364l-4.5 4.5a4.5 4.5 0 001.242 7.244"/>
-                                    </svg>
-                                    <span class="flex-1 font-mono text-xs text-gray-600 dark:text-gray-300 truncate" x-text="p"></span>
-                                    <button @click="cfg.radarr.target_prefixes.splice(i, 1)" class="text-red-400 hover:text-red-600 text-sm p-0.5 shrink-0">✕</button>
-                                </div>
-                            </template>
-                        </div>
-                        <div class="flex gap-2 mt-1.5">
-                            <input type="text" x-model="radarrPrefInput"
-                                   placeholder="/mnt/..."
-                                   @keydown.enter.prevent="addManualPath('radarr', 'target_prefixes', radarrPrefInput)"
-                                   class="flex-1 border border-gray-200 dark:border-gray-700 rounded-lg px-3 py-1.5 text-sm bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-200 placeholder-gray-400">
-                            <button @click="addManualPath('radarr', 'target_prefixes', radarrPrefInput)"
-                                    class="bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg px-3 py-1.5 text-sm text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700">➕</button>
-                            <button @click="openBrowser('radarr', 'target_prefixes', '/mnt')"
-                                    class="bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg px-3 py-1.5 text-sm text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700">📂</button>
-                        </div>
-                    </div>
-                    <div class="sm:col-span-2">
-                        <span x-show="radarrTest" class="text-sm" x-text="radarrTest" :class="radarrOk ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'"></span>
-                    </div>
-                </div>
-            </div>
-
-            {# Sonarr #}
-            <div class="p-4">
-                <div class="flex items-center gap-2 mb-4">
-                    <svg class="w-4 h-4 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.5">
-                        <path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
-                    </svg>
-                    <h4 class="font-medium text-gray-800 dark:text-gray-200 text-sm">Sonarr</h4>
-                    <div class="flex gap-1 ml-auto">
-                        <span class="text-xs text-gray-400 dark:text-gray-500" x-text="completeness('sonarr') + '/5'"></span>
-                        <button @click="testSonarr()" class="text-xs text-brand-600 dark:text-brand-400 hover:underline font-medium">Tester</button>
-                    </div>
-                </div>
-                <div class="grid sm:grid-cols-2 gap-3">
-                    <div>
-                        <label class="block text-sm text-gray-500 dark:text-gray-400 mb-1">URL</label>
-                        <input type="url" x-model="cfg.sonarr.url" placeholder="http://sonarr:8989"
-                               class="w-full border border-gray-200 dark:border-gray-700 rounded-lg px-3 py-2 text-sm bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-200 placeholder-gray-400">
-                    </div>
-                    <div>
-                        <label class="block text-sm text-gray-500 dark:text-gray-400 mb-1">Clé API</label>
-                        <div class="flex gap-2">
-                            <input :type="showSonarrKey ? 'text' : 'password'" x-model="cfg.sonarr.api_key"
-                                   class="flex-1 border border-gray-200 dark:border-gray-700 rounded-lg px-3 py-2 text-sm font-mono bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-200">
-                            <button @click="showSonarrKey = !showSonarrKey" class="text-xs text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300 shrink-0 px-2">
-                                <span x-text="showSonarrKey ? 'Masquer' : 'Afficher'"></span>
-                            </button>
-                        </div>
-                    </div>
-                    <div>
-                        <label class="block text-sm text-gray-500 dark:text-gray-400 mb-1">Conteneur Docker</label>
-                        <input type="text" x-model="cfg.sonarr.container" placeholder="sonarr"
-                               class="w-full border border-gray-200 dark:border-gray-700 rounded-lg px-3 py-2 text-sm bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-200">
-                    </div>
-                    <div class="sm:col-span-2">
-                        <label class="block text-sm text-gray-500 dark:text-gray-400 mb-1">Bibliothèques</label>
-                        <div class="space-y-1.5">
-                            <template x-for="(root, i) in cfg.sonarr.library_roots" :key="'sl'+i">
-                                <div class="flex items-center gap-2 px-3 py-1.5 bg-gray-50 dark:bg-gray-800 rounded-lg text-sm">
-                                    <svg class="w-4 h-4 shrink-0 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.5">
-                                        <path stroke-linecap="round" stroke-linejoin="round" d="M2.25 12.75V12A2.25 2.25 0 014.5 9.75h15A2.25 2.25 0 0121.75 12v.75m-8.69-6.44l-2.12-2.12a1.5 1.5 0 00-1.061-.44H4.5A2.25 2.25 0 002.25 6v12a2.25 2.25 0 002.25 2.25h15A2.25 2.25 0 0021.75 18V9a2.25 2.25 0 00-2.25-2.25h-5.379a1.5 1.5 0 01-1.06-.44z"/>
-                                    </svg>
-                                    <span class="flex-1 font-mono text-xs text-gray-600 dark:text-gray-300 truncate" x-text="root"></span>
-                                    <button @click="cfg.sonarr.library_roots.splice(i, 1)" class="text-red-400 hover:text-red-600 text-sm p-0.5 shrink-0">✕</button>
-                                </div>
-                            </template>
-                        </div>
-                        <div class="flex gap-2 mt-1.5">
-                            <input type="text" x-model="sonarrLibInput"
-                                   placeholder="Taper un chemin ou coller..."
-                                   @keydown.enter.prevent="addManualPath('sonarr', 'library_roots', sonarrLibInput)"
-                                   class="flex-1 border border-gray-200 dark:border-gray-700 rounded-lg px-3 py-1.5 text-sm bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-200 placeholder-gray-400">
-                            <button @click="addManualPath('sonarr', 'library_roots', sonarrLibInput)"
-                                    class="bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg px-3 py-1.5 text-sm text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700">➕</button>
-                            <button @click="openBrowser('sonarr', 'library_roots')"
-                                    class="bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg px-3 py-1.5 text-sm text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700">📂</button>
-                        </div>
-                    </div>
-                    <div class="sm:col-span-2">
-                        <label class="block text-sm text-gray-500 dark:text-gray-400 mb-1">Préfixes surveillés</label>
-                        <div class="space-y-1.5">
-                            <template x-for="(p, i) in cfg.sonarr.target_prefixes" :key="'sp'+i">
-                                <div class="flex items-center gap-2 px-3 py-1.5 bg-gray-50 dark:bg-gray-800 rounded-lg text-sm">
-                                    <svg class="w-4 h-4 shrink-0 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.5">
-                                        <path stroke-linecap="round" stroke-linejoin="round" d="M13.19 8.688a4.5 4.5 0 011.242 7.244l-4.5 4.5a4.5 4.5 0 01-6.364-6.364l1.757-1.757m13.35-.622l1.757-1.757a4.5 4.5 0 00-6.364-6.364l-4.5 4.5a4.5 4.5 0 001.242 7.244"/>
-                                    </svg>
-                                    <span class="flex-1 font-mono text-xs text-gray-600 dark:text-gray-300 truncate" x-text="p"></span>
-                                    <button @click="cfg.sonarr.target_prefixes.splice(i, 1)" class="text-red-400 hover:text-red-600 text-sm p-0.5 shrink-0">✕</button>
-                                </div>
-                            </template>
-                        </div>
-                        <div class="flex gap-2 mt-1.5">
-                            <input type="text" x-model="sonarrPrefInput"
-                                   placeholder="/mnt/..."
-                                   @keydown.enter.prevent="addManualPath('sonarr', 'target_prefixes', sonarrPrefInput)"
-                                   class="flex-1 border border-gray-200 dark:border-gray-700 rounded-lg px-3 py-1.5 text-sm bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-200 placeholder-gray-400">
-                            <button @click="addManualPath('sonarr', 'target_prefixes', sonarrPrefInput)"
-                                    class="bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg px-3 py-1.5 text-sm text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700">➕</button>
-                            <button @click="openBrowser('sonarr', 'target_prefixes', '/mnt')"
-                                    class="bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg px-3 py-1.5 text-sm text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700">📂</button>
-                        </div>
-                    </div>
-                    <div class="sm:col-span-2">
-                        <span x-show="sonarrTest" class="text-sm" x-text="sonarrTest" :class="sonarrOk ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'"></span>
-                    </div>
-                </div>
-            </div>
-        </section>
-
-        {# === NOTIFICATIONS === #}
-        <section class="bg-white dark:bg-gray-900 rounded-xl shadow-sm border border-gray-200 dark:border-gray-800">
-            <div class="flex items-center gap-2 p-4 border-b border-gray-100 dark:border-gray-800">
-                <svg class="w-5 h-5 text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.5">
-                    <path stroke-linecap="round" stroke-linejoin="round" d="M7.217 10.907a2.25 2.25 0 100 2.186m0-2.186c.18.324.283.696.283 1.093s-.103.77-.283 1.093m0-2.186l9.566-5.314m-9.566 7.5l9.566 5.314m0 0a2.25 2.25 0 103.935 2.186 2.25 2.25 0 00-3.935-2.186zm0-12.814a2.25 2.25 0 103.933-2.185 2.25 2.25 0 00-3.933 2.185z"/>
-                </svg>
-                <h3 class="font-medium text-gray-800 dark:text-gray-200">Notifications</h3>
-            </div>
-            <div class="p-4 space-y-3">
-                <label class="flex items-center gap-2 cursor-pointer">
-                    <input type="checkbox" x-model="cfg.discord.enabled" class="rounded border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800">
-                    <span class="text-sm text-gray-700 dark:text-gray-300">Notifications Discord activées</span>
-                </label>
-                <div x-show="cfg.discord.enabled">
-                    <label class="block text-sm text-gray-500 dark:text-gray-400 mb-1">Webhook URL</label>
-                    <div class="flex gap-2">
-                        <input :type="showWebhook ? 'text' : 'password'" x-model="cfg.discord.webhook"
-                               class="flex-1 border border-gray-200 dark:border-gray-700 rounded-lg px-3 py-2 text-sm font-mono bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-200">
-                        <button @click="showWebhook = !showWebhook" class="text-xs text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300 shrink-0 px-2">
-                            <span x-text="showWebhook ? 'Masquer' : 'Afficher'"></span>
-                        </button>
-                    </div>
-                </div>
-            </div>
-        </section>
-
-        {# === ALLDEBRID === #}
-        <section class="bg-white dark:bg-gray-900 rounded-xl shadow-sm border border-gray-200 dark:border-gray-800">
-            <div class="flex items-center justify-between p-4 border-b border-gray-100 dark:border-gray-800">
-                <div class="flex items-center gap-2">
-                    <svg class="w-5 h-5 text-orange-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.5">
-                        <path stroke-linecap="round" stroke-linejoin="round" d="M13.19 8.688a4.5 4.5 0 011.242 7.244l-4.5 4.5a4.5 4.5 0 01-6.364-6.364l1.757-1.757m13.35-.622l1.757-1.757a4.5 4.5 0 00-6.364-6.364l-4.5 4.5a4.5 4.5 0 001.242 7.244"/>
-                    </svg>
-                    <h3 class="font-medium text-gray-800 dark:text-gray-200">AllDebrid — Orphelins</h3>
-                </div>
-                <button @click="addAllDebridInstance()"
-                        class="text-xs text-brand-600 dark:text-brand-400 hover:underline font-medium">➕ Ajouter une instance</button>
-            </div>
-
-            <div class="divide-y divide-gray-100 dark:divide-gray-800">
-                <template x-for="(inst, idx) in cfg.alldebrid.instances" :key="idx">
-                    <div class="p-4 space-y-3">
-                        <div class="flex items-center justify-between">
-                            <div class="flex items-center gap-2">
-                                <input type="checkbox" x-model="inst.enabled"
-                                       class="rounded border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800">
-                                <span class="text-sm font-medium text-gray-700 dark:text-gray-300" x-text="inst.name || 'Instance ' + (idx + 1)"></span>
-                            </div>
-                            <button @click="cfg.alldebrid.instances.splice(idx, 1)"
-                                    class="text-red-400 hover:text-red-600 text-sm p-1" title="Supprimer">✕</button>
-                        </div>
-
-                        <div class="grid sm:grid-cols-2 gap-3">
-                            <div>
-                                <label class="block text-sm text-gray-500 dark:text-gray-400 mb-1">Nom</label>
-                                <input type="text" x-model="inst.name" placeholder="alldebrid-01"
-                                       class="w-full border border-gray-200 dark:border-gray-700 rounded-lg px-3 py-2 text-sm bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-200">
-                            </div>
-                            <div>
-                                <label class="block text-sm text-gray-500 dark:text-gray-400 mb-1">Clé API</label>
-                                <div class="flex gap-2">
-                                    <input :type="'showADKey' + idx === showADKey ? 'text' : 'password'"
-                                           x-model="inst.api_key"
-                                           class="flex-1 border border-gray-200 dark:border-gray-700 rounded-lg px-3 py-2 text-sm font-mono bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-200">
-                                    <button @click="showADKey = 'showADKey' + idx"
-                                            class="text-xs text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300 shrink-0 px-2">
-                                        <span x-text="showADKey === 'showADKey' + idx ? 'Masquer' : 'Afficher'"></span>
-                                    </button>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div>
-                            <label class="block text-sm text-gray-500 dark:text-gray-400 mb-1">Dossiers à scanner</label>
-                            <div class="space-y-1.5">
-                                <template x-for="(root, ri) in inst.library_roots" :key="'adlr'+idx+ri">
-                                    <div class="flex items-center gap-2 px-3 py-1.5 bg-gray-50 dark:bg-gray-800 rounded-lg text-sm">
-                                        <svg class="w-4 h-4 shrink-0 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.5">
-                                            <path stroke-linecap="round" stroke-linejoin="round" d="M2.25 12.75V12A2.25 2.25 0 014.5 9.75h15A2.25 2.25 0 0121.75 12v.75m-8.69-6.44l-2.12-2.12a1.5 1.5 0 00-1.061-.44H4.5A2.25 2.25 0 002.25 6v12a2.25 2.25 0 002.25 2.25h15A2.25 2.25 0 0021.75 18V9a2.25 2.25 0 00-2.25-2.25h-5.379a1.5 1.5 0 01-1.06-.44z"/>
-                                        </svg>
-                                        <span class="flex-1 font-mono text-xs text-gray-600 dark:text-gray-300 truncate" x-text="root"></span>
-                                        <button @click="inst.library_roots.splice(ri, 1)" class="text-red-400 hover:text-red-600 text-sm p-0.5 shrink-0">✕</button>
-                                    </div>
-                                </template>
-                            </div>
-                            <div class="flex gap-2 mt-1.5">
-                                <input type="text" x-model="adLibInputs[idx]"
-                                       placeholder="Taper un chemin..."
-                                       @keydown.enter.prevent="inst.library_roots.push(adLibInputs[idx]); adLibInputs[idx] = ''"
-                                       class="flex-1 border border-gray-200 dark:border-gray-700 rounded-lg px-3 py-1.5 text-sm bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-200 placeholder-gray-400">
-                                <button @click="inst.library_roots.push(adLibInputs[idx]); adLibInputs[idx] = ''"
-                                        class="bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg px-3 py-1.5 text-sm text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700">➕</button>
-                                <button @click="openADBrowser(idx, 'library_roots')"
-                                        class="bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg px-3 py-1.5 text-sm text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700">📂</button>
-                            </div>
-                        </div>
-
-                        <div>
-                            <label class="block text-sm text-gray-500 dark:text-gray-400 mb-1">Préfixes cibles (AllDebrid mount)</label>
-                            <div class="space-y-1.5">
-                                <template x-for="(p, pi) in inst.target_prefixes" :key="'adtp'+idx+pi">
-                                    <div class="flex items-center gap-2 px-3 py-1.5 bg-gray-50 dark:bg-gray-800 rounded-lg text-sm">
-                                        <svg class="w-4 h-4 shrink-0 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.5">
-                                            <path stroke-linecap="round" stroke-linejoin="round" d="M13.19 8.688a4.5 4.5 0 011.242 7.244l-4.5 4.5a4.5 4.5 0 01-6.364-6.364l1.757-1.757m13.35-.622l1.757-1.757a4.5 4.5 0 00-6.364-6.364l-4.5 4.5a4.5 4.5 0 001.242 7.244"/>
-                                        </svg>
-                                        <span class="flex-1 font-mono text-xs text-gray-600 dark:text-gray-300 truncate" x-text="p"></span>
-                                        <button @click="inst.target_prefixes.splice(pi, 1)" class="text-red-400 hover:text-red-600 text-sm p-0.5 shrink-0">✕</button>
-                                    </div>
-                                </template>
-                            </div>
-                            <div class="flex gap-2 mt-1.5">
-                                <input type="text" x-model="adPrefInputs[idx]"
-                                       placeholder="/mnt/..."
-                                       @keydown.enter.prevent="inst.target_prefixes.push(adPrefInputs[idx]); adPrefInputs[idx] = ''"
-                                       class="flex-1 border border-gray-200 dark:border-gray-700 rounded-lg px-3 py-1.5 text-sm bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-200 placeholder-gray-400">
-                                <button @click="inst.target_prefixes.push(adPrefInputs[idx]); adPrefInputs[idx] = ''"
-                                        class="bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg px-3 py-1.5 text-sm text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700">➕</button>
-                                <button @click="openADBrowser(idx, 'target_prefixes', '/mnt')"
-                                        class="bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg px-3 py-1.5 text-sm text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700">📂</button>
-                            </div>
-                        </div>
-
-                        <div class="grid grid-cols-2 gap-3">
-                            <div>
-                                <label class="block text-sm text-gray-500 dark:text-gray-400 mb-1">Âge min (heures)</label>
-                                <input type="number" x-model="inst.min_age_hours" min="0" max="720"
-                                       class="w-24 border border-gray-200 dark:border-gray-700 rounded-lg px-3 py-2 text-sm bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-200">
-                            </div>
-                            <div>
-                                <label class="block text-sm text-gray-500 dark:text-gray-400 mb-1">Rate limit (s)</label>
-                                <input type="number" x-model="inst.rate_limit" min="0.1" max="5" step="0.1"
-                                       class="w-24 border border-gray-200 dark:border-gray-700 rounded-lg px-3 py-2 text-sm bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-200">
-                            </div>
-                        </div>
-                    </div>
-                </template>
-            </div>
-
-            <div class="p-4 border-t border-gray-100 dark:border-gray-800 space-y-3">
-                <label class="flex items-start gap-3 cursor-pointer">
-                    <input type="checkbox" x-model="cfg.alldebrid.auto_enabled"
-                           class="mt-0.5 rounded border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800">
-                    <div>
-                        <span class="text-sm font-medium text-gray-700 dark:text-gray-300">Analyse automatique</span>
-                        <p class="text-xs text-amber-600 dark:text-amber-400 mt-0.5">
-                            ⚠️ Le mode automatique supprime les orphelins sans confirmation.
-                            Il est recommandé de nettoyer manuellement depuis la page Orphelins.
-                        </p>
-                    </div>
-                </label>
-                <template x-if="cfg.alldebrid.auto_enabled">
-                    <div>
-                        <label class="block text-sm text-gray-500 dark:text-gray-400 mb-1">
-                            Horaire (format 24h · fuseau horaire du serveur)
-                        </label>
-                        <input type="time" x-model="cfg.alldebrid.schedule_time"
-                               class="w-32 border border-gray-200 dark:border-gray-700 rounded-lg px-3 py-2 text-sm bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-200">
-                    </div>
-                </template>
-            </div>
-        </section>
-
-        {# === AUTOMATISATION === #}
-        <section class="bg-white dark:bg-gray-900 rounded-xl shadow-sm border border-gray-200 dark:border-gray-800">
-            <div class="flex items-center gap-2 p-4 border-b border-gray-100 dark:border-gray-800">
-                <svg class="w-5 h-5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.5">
-                    <path stroke-linecap="round" stroke-linejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z"/>
-                </svg>
-                <h3 class="font-medium text-gray-800 dark:text-gray-200">Automatisation</h3>
-            </div>
-            <div class="p-4 space-y-4">
-                <div>
-                    <h4 class="text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">Scans planifiés</h4>
-                    <div class="space-y-3">
-                        <div>
-                            <label class="flex items-center gap-2 cursor-pointer">
-                                <input type="checkbox" x-model="cfg.scheduler.radarr_enabled" class="rounded border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800">
-                                <span class="text-sm text-gray-700 dark:text-gray-300">Radarr</span>
-                            </label>
-                            <div x-show="cfg.scheduler.radarr_enabled" class="mt-2 ml-6">
-                                <label class="block text-sm text-gray-500 dark:text-gray-400 mb-1">Intervalle (heures)</label>
-                                <input type="number" x-model="cfg.scheduler.radarr_interval_hours" min="1" max="168"
-                                       class="w-24 border border-gray-200 dark:border-gray-700 rounded-lg px-3 py-2 text-sm bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-200">
-                            </div>
-                        </div>
-                        <div>
-                            <label class="flex items-center gap-2 cursor-pointer">
-                                <input type="checkbox" x-model="cfg.scheduler.sonarr_enabled" class="rounded border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800">
-                                <span class="text-sm text-gray-700 dark:text-gray-300">Sonarr</span>
-                            </label>
-                            <div x-show="cfg.scheduler.sonarr_enabled" class="mt-2 ml-6">
-                                <label class="block text-sm text-gray-500 dark:text-gray-400 mb-1">Intervalle (heures)</label>
-                                <input type="number" x-model="cfg.scheduler.sonarr_interval_hours" min="1" max="168"
-                                       class="w-24 border border-gray-200 dark:border-gray-700 rounded-lg px-3 py-2 text-sm bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-200">
-                            </div>
-                        </div>
-                    </div>
-                    <p class="text-xs text-gray-400 dark:text-gray-500 mt-2">Les scans sont lancés en mode réel.</p>
-                </div>
-                <div class="border-t border-gray-100 dark:border-gray-800 pt-4">
-                    <h4 class="text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">Vérification post-nettoyage</h4>
-                    <label class="flex items-center gap-2 cursor-pointer">
-                        <input type="checkbox" x-model="cfg.verifier.enabled" class="rounded border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800">
-                        <span class="text-sm text-gray-700 dark:text-gray-300">Vérification automatique</span>
-                    </label>
-                    <div x-show="cfg.verifier.enabled" class="mt-3 ml-6 space-y-3">
-                        <div>
-                            <label class="block text-sm text-gray-500 dark:text-gray-400 mb-1">Intervalle (minutes)</label>
-                            <input type="number" x-model="cfg.verifier.interval_minutes" min="1" max="60"
-                                   class="w-24 border border-gray-200 dark:border-gray-700 rounded-lg px-3 py-2 text-sm bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-200">
-                        </div>
-                        <div>
-                            <label class="block text-sm text-gray-500 dark:text-gray-400 mb-1">Durée max avant recherche forcée</label>
-                            <input type="number" x-model="cfg.verifier.max_duration_minutes" min="5" max="480"
-                                   class="w-24 border border-gray-200 dark:border-gray-700 rounded-lg px-3 py-2 text-sm bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-200">
-                        </div>
-                    </div>
-                    <p class="text-xs text-gray-400 dark:text-gray-500 mt-2">
-                        Vérifie si les symlinks traités ont été remplacés. Au bout de la durée max, une recherche forcée est déclenchée.
-                    </p>
-                </div>
-                <div class="border-t border-gray-100 dark:border-gray-800 pt-4">
-                    <h4 class="text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">Re-tentatives automatiques</h4>
-                    <label class="flex items-center gap-2 cursor-pointer">
-                        <input type="checkbox" x-model="cfg.retryer.enabled" class="rounded border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800">
-                        <span class="text-sm text-gray-700 dark:text-gray-300">Re-tenter les éléments non remplacés</span>
-                    </label>
-                    <div x-show="cfg.retryer.enabled" class="mt-3 ml-6 space-y-3">
-                        <div>
-                            <label class="block text-sm text-gray-500 dark:text-gray-400 mb-1">Intervalle (minutes)</label>
-                            <input type="number" x-model="cfg.retryer.interval_minutes" min="10" max="1440"
-                                   class="w-24 border border-gray-200 dark:border-gray-700 rounded-lg px-3 py-2 text-sm bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-200">
-                        </div>
-                        <div>
-                            <label class="block text-sm text-gray-500 dark:text-gray-400 mb-1">Max tentatives par jour</label>
-                            <input type="number" x-model="cfg.retryer.max_daily_retries" min="1" max="24"
-                                   class="w-24 border border-gray-200 dark:border-gray-700 rounded-lg px-3 py-2 text-sm bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-200">
-                        </div>
-                    </div>
-                    <p class="text-xs text-gray-400 dark:text-gray-500 mt-2">
-                        Relance automatiquement une recherche pour les éléments non remplacés.
-                    </p>
-                </div>
-                <div class="border-t border-gray-100 dark:border-gray-800 pt-4">
-                    <h4 class="text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">Re-vérification automatique</h4>
-                    <label class="flex items-center gap-2 cursor-pointer">
-                        <input type="checkbox" x-model="cfg.rechecker.enabled" class="rounded border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800">
-                        <span class="text-sm text-gray-700 dark:text-gray-300">Vérifier périodiquement les résultats non résolus</span>
-                    </label>
-                    <div x-show="cfg.rechecker.enabled" class="mt-3 ml-6 space-y-3">
-                        <div>
-                            <label class="block text-sm text-gray-500 dark:text-gray-400 mb-1">Intervalle (minutes)</label>
-                            <input type="number" x-model="cfg.rechecker.interval_minutes" min="1" max="480"
-                                   class="w-24 border border-gray-200 dark:border-gray-700 rounded-lg px-3 py-2 text-sm bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-200">
-                        </div>
-                    </div>
-                    <p class="text-xs text-gray-400 dark:text-gray-500 mt-2">
-                        Vérifie sur le filesystem si les symlinks en attente (détecté, surveillance, non_remplacé) ont été remplacés automatiquement par Radarr/Sonarr, sans action manuelle.
-                    </p>
-                </div>
-            </div>
-        </section>
-
-        {# === COMPORTEMENT === #}
-        <section class="bg-white dark:bg-gray-900 rounded-xl shadow-sm border border-gray-200 dark:border-gray-800">
-            <div class="flex items-center gap-2 p-4 border-b border-gray-100 dark:border-gray-800">
-                <svg class="w-5 h-5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.5">
-                    <path stroke-linecap="round" stroke-linejoin="round" d="M10.5 6h9.75M10.5 6a1.5 1.5 0 11-3 0m3 0a1.5 1.5 0 10-3 0M3.75 6H7.5m3 12h9.75m-9.75 0a1.5 1.5 0 01-3 0m3 0a1.5 1.5 0 00-3 0m-3.75 0H7.5m9-6h3.75m-3.75 0a1.5 1.5 0 01-3 0m3 0a1.5 1.5 0 00-3 0m-9.75 0h9.75"/>
-                </svg>
-                <h3 class="font-medium text-gray-800 dark:text-gray-200">Comportement</h3>
-            </div>
-            <div class="p-4 space-y-3">
-                <label class="flex items-center gap-2 cursor-pointer">
-                    <input type="checkbox" x-model="cfg.defaults.rescan" class="rounded border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800">
-                    <span class="text-sm text-gray-700 dark:text-gray-300">Refresh après traitement</span>
-                </label>
-                <label class="flex items-center gap-2 cursor-pointer">
-                    <input type="checkbox" x-model="cfg.defaults.search" class="rounded border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800">
-                    <span class="text-sm text-gray-700 dark:text-gray-300">Recherche automatique après nettoyage</span>
-                </label>
-                <label class="flex items-center gap-2 cursor-pointer">
-                    <input type="checkbox" x-model="cfg.defaults.keep_symlinks" class="rounded border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800">
-                    <span class="text-sm text-gray-700 dark:text-gray-300">Conserver les symlinks locaux</span>
-                </label>
-                <div>
-                    <label class="block text-sm text-gray-500 dark:text-gray-400 mb-1">Limite fichiers par scan</label>
-                    <input type="number" x-model="cfg.defaults.limit" min="0" max="500"
-                           class="w-24 border border-gray-200 dark:border-gray-700 rounded-lg px-3 py-2 text-sm bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-200">
-                </div>
-            </div>
-        </section>
-
-        {# === CHEMINS AUTORISÉS === #}
-        <section class="bg-white dark:bg-gray-900 rounded-xl shadow-sm border border-gray-200 dark:border-gray-800">
-            <div class="flex items-center gap-2 p-4 border-b border-gray-100 dark:border-gray-800">
-                <svg class="w-5 h-5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.5">
-                    <path stroke-linecap="round" stroke-linejoin="round" d="M13.19 8.688a4.5 4.5 0 011.242 7.244l-4.5 4.5a4.5 4.5 0 01-6.364-6.364l1.757-1.757m13.35-.622l1.757-1.757a4.5 4.5 0 00-6.364-6.364l-4.5 4.5a4.5 4.5 0 001.242 7.244"/>
-                </svg>
-                <h3 class="font-medium text-gray-800 dark:text-gray-200">Chemins autorisés</h3>
-            </div>
-            <div class="p-4">
-                <p class="text-xs text-gray-400 dark:text-gray-500 mb-3">Racines de navigation pour l'explorateur de dossiers.</p>
-                <div class="space-y-1.5">
-                    <template x-for="(root, i) in cfg.browse_roots" :key="'br'+i">
-                        <div class="flex items-center gap-2 px-3 py-1.5 bg-gray-50 dark:bg-gray-800 rounded-lg text-sm">
-                            <svg class="w-4 h-4 shrink-0 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.5">
-                                <path stroke-linecap="round" stroke-linejoin="round" d="M2.25 12.75V12A2.25 2.25 0 014.5 9.75h15A2.25 2.25 0 0121.75 12v.75m-8.69-6.44l-2.12-2.12a1.5 1.5 0 00-1.061-.44H4.5A2.25 2.25 0 002.25 6v12a2.25 2.25 0 002.25 2.25h15A2.25 2.25 0 0021.75 18V9a2.25 2.25 0 00-2.25-2.25h-5.379a1.5 1.5 0 01-1.06-.44z"/>
+                    {# Scans planifiés #}
+                    <div class="p-4">
+                        <div @click="autoSection = autoSection === 'scans' ? '' : 'scans'" class="flex items-center gap-2 cursor-pointer select-none">
+                            <svg class="w-4 h-4 text-gray-400 shrink-0 transition-transform duration-150" :class="autoSection === 'scans' ? 'rotate-90' : ''" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5"/>
                             </svg>
-                            <span class="flex-1 font-mono text-xs text-gray-600 dark:text-gray-300 truncate" x-text="root"></span>
-                            <button @click="cfg.browse_roots.splice(i, 1)" class="text-red-400 hover:text-red-600 text-sm p-0.5 shrink-0">✕</button>
+                            <h4 class="text-sm font-medium text-gray-700 dark:text-gray-300">Scans planifiés</h4>
+                            <svg class="w-4 h-4 ml-auto text-gray-400 transition-transform duration-150" :class="autoSection === 'scans' ? 'rotate-180' : ''" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 8.25l-7.5 7.5-7.5-7.5"/>
+                            </svg>
+                        </div>
+                        <div x-show="autoSection === 'scans'" class="mt-3 space-y-3">
+                            <div>
+                                {{ checkbox_input('Radarr', 'cfg.scheduler.radarr_enabled') }}
+                                <div x-show="cfg.scheduler.radarr_enabled" class="mt-2 ml-6">
+                                    {{ number_input('Intervalle (heures)', 'cfg.scheduler.radarr_interval_hours', 1, 168) }}
+                                </div>
+                            </div>
+                            <div>
+                                {{ checkbox_input('Sonarr', 'cfg.scheduler.sonarr_enabled') }}
+                                <div x-show="cfg.scheduler.sonarr_enabled" class="mt-2 ml-6">
+                                    {{ number_input('Intervalle (heures)', 'cfg.scheduler.sonarr_interval_hours', 1, 168) }}
+                                </div>
+                            </div>
+                            <p class="text-xs text-gray-400 dark:text-gray-500">Les scans sont lancés en mode réel.</p>
+                        </div>
+                    </div>
+
+                    {# Vérification post-nettoyage #}
+                    <div class="p-4">
+                        <div @click="autoSection = autoSection === 'verify' ? '' : 'verify'" class="flex items-center gap-2 cursor-pointer select-none">
+                            <svg class="w-4 h-4 text-gray-400 shrink-0 transition-transform duration-150" :class="autoSection === 'verify' ? 'rotate-90' : ''" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5"/>
+                            </svg>
+                            <h4 class="text-sm font-medium text-gray-700 dark:text-gray-300">Vérification post-nettoyage</h4>
+                            <svg class="w-4 h-4 ml-auto text-gray-400 transition-transform duration-150" :class="autoSection === 'verify' ? 'rotate-180' : ''" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 8.25l-7.5 7.5-7.5-7.5"/>
+                            </svg>
+                        </div>
+                        <div x-show="autoSection === 'verify'" class="mt-3 space-y-3">
+                            {{ checkbox_input('Vérification automatique', 'cfg.verifier.enabled') }}
+                            <div x-show="cfg.verifier.enabled" class="ml-6 space-y-3">
+                                {{ number_input('Intervalle (minutes)', 'cfg.verifier.interval_minutes', 1, 60) }}
+                                {{ number_input('Durée max avant recherche forcée (min)', 'cfg.verifier.max_duration_minutes', 5, 480) }}
+                            </div>
+                            <p class="text-xs text-gray-400 dark:text-gray-500">Vérifie si les symlinks traités ont été remplacés. Au bout de la durée max, une recherche forcée est déclenchée.</p>
+                        </div>
+                    </div>
+
+                    {# Re-tentatives #}
+                    <div class="p-4">
+                        <div @click="autoSection = autoSection === 'retry' ? '' : 'retry'" class="flex items-center gap-2 cursor-pointer select-none">
+                            <svg class="w-4 h-4 text-gray-400 shrink-0 transition-transform duration-150" :class="autoSection === 'retry' ? 'rotate-90' : ''" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5"/>
+                            </svg>
+                            <h4 class="text-sm font-medium text-gray-700 dark:text-gray-300">Re-tentatives automatiques</h4>
+                            <svg class="w-4 h-4 ml-auto text-gray-400 transition-transform duration-150" :class="autoSection === 'retry' ? 'rotate-180' : ''" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 8.25l-7.5 7.5-7.5-7.5"/>
+                            </svg>
+                        </div>
+                        <div x-show="autoSection === 'retry'" class="mt-3 space-y-3">
+                            {{ checkbox_input('Re-tenter les éléments non remplacés', 'cfg.retryer.enabled') }}
+                            <div x-show="cfg.retryer.enabled" class="ml-6 space-y-3">
+                                {{ number_input('Intervalle (minutes)', 'cfg.retryer.interval_minutes', 10, 1440) }}
+                                {{ number_input('Max tentatives par jour', 'cfg.retryer.max_daily_retries', 1, 24) }}
+                            </div>
+                            <p class="text-xs text-gray-400 dark:text-gray-500">Relance automatiquement une recherche pour les éléments non remplacés.</p>
+                        </div>
+                    </div>
+
+                    {# Re-vérification #}
+                    <div class="p-4">
+                        <div @click="autoSection = autoSection === 'recheck' ? '' : 'recheck'" class="flex items-center gap-2 cursor-pointer select-none">
+                            <svg class="w-4 h-4 text-gray-400 shrink-0 transition-transform duration-150" :class="autoSection === 'recheck' ? 'rotate-90' : ''" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5"/>
+                            </svg>
+                            <h4 class="text-sm font-medium text-gray-700 dark:text-gray-300">Re-vérification automatique</h4>
+                            <svg class="w-4 h-4 ml-auto text-gray-400 transition-transform duration-150" :class="autoSection === 'recheck' ? 'rotate-180' : ''" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 8.25l-7.5 7.5-7.5-7.5"/>
+                            </svg>
+                        </div>
+                        <div x-show="autoSection === 'recheck'" class="mt-3 space-y-3">
+                            {{ checkbox_input('Vérifier périodiquement les résultats non résolus', 'cfg.rechecker.enabled') }}
+                            <div x-show="cfg.rechecker.enabled" class="ml-6">
+                                {{ number_input('Intervalle (minutes)', 'cfg.rechecker.interval_minutes', 1, 480) }}
+                            </div>
+                            <p class="text-xs text-gray-400 dark:text-gray-500">Vérifie sur le filesystem si les symlinks en attente (détecté, surveillance, non_remplacé) ont été remplacés automatiquement par Radarr/Sonarr, sans action manuelle.</p>
+                        </div>
+                    </div>
+
+                </div>
+            </section>
+        </div>
+
+        {# ===== TAB: ALLDEBRID ===== #}
+        <div x-show="activeTab === 'alldebrid'" x-cloak>
+            <section class="bg-white dark:bg-gray-900 rounded-xl shadow-sm border border-gray-200 dark:border-gray-800">
+                <div class="flex items-center justify-between p-4 border-b border-gray-100 dark:border-gray-800">
+                    <div class="flex items-center gap-2">
+                        <svg class="w-5 h-5 text-orange-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.5">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M13.19 8.688a4.5 4.5 0 011.242 7.244l-4.5 4.5a4.5 4.5 0 01-6.364-6.364l1.757-1.757m13.35-.622l1.757-1.757a4.5 4.5 0 00-6.364-6.364l-4.5 4.5a4.5 4.5 0 001.242 7.244"/>
+                        </svg>
+                        <h3 class="font-medium text-gray-800 dark:text-gray-200">AllDebrid — Orphelins</h3>
+                    </div>
+                    <button @click="addAllDebridInstance()"
+                            class="text-xs text-brand-600 dark:text-brand-400 hover:underline font-medium">➕ Ajouter une instance</button>
+                </div>
+
+                <div class="divide-y divide-gray-100 dark:divide-gray-800">
+                    <template x-for="(inst, idx) in cfg.alldebrid.instances" :key="idx">
+                        <div class="p-4 space-y-3">
+                            <div class="flex items-center justify-between">
+                                <div class="flex items-center gap-2">
+                                    <input type="checkbox" x-model="inst.enabled"
+                                           class="rounded border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800">
+                                    <span class="text-sm font-medium text-gray-700 dark:text-gray-300" x-text="inst.name || 'Instance ' + (idx + 1)"></span>
+                                </div>
+                                <button @click="cfg.alldebrid.instances.splice(idx, 1)"
+                                        class="text-red-400 hover:text-red-600 text-sm p-1" title="Supprimer">✕</button>
+                            </div>
+
+                            <div class="grid sm:grid-cols-2 gap-3">
+                                {{ text_input('Nom', 'inst.name', 'alldebrid-01') }}
+                                <div>
+                                    <label class="block text-sm text-gray-500 dark:text-gray-400 mb-1">Clé API</label>
+                                    <div class="flex gap-2">
+                                        <input :type="showADKey === 'showADKey' + idx ? 'text' : 'password'" x-model="inst.api_key"
+                                               class="flex-1 border border-gray-200 dark:border-gray-700 rounded-lg px-3 py-2 text-sm font-mono bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-200">
+                                        <button @click="showADKey = 'showADKey' + idx"
+                                                class="text-xs text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300 shrink-0 px-2">
+                                            <span x-text="showADKey === 'showADKey' + idx ? 'Masquer' : 'Afficher'"></span>
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div>
+                                <label class="block text-sm text-gray-500 dark:text-gray-400 mb-1">Dossiers à scanner</label>
+                                {{ path_list("inst.library_roots", "inst.library_roots.splice(ri, 1)") }}
+                                <div class="flex gap-2 mt-1.5">
+                                    <input type="text" x-model="adLibInputs[idx]"
+                                           placeholder="Taper un chemin..."
+                                           @keydown.enter.prevent="inst.library_roots.push(adLibInputs[idx]); adLibInputs[idx] = ''"
+                                           class="flex-1 border border-gray-200 dark:border-gray-700 rounded-lg px-3 py-1.5 text-sm bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-200 placeholder-gray-400">
+                                    <button @click="inst.library_roots.push(adLibInputs[idx]); adLibInputs[idx] = ''"
+                                            class="bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg px-3 py-1.5 text-sm text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700">➕</button>
+                                    <button @click="openADBrowser(idx, 'library_roots')"
+                                            class="bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg px-3 py-1.5 text-sm text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700">📂</button>
+                                </div>
+                            </div>
+
+                            <div>
+                                <label class="block text-sm text-gray-500 dark:text-gray-400 mb-1">Préfixes cibles (AllDebrid mount)</label>
+                                {{ path_list("inst.target_prefixes", "inst.target_prefixes.splice(pi, 1)") }}
+                                <div class="flex gap-2 mt-1.5">
+                                    <input type="text" x-model="adPrefInputs[idx]"
+                                           placeholder="/mnt/..."
+                                           @keydown.enter.prevent="inst.target_prefixes.push(adPrefInputs[idx]); adPrefInputs[idx] = ''"
+                                           class="flex-1 border border-gray-200 dark:border-gray-700 rounded-lg px-3 py-1.5 text-sm bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-200 placeholder-gray-400">
+                                    <button @click="inst.target_prefixes.push(adPrefInputs[idx]); adPrefInputs[idx] = ''"
+                                            class="bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg px-3 py-1.5 text-sm text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700">➕</button>
+                                    <button @click="openADBrowser(idx, 'target_prefixes', '/mnt')"
+                                            class="bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg px-3 py-1.5 text-sm text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700">📂</button>
+                                </div>
+                            </div>
+
+                            <div class="grid grid-cols-2 gap-3">
+                                {{ number_input('Âge min (heures)', 'inst.min_age_hours', 0, 720) }}
+                                {{ number_input('Rate limit (s)', 'inst.rate_limit', '0.1', 5) }}
+                            </div>
                         </div>
                     </template>
                 </div>
-                <div class="flex gap-2 mt-1.5">
-                    <input type="text" x-model="browseRootsInput"
-                           placeholder="/mnt, /home..."
-                           @keydown.enter.prevent="addBrowseRoot"
-                           class="flex-1 border border-gray-200 dark:border-gray-700 rounded-lg px-3 py-1.5 text-sm bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-200 placeholder-gray-400">
-                    <button @click="addBrowseRoot"
-                            class="bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg px-3 py-1.5 text-sm text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700">➕</button>
-                </div>
-            </div>
-        </section>
 
-        {# === Save bar === #}
+                <div class="p-4 border-t border-gray-100 dark:border-gray-800 space-y-3">
+                    <label class="flex items-start gap-3 cursor-pointer">
+                        <input type="checkbox" x-model="cfg.alldebrid.auto_enabled"
+                               class="mt-0.5 rounded border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800">
+                        <div>
+                            <span class="text-sm font-medium text-gray-700 dark:text-gray-300">Analyse automatique</span>
+                            <p class="text-xs text-amber-600 dark:text-amber-400 mt-0.5">
+                                ⚠️ Le mode automatique supprime les orphelins sans confirmation.
+                                Il est recommandé de nettoyer manuellement depuis la page Orphelins.
+                            </p>
+                        </div>
+                    </label>
+                    <template x-if="cfg.alldebrid.auto_enabled">
+                        <div>
+                            <label class="block text-sm text-gray-500 dark:text-gray-400 mb-1">
+                                Horaire (format 24h · fuseau horaire du serveur)
+                            </label>
+                            <input type="time" x-model="cfg.alldebrid.schedule_time"
+                                   class="w-32 border border-gray-200 dark:border-gray-700 rounded-lg px-3 py-2 text-sm bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-200">
+                        </div>
+                    </template>
+                </div>
+            </section>
+        </div>
+
+        {# ===== TAB: GÉNÉRAL ===== #}
+        <div x-show="activeTab === 'general'" x-cloak>
+            <div class="space-y-4">
+
+                {# Notifications #}
+                <section class="bg-white dark:bg-gray-900 rounded-xl shadow-sm border border-gray-200 dark:border-gray-800">
+                    <div class="flex items-center gap-2 p-4 border-b border-gray-100 dark:border-gray-800">
+                        <svg class="w-5 h-5 text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.5">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M7.217 10.907a2.25 2.25 0 100 2.186m0-2.186c.18.324.283.696.283 1.093s-.103.77-.283 1.093m0-2.186l9.566-5.314m-9.566 7.5l9.566 5.314m0 0a2.25 2.25 0 103.935 2.186 2.25 2.25 0 00-3.935-2.186zm0-12.814a2.25 2.25 0 103.933-2.185 2.25 2.25 0 00-3.933 2.185z"/>
+                        </svg>
+                        <h3 class="font-medium text-gray-800 dark:text-gray-200">Notifications</h3>
+                    </div>
+                    <div class="p-4 space-y-3">
+                        {{ checkbox_input('Notifications Discord activées', 'cfg.discord.enabled') }}
+                        <div x-show="cfg.discord.enabled">
+                            <label class="block text-sm text-gray-500 dark:text-gray-400 mb-1">Webhook URL</label>
+                            <div class="flex gap-2">
+                                <input :type="showWebhook ? 'text' : 'password'" x-model="cfg.discord.webhook"
+                                       class="flex-1 border border-gray-200 dark:border-gray-700 rounded-lg px-3 py-2 text-sm font-mono bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-200">
+                                <button @click="showWebhook = !showWebhook"
+                                        class="text-xs text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300 shrink-0 px-2">
+                                    <span x-text="showWebhook ? 'Masquer' : 'Afficher'"></span>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                {# Comportement #}
+                <section class="bg-white dark:bg-gray-900 rounded-xl shadow-sm border border-gray-200 dark:border-gray-800">
+                    <div class="flex items-center gap-2 p-4 border-b border-gray-100 dark:border-gray-800">
+                        <svg class="w-5 h-5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.5">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M10.5 6h9.75M10.5 6a1.5 1.5 0 11-3 0m3 0a1.5 1.5 0 10-3 0M3.75 6H7.5m3 12h9.75m-9.75 0a1.5 1.5 0 01-3 0m3 0a1.5 1.5 0 00-3 0m-3.75 0H7.5m9-6h3.75m-3.75 0a1.5 1.5 0 01-3 0m3 0a1.5 1.5 0 00-3 0m-9.75 0h9.75"/>
+                        </svg>
+                        <h3 class="font-medium text-gray-800 dark:text-gray-200">Comportement</h3>
+                    </div>
+                    <div class="p-4 space-y-3">
+                        {{ checkbox_input('Refresh après traitement', 'cfg.defaults.rescan') }}
+                        {{ checkbox_input('Recherche automatique après nettoyage', 'cfg.defaults.search') }}
+                        {{ checkbox_input('Conserver les symlinks locaux', 'cfg.defaults.keep_symlinks') }}
+                        {{ number_input('Limite fichiers par scan', 'cfg.defaults.limit', 0, 500) }}
+                    </div>
+                </section>
+
+                {# Chemins autorisés #}
+                <section class="bg-white dark:bg-gray-900 rounded-xl shadow-sm border border-gray-200 dark:border-gray-800">
+                    <div class="flex items-center gap-2 p-4 border-b border-gray-100 dark:border-gray-800">
+                        <svg class="w-5 h-5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.5">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M13.19 8.688a4.5 4.5 0 011.242 7.244l-4.5 4.5a4.5 4.5 0 01-6.364-6.364l1.757-1.757m13.35-.622l1.757-1.757a4.5 4.5 0 00-6.364-6.364l-4.5 4.5a4.5 4.5 0 001.242 7.244"/>
+                        </svg>
+                        <h3 class="font-medium text-gray-800 dark:text-gray-200">Chemins autorisés</h3>
+                    </div>
+                    <div class="p-4">
+                        <p class="text-xs text-gray-400 dark:text-gray-500 mb-3">Racines de navigation pour l'explorateur de dossiers.</p>
+                        {{ path_list("cfg.browse_roots", "cfg.browse_roots.splice(i, 1)") }}
+                        <div class="flex gap-2 mt-1.5">
+                            <input type="text" x-model="browseRootsInput"
+                                   placeholder="/mnt, /home..."
+                                   @keydown.enter.prevent="addBrowseRoot"
+                                   class="flex-1 border border-gray-200 dark:border-gray-700 rounded-lg px-3 py-1.5 text-sm bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-200 placeholder-gray-400">
+                            <button @click="addBrowseRoot"
+                                    class="bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg px-3 py-1.5 text-sm text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700">➕</button>
+                        </div>
+                    </div>
+                </section>
+
+            </div>
+        </div>
+
+        {# === SAVE BAR === #}
         <div class="sticky bottom-0 md:relative bg-white dark:bg-gray-900 border-t md:border border-gray-200 dark:border-gray-800 md:rounded-xl md:shadow-sm p-4 -mx-4 md:mx-0 md:mt-6 flex items-center gap-3 safe-bottom">
             <button @click="saveConfig()" class="bg-brand-600 text-white px-5 py-2.5 rounded-lg text-sm font-medium hover:bg-brand-700 transition-colors">
                 <span x-show="!saving">💾 Enregistrer</span>
@@ -548,6 +466,7 @@
             <span x-show="saved" class="text-sm text-green-600 dark:text-green-400" x-cloak>✓ Enregistré</span>
             <span x-show="error" class="text-sm text-red-600 dark:text-red-400" x-text="error" x-cloak></span>
         </div>
+
     </div>
 
     {# === EXPLORATEUR MULTI-SÉLECTION === #}
@@ -752,6 +671,8 @@
 <script>
 function configApp() {
     return {
+        activeTab: 'servers',
+        autoSection: 'scans',
         cfg: { radarr: { url: '', api_key: '', container: 'radarr', library_roots: [], target_prefixes: [] },
                sonarr: { url: '', api_key: '', container: 'sonarr', library_roots: [], target_prefixes: [] },
                discord: { enabled: false, webhook: '' },
