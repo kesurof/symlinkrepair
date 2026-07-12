@@ -78,7 +78,7 @@ class OrphanDetector:
             if self._is_under_path(target, prefix):
                 pn = os.path.normpath(target)
                 pr = os.path.normpath(prefix)
-                rel = pn[len(pr.rstrip("/")) + 1:] if pn != pr else ""
+                rel = pn[len(pr.rstrip("/")) + 1 :] if pn != pr else ""
                 parts = tuple(p for p in rel.split(os.sep) if p)
                 return prefix, parts
         return None
@@ -99,7 +99,8 @@ class OrphanDetector:
                         usage.total_symlinks += 1
                         raw_target = os.readlink(full_path)
                         target = os.path.normpath(
-                            raw_target if os.path.isabs(raw_target)
+                            raw_target
+                            if os.path.isabs(raw_target)
                             else os.path.join(root, raw_target)
                         )
                         matched = self._match_target_prefix(target)
@@ -162,7 +163,9 @@ class OrphanDetector:
         usage = self.scan_symlinks()
         logger.info(
             "[%s] Symlinks: total=%d matching=%d keys=%d",
-            self.name, usage.total_symlinks, usage.matching_symlinks,
+            self.name,
+            usage.total_symlinks,
+            usage.matching_symlinks,
             len(usage.used_strict_keys),
         )
 
@@ -193,7 +196,10 @@ class OrphanDetector:
         )
         logger.info(
             "[%s] Done: used=%d protected=%d orphans=%d (%.1fs)",
-            self.name, result.used_count, result.protected_count, result.orphan_count,
+            self.name,
+            result.used_count,
+            result.protected_count,
+            result.orphan_count,
             result.duration,
         )
         return result

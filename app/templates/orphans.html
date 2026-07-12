@@ -1,7 +1,7 @@
 {% extends "base.html" %}
 {% block title %}Orphelins AllDebrid — SymlinkRepair{% endblock %}
 {% block content %}
-<div>
+<div x-data="orphansApp()">
     <div class="flex items-center justify-between mb-6">
         <h2 class="text-lg font-semibold text-gray-800 dark:text-gray-200">Orphelins AllDebrid</h2>
         <a href="https://alldebrid.com" target="_blank"
@@ -19,6 +19,29 @@
         dans les <a href="/config" class="underline font-medium">paramètres</a>.
     </div>
     {% endif %}
+
+    {# === Bandeau analyse préalable === #}
+    <div class="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl p-4 mb-6">
+        <div class="flex items-start gap-3">
+            <svg class="w-6 h-6 shrink-0 text-red-500 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.5">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z"/>
+            </svg>
+            <div class="flex-1">
+                <p class="font-semibold text-red-800 dark:text-red-300">Analyse préalable requise</p>
+                <p class="text-sm text-red-700 dark:text-red-400 mt-1">
+                    Avant d'utiliser la suppression des orphelins, analysez d'abord les cibles des symlinks
+                    pour vérifier qu'aucun dossier n'est encore utilisé par un autre service.
+                </p>
+                <button @click="symlinkModalOpen = true"
+                        class="mt-3 bg-red-600 hover:bg-red-700 text-white px-6 py-3 rounded-lg font-medium text-base inline-flex items-center gap-2 transition-colors">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M13.19 8.688a4.5 4.5 0 011.242 7.244l-4.5 4.5a4.5 4.5 0 01-6.364-6.364l1.757-1.757m13.35-.622l1.757-1.757a4.5 4.5 0 00-6.364-6.364l-4.5 4.5a4.5 4.5 0 001.242 7.244"/>
+                    </svg>
+                    Analyser les cibles des symlinks
+                </button>
+            </div>
+        </div>
+    </div>
 
     {# === Stats cards === #}
     <div class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
@@ -130,6 +153,163 @@
         </div>
     </div>
 
+{# === MODALE ANALYSE SYMLINKS === #}
+<div x-show="symlinkModalOpen" class="fixed inset-0 bg-black/40 dark:bg-black/60 flex items-end md:items-center justify-center z-50" @click.self="symlinkModalOpen = false" x-cloak>
+    <div class="bg-white dark:bg-gray-900 rounded-t-2xl md:rounded-2xl shadow-xl w-full md:max-w-4xl md:mx-4 mx-2 max-h-[90vh] flex flex-col slide-up">
+
+        <div class="flex items-center gap-3 px-6 py-4 border-b border-gray-200 dark:border-gray-800 shrink-0">
+            <div class="w-8 h-8 rounded-full bg-red-100 dark:bg-red-900/30 flex items-center justify-center">
+                <svg class="w-5 h-5 text-red-600 dark:text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.5">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M13.19 8.688a4.5 4.5 0 011.242 7.244l-4.5 4.5a4.5 4.5 0 01-6.364-6.364l1.757-1.757m13.35-.622l1.757-1.757a4.5 4.5 0 00-6.364-6.364l-4.5 4.5a4.5 4.5 0 001.242 7.244"/>
+                </svg>
+            </div>
+            <h3 class="font-semibold text-gray-800 dark:text-gray-200 text-lg">Analyse des cibles de symlinks</h3>
+            <button @click="symlinkModalOpen = false" class="ml-auto text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 p-1 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800">✕</button>
+        </div>
+
+        {# === Étape 1 : saisie du chemin === #}
+        <div x-show="!symlinkResult" class="p-6 overflow-y-auto">
+            <p class="text-gray-600 dark:text-gray-400 mb-1 font-medium">Quel dossier analyser ?</p>
+            <p class="text-sm text-gray-500 dark:text-gray-400 mb-4">
+                Choisissez votre dossier racine de médias complets (ex: <code class="font-mono text-xs bg-gray-100 dark:bg-gray-800 px-1 py-0.5 rounded">/home/$USER/Medias</code>).<br>
+                L'analyse regroupe les symlinks par dossier cible après <code class="font-mono text-xs">alldebrid/</code>, inutile de sélectionner un sous-dossier précis.
+            </p>
+            <div class="flex gap-2 items-start">
+                <div class="flex-1">
+                    <input type="text" x-model="symlinkPath"
+                           @keydown.enter.prevent="runSymlinkAnalysis"
+                           placeholder="/mnt/..."
+                           class="w-full border border-gray-200 dark:border-gray-700 rounded-lg px-3 py-2.5 text-sm bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-200 placeholder-gray-400">
+                </div>
+                <button @click="openSymlinkBrowser"
+                        class="bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg px-3 py-2.5 text-sm text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors" title="Explorateur">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.5">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M2.25 12.75V12A2.25 2.25 0 014.5 9.75h15A2.25 2.25 0 0121.75 12v.75m-8.69-6.44l-2.12-2.12a1.5 1.5 0 00-1.061-.44H4.5A2.25 2.25 0 002.25 6v12a2.25 2.25 0 002.25 2.25h15A2.25 2.25 0 0021.75 18V9a2.25 2.25 0 00-2.25-2.25h-5.379a1.5 1.5 0 01-1.06-.44z"/>
+                    </svg>
+                </button>
+            </div>
+            <div x-show="symlinkError" class="mt-2 text-sm text-red-600 dark:text-red-400 flex items-center gap-1">
+                <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.5">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m9-.75a9 9 0 11-18 0 9 9 0 0118 0zm-9 3.75h.008v.008H12v-.008z"/>
+                </svg>
+                <span x-text="symlinkError"></span>
+            </div>
+            <div class="flex gap-3 mt-6">
+                <button @click="runSymlinkAnalysis" :disabled="symlinkLoading || !symlinkPath"
+                        class="bg-brand-600 hover:bg-brand-700 disabled:opacity-50 disabled:cursor-not-allowed text-white px-6 py-2.5 rounded-lg text-sm font-medium transition-colors inline-flex items-center gap-2">
+                    <svg x-show="symlinkLoading" class="w-4 h-4 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0l3.181 3.183a8.25 8.25 0 0013.803-3.7M4.031 9.865a8.25 8.25 0 0113.803-3.7l3.181 3.182"/>
+                    </svg>
+                    <span x-show="!symlinkLoading">Lancer l'analyse</span>
+                    <span x-show="symlinkLoading">Analyse en cours...</span>
+                </button>
+                <button @click="symlinkModalOpen = false" class="text-gray-500 dark:text-gray-400 px-4 py-2.5 text-sm font-medium hover:text-gray-700 dark:hover:text-gray-300">Annuler</button>
+            </div>
+        </div>
+
+        {# === Étape 2 : résultats === #}
+        <div x-show="symlinkResult" class="p-6 overflow-y-auto">
+            <div class="flex items-center justify-between mb-4">
+                <h4 class="font-semibold text-gray-800 dark:text-gray-200">Chemins de symlink détectés</h4>
+                <span class="text-xs text-gray-500 dark:text-gray-400 font-mono" x-text="symlinkResult.total + ' symlinks'"></span>
+            </div>
+
+            <div class="border border-gray-200 dark:border-gray-700 rounded-xl overflow-hidden">
+                <table class="w-full text-sm">
+                    <thead class="bg-gray-50 dark:bg-gray-800 text-left">
+                        <tr>
+                            <th class="px-4 py-3 font-medium text-gray-600 dark:text-gray-400 text-xs uppercase tracking-wider">Dossier cible</th>
+                            <th class="px-4 py-3 font-medium text-gray-600 dark:text-gray-400 text-xs uppercase tracking-wider text-right">Liens</th>
+                            <th class="px-4 py-3 font-medium text-gray-600 dark:text-gray-400 text-xs uppercase tracking-wider text-right">Cassés</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <template x-for="(item, i) in symlinkResult.target_dirs" :key="i">
+                            <tr class="border-t border-gray-100 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800/30 transition-colors">
+                                <td class="px-4 py-3 font-mono text-xs text-gray-700 dark:text-gray-300 max-w-[400px] truncate" x-text="item.dir" :title="item.dir"></td>
+                                <td class="px-4 py-3 text-right text-gray-800 dark:text-gray-200 font-medium" x-text="item.count"></td>
+                                <td class="px-4 py-3 text-right" x-text="item.broken"
+                                    :class="item.broken > 0 ? 'text-red-600 dark:text-red-400 font-medium' : 'text-gray-400 dark:text-gray-500'"></td>
+                            </tr>
+                        </template>
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="mt-4 flex flex-wrap items-center gap-4 text-sm">
+                <div class="flex items-center gap-2">
+                    <span class="text-gray-500 dark:text-gray-400">Symlinks trouvés :</span>
+                    <span class="font-semibold text-gray-800 dark:text-gray-200" x-text="symlinkResult.total"></span>
+                </div>
+                <div class="flex items-center gap-2">
+                    <span class="text-gray-500 dark:text-gray-400">Symlinks cassés :</span>
+                    <span class="font-semibold" :class="symlinkResult.broken > 0 ? 'text-red-600 dark:text-red-400' : 'text-green-600 dark:text-green-400'" x-text="symlinkResult.broken"></span>
+                </div>
+            </div>
+
+            <div x-show="symlinkResult.broken > 0" class="mt-3 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-xl p-3 text-sm text-amber-700 dark:text-amber-400">
+                <span class="font-medium">Attention :</span> des symlinks cassés ont été détectés. Assurez-vous que les dossiers cibles sont bien montés avant de nettoyer les orphelins.
+            </div>
+
+            <div class="flex gap-3 mt-6 pt-4 border-t border-gray-100 dark:border-gray-800">
+                <button @click="symlinkModalOpen = false; symlinkResult = null"
+                        class="bg-brand-600 hover:bg-brand-700 text-white px-6 py-2.5 rounded-lg text-sm font-medium transition-colors">
+                    J'ai compris, je peux continuer
+                </button>
+                <button @click="symlinkResult = null; symlinkPath = ''; symlinkError = ''"
+                        class="bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 px-4 py-2.5 rounded-lg text-sm font-medium hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors">
+                    Analyser un autre dossier
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+{# === FILE BROWSER DIALOG === #}
+<dialog x-ref="browserModal" class="rounded-2xl shadow-xl border border-gray-200 dark:border-gray-800 p-0 w-full max-w-lg bg-white dark:bg-gray-900 backdrop:bg-black/40">
+    <div class="p-4 border-b border-gray-100 dark:border-gray-800 flex items-center justify-between">
+        <span class="text-sm font-medium text-gray-700 dark:text-gray-300">Sélectionner un dossier</span>
+        <button @click="$refs.browserModal.close()" class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 p-1">✕</button>
+    </div>
+    <div class="p-4">
+        <div class="text-sm font-mono text-gray-500 dark:text-gray-400 mb-2 truncate" x-text="browserPath"></div>
+        <div x-show="browserError" class="text-sm text-red-500 dark:text-red-400 mb-2" x-text="browserError"></div>
+        <div class="border border-gray-200 dark:border-gray-700 rounded-xl overflow-hidden max-h-60 overflow-y-auto">
+            <template x-for="dir in browserDirs" :key="dir.path">
+                <div class="flex items-center px-4 py-2.5 hover:bg-gray-50 dark:hover:bg-gray-800 border-b border-gray-100 dark:border-gray-800 last:border-b-0 text-sm">
+                    <button @click="navigateDir(dir.path)" class="flex items-center gap-2 flex-1 min-w-0 text-left">
+                        <span>📁</span>
+                        <span class="truncate text-gray-700 dark:text-gray-300" x-text="dir.name"></span>
+                    </button>
+                    <button @click="selectBrowserDir(dir.path)"
+                            class="shrink-0 text-brand-600 dark:text-brand-400 hover:text-brand-700 dark:hover:text-brand-300 text-xs font-medium ml-2">
+                        Choisir
+                    </button>
+                </div>
+            </template>
+        </div>
+        <div class="flex items-center gap-2 mt-2">
+            <button x-show="browserCanGoUp" @click="navigateDir(browserParent)"
+                    class="text-sm text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300 font-medium">
+                ↑ Dossier parent
+            </button>
+        </div>
+        <div class="mt-3 border-t border-gray-100 dark:border-gray-800 pt-3">
+            <label class="block text-sm text-gray-500 dark:text-gray-400 mb-1">Ou taper un chemin</label>
+            <div class="flex gap-2">
+                <input type="text" x-model="browserManualPath"
+                       placeholder="/mnt/..."
+                       @keydown.enter.prevent="selectBrowserDir(browserManualPath)"
+                       class="flex-1 border border-gray-200 dark:border-gray-700 rounded-lg px-3 py-1.5 text-sm bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-200 placeholder-gray-400">
+                <button @click="selectBrowserDir(browserManualPath)"
+                        class="bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg px-3 py-1.5 text-sm text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors">
+                    Choisir
+                </button>
+            </div>
+        </div>
+    </div>
+</dialog>
+
 </div>
 <style>
 .loading-text { display: none; }
@@ -143,6 +323,78 @@ function hxFilterOrphans() {
     const params = new URLSearchParams();
     if (q) params.set('q', q);
     htmx.ajax('GET', '/api/orphans/content?' + params.toString(), {target: '#orphans-content'});
+}
+</script>
+<script>
+function orphansApp() {
+    return {
+        symlinkModalOpen: false,
+        symlinkPath: '',
+        symlinkResult: null,
+        symlinkLoading: false,
+        symlinkError: '',
+        browserPath: '',
+        browserDirs: [],
+        browserParent: '',
+        browserCanGoUp: false,
+        browserError: '',
+        browserManualPath: '',
+
+        async openSymlinkBrowser() {
+            this.browserError = '';
+            this.browserManualPath = '';
+            const resp = await fetch('/api/config/default-browse-roots');
+            const data = await resp.json();
+            this.browserPath = data.roots.length ? data.roots[0] : '/mnt';
+            await this.loadBrowser(this.browserPath);
+            this.$refs.browserModal.showModal();
+        },
+
+        async loadBrowser(path) {
+            this.browserError = '';
+            const resp = await fetch(`/api/browse?path=${encodeURIComponent(path)}`);
+            if (!resp.ok) {
+                const err = await resp.json();
+                this.browserError = err.error || 'Erreur inconnue';
+                return;
+            }
+            const data = await resp.json();
+            this.browserPath = data.current;
+            this.browserDirs = data.directories;
+            this.browserParent = data.parent;
+            this.browserCanGoUp = data.can_go_up;
+        },
+
+        navigateDir(path) {
+            this.loadBrowser(path);
+        },
+
+        selectBrowserDir(path) {
+            if (path) {
+                this.symlinkPath = path;
+            }
+            this.$refs.browserModal.close();
+        },
+
+        async runSymlinkAnalysis() {
+            if (!this.symlinkPath || !this.symlinkPath.trim()) return;
+            this.symlinkLoading = true;
+            this.symlinkError = '';
+            this.symlinkResult = null;
+            const form = new FormData();
+            form.append('path', this.symlinkPath.trim());
+            try {
+                const resp = await fetch('/api/orphans/analyze-symlinks', { method: 'POST', body: form });
+                const data = await resp.json();
+                if (!data.ok) throw new Error(data.error || 'Erreur inconnue');
+                this.symlinkResult = data;
+            } catch (e) {
+                this.symlinkError = e.message;
+            } finally {
+                this.symlinkLoading = false;
+            }
+        }
+    };
 }
 </script>
 {% endblock %}

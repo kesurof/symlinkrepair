@@ -332,27 +332,32 @@ async def surveillance_items(db: Connection = Depends(get_db)):
             if key not in seen:
                 seen.add(key)
                 episodes = [
-                    i for i in all_items
+                    i
+                    for i in all_items
                     if i["series_id"] == item["series_id"] and i["season"] == item["season"]
                 ]
                 dates = [e["created_at"] for e in episodes if e.get("created_at")]
-                groups.append({
-                    "series_id": item["series_id"],
-                    "season": item["season"],
-                    "media_title": item["media_title"],
-                    "episode_count": len(episodes),
-                    "total_searches": sum(e.get("search_count") or 0 for e in episodes),
-                    "oldest_created": min(dates) if dates else None,
-                })
+                groups.append(
+                    {
+                        "series_id": item["series_id"],
+                        "season": item["season"],
+                        "media_title": item["media_title"],
+                        "episode_count": len(episodes),
+                        "total_searches": sum(e.get("search_count") or 0 for e in episodes),
+                        "oldest_created": min(dates) if dates else None,
+                    }
+                )
         else:
-            singles.append({
-                "id": item["id"],
-                "source": item["source"],
-                "media_title": item["media_title"],
-                "symlink_path": item["symlink_path"],
-                "search_count": item.get("search_count") or 0,
-                "created_at": item.get("created_at"),
-            })
+            singles.append(
+                {
+                    "id": item["id"],
+                    "source": item["source"],
+                    "media_title": item["media_title"],
+                    "symlink_path": item["symlink_path"],
+                    "search_count": item.get("search_count") or 0,
+                    "created_at": item.get("created_at"),
+                }
+            )
 
     return {"groups": groups, "singles": singles, "total": len(all_items)}
 
@@ -364,15 +369,19 @@ async def result_detail(request: Request, result_id: int, db: Connection = Depen
     if not row:
         return templates.TemplateResponse(request, "404.html", status_code=404)
     config = load_config()
-    return templates.TemplateResponse(request, "detail.html", {
-        "item": dict(row),
-        "retryer": config.retryer,
-        "copy_icon": (
-            '<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"'
-            ' stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round"'
-            ' d="M15.666 3.888A2.25 2.25 0 0013.5 2.25h-3c-1.03 0-1.9.693-2.166 1.638m7.332 0c.055.194.084.4.084.612v0a.75.75 0 01-.75.75H9a.75.75 0 01-.75-.75v0c0-.212.03-.418.084-.612m7.332 0c.646.049 1.288.11 1.927.184 1.1.128 1.907 1.077 1.907 2.185V19.5a2.25 2.25 0 01-2.25 2.25H6.75A2.25 2.25 0 014.5 19.5V6.257c0-1.108.806-2.057 1.907-2.185a48.208 48.208 0 011.927-.184"/></svg>'
-        ),
-    })
+    return templates.TemplateResponse(
+        request,
+        "detail.html",
+        {
+            "item": dict(row),
+            "retryer": config.retryer,
+            "copy_icon": (
+                '<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"'
+                ' stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round"'
+                ' d="M15.666 3.888A2.25 2.25 0 0013.5 2.25h-3c-1.03 0-1.9.693-2.166 1.638m7.332 0c.055.194.084.4.084.612v0a.75.75 0 01-.75.75H9a.75.75 0 01-.75-.75v0c0-.212.03-.418.084-.612m7.332 0c.646.049 1.288.11 1.927.184 1.1.128 1.907 1.077 1.907 2.185V19.5a2.25 2.25 0 01-2.25 2.25H6.75A2.25 2.25 0 014.5 19.5V6.257c0-1.108.806-2.057 1.907-2.185a48.208 48.208 0 011.927-.184"/></svg>'
+            ),
+        },
+    )
 
 
 @router.get("/season/{series_id}/{season}", response_class=HTMLResponse)
@@ -463,8 +472,14 @@ async def recheck_result(result_id: int, db: Connection = Depends(get_db)):
     await db.commit()
     cfg = load_config()
     search_ok = False
-    if result["source"] == "sonarr" and result.get("series_id") and result.get("season") is not None:
-        search_ok = await search_season(cfg.sonarr.url, cfg.sonarr.api_key, result["series_id"], result["season"])
+    if (
+        result["source"] == "sonarr"
+        and result.get("series_id")
+        and result.get("season") is not None
+    ):
+        search_ok = await search_season(
+            cfg.sonarr.url, cfg.sonarr.api_key, result["series_id"], result["season"]
+        )
     elif result["source"] == "radarr" and result.get("movie_id"):
         search_ok = await search_movies(cfg.radarr.url, cfg.radarr.api_key, [result["movie_id"]])
     logger.info("Result %d recheck scheduled (search=%s)", result_id, search_ok)
@@ -652,7 +667,13 @@ async def batch_action(request: Request, db: Connection = Depends(get_db)):
     action = body.get("action", "")
     ids = body.get("ids", [])
 
-    if action in ("process_season", "verify_season", "ignore_season", "recheck_season", "fix_season"):
+    if action in (
+        "process_season",
+        "verify_season",
+        "ignore_season",
+        "recheck_season",
+        "fix_season",
+    ):
         series_id = body.get("series_id")
         season_num = body.get("season")
         if not series_id or season_num is None:
@@ -760,7 +781,10 @@ async def batch_action(request: Request, db: Connection = Depends(get_db)):
                 await db.commit()
             logger.info(
                 "Season ignore: series=%s season=%s affected=%d verifier_stopped=%d",
-                series_id, season_num, len(ids_is), stopped,
+                series_id,
+                season_num,
+                len(ids_is),
+                stopped,
             )
             return {"ok": True, "affected": len(ids_is), "verifier_stopped": stopped}
 
@@ -792,12 +816,17 @@ async def batch_action(request: Request, db: Connection = Depends(get_db)):
                 )
                 await db.commit()
                 cfg = load_config()
-                search_ok = await search_season(cfg.sonarr.url, cfg.sonarr.api_key, series_id, season_num)
+                search_ok = await search_season(
+                    cfg.sonarr.url, cfg.sonarr.api_key, series_id, season_num
+                )
             else:
                 search_ok = False
             logger.info(
                 "Season recheck: series=%s season=%s affected=%d search=%s",
-                series_id, season_num, len(ids_rs), search_ok,
+                series_id,
+                season_num,
+                len(ids_rs),
+                search_ok,
             )
             return {"ok": True, "affected": len(ids_rs), "search_triggered": bool(search_ok)}
 
@@ -829,7 +858,9 @@ async def batch_action(request: Request, db: Connection = Depends(get_db)):
                 await db.commit()
             logger.info(
                 "Season fix: series=%s season=%s affected=%d",
-                series_id, season_num, len(ids_fs),
+                series_id,
+                season_num,
+                len(ids_fs),
             )
             return {"ok": True, "affected": len(ids_fs)}
 
@@ -942,8 +973,14 @@ async def batch_action(request: Request, db: Connection = Depends(get_db)):
         triggered = 0
         for row_v in await cursor_v.fetchall():
             rdict = dict(row_v)
-            if rdict["source"] == "sonarr" and rdict.get("series_id") and rdict.get("season") is not None:
-                ok = await search_season(cfg.sonarr.url, cfg.sonarr.api_key, rdict["series_id"], rdict["season"])
+            if (
+                rdict["source"] == "sonarr"
+                and rdict.get("series_id")
+                and rdict.get("season") is not None
+            ):
+                ok = await search_season(
+                    cfg.sonarr.url, cfg.sonarr.api_key, rdict["series_id"], rdict["season"]
+                )
                 if ok:
                     triggered += 1
             elif rdict["source"] == "radarr" and rdict.get("movie_id"):

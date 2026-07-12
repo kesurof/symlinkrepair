@@ -1,3 +1,4 @@
+import asyncio
 import logging
 
 from aiosqlite import Connection
@@ -6,7 +7,8 @@ from fastapi.responses import HTMLResponse, JSONResponse
 
 from app.database import get_db
 from app.services.alldebrid import AllDebridAPI, is_hash_name
-from app.services.config_service import load_config
+from app.services.config_service import browse_directory, load_config
+from app.services.filescanner import analyze_symlink_targets
 from app.services.orphan_detector import OrphanDetector
 from app.templates import templates
 
@@ -24,17 +26,11 @@ def _collect_fallback_prefixes(config) -> list[str]:
 async def _compute_stats(db: Connection) -> dict:
     cursor = await db.execute("SELECT COUNT(*) FROM orphan_magnets")
     total_magnets = (await cursor.fetchone())[0]
-    cursor = await db.execute(
-        "SELECT COUNT(*) FROM orphan_magnets WHERE status = 'orphan'"
-    )
+    cursor = await db.execute("SELECT COUNT(*) FROM orphan_magnets WHERE status = 'orphan'")
     orphan_count = (await cursor.fetchone())[0]
-    cursor = await db.execute(
-        "SELECT COUNT(*) FROM orphan_magnets WHERE status = 'used'"
-    )
+    cursor = await db.execute("SELECT COUNT(*) FROM orphan_magnets WHERE status = 'used'")
     used_count = (await cursor.fetchone())[0]
-    cursor = await db.execute(
-        "SELECT COUNT(*) FROM orphan_magnets WHERE status = 'protected'"
-    )
+    cursor = await db.execute("SELECT COUNT(*) FROM orphan_magnets WHERE status = 'protected'")
     protected_count = (await cursor.fetchone())[0]
     return {
         "total_magnets": total_magnets,
@@ -48,16 +44,11 @@ async def _compute_stats(db: Connection) -> dict:
 async def orphans_page(request: Request, db: Connection = Depends(get_db)):
     config = load_config()
     ad = config.alldebrid
-    configured = any(
-        inst.enabled and inst.api_key and inst.library_roots
-        for inst in ad.instances
-    )
+    configured = any(inst.enabled and inst.api_key and inst.library_roots for inst in ad.instances)
 
     stats = await _compute_stats(db)
 
-    instance_names = [
-        i.name for i in ad.instances if i.name
-    ]
+    instance_names = [i.name for i in ad.instances if i.name]
 
     return templates.TemplateResponse(
         request,
@@ -85,9 +76,7 @@ async def _build_content_query(q: str, page: int, per_page: int, db: Connection)
         like = f"%{q}%"
         params.extend([like, like, like])
 
-    count_cursor = await db.execute(
-        f"SELECT COUNT(*) FROM orphan_magnets {where}", params
-    )
+    count_cursor = await db.execute(f"SELECT COUNT(*) FROM orphan_magnets {where}", params)
     total = (await count_cursor.fetchone())[0]
     total_pages = max(1, (total + per_page - 1) // per_page)
     if page > total_pages:
@@ -142,7 +131,8 @@ async def run_orphan_scan(
 
     if instance:
         enabled = [
-            i for i in ad.instances
+            i
+            for i in ad.instances
             if i.name == instance and i.enabled and i.api_key and i.library_roots
         ]
         if not enabled:
@@ -174,7 +164,8 @@ async def run_orphan_scan(
         except Exception as e:
             logger.error("Orphan scan failed for %s: %s", inst.name, e)
             return JSONResponse(
-                {"ok": False, "error": f"{inst.name}: {e}"}, status_code=500,
+                {"ok": False, "error": f"{inst.name}: {e}"},
+                status_code=500,
             )
         for cand in result.orphans + result.protected + result.used:
             await db.execute(
@@ -215,7 +206,9 @@ async def run_orphan_scan(
         ctx["scan_orphan_count"] = total_orphans
         ctx["oob_stats"] = True
         return templates.TemplateResponse(
-            request, "partials/orphans_content.html", ctx,
+            request,
+            "partials/orphans_content.html",
+            ctx,
         )
 
     return {
@@ -257,7 +250,9 @@ async def delete_instance_orphans(
             ctx.update(stats)
             ctx["oob_stats"] = True
             return templates.TemplateResponse(
-                request, "partials/orphans_content.html", ctx,
+                request,
+                "partials/orphans_content.html",
+                ctx,
             )
         return {"ok": True, "deleted": 0, "errors": 0}
 
@@ -268,7 +263,10 @@ async def delete_instance_orphans(
         None,
     )
     if not inst:
-        return JSONResponse({"ok": False, "error": f"Instance {instance_name} introuvable ou inactive"}, status_code=400)
+        return JSONResponse(
+            {"ok": False, "error": f"Instance {instance_name} introuvable ou inactive"},
+            status_code=400,
+        )
 
     deleted = 0
     errors = 0
@@ -295,7 +293,22 @@ async def delete_instance_orphans(
         ctx.update(stats)
         ctx["oob_stats"] = True
         return templates.TemplateResponse(
-            request, "partials/orphans_content.html", ctx,
+            request,
+            "partials/orphans_content.html",
+            ctx,
         )
 
 
+@router.post("/api/orphans/analyze-symlinks")
+async def analyze_symlinks(request: Request, path: str = Form(...)):
+    config = load_config()
+    result = browse_directory(path, config.browse_roots)
+    if result is None:
+        return JSONResponse(
+            {"ok": False, "error": "Chemin non autorisé ou invalide"},
+            status_code=400,
+        )
+
+    data = await asyncio.to_thread(analyze_symlink_targets, path)
+    data["ok"] = True
+    return data

@@ -14,13 +14,30 @@ logger = logging.getLogger(__name__)
 
 BASE_URL = "https://api.alldebrid.com/v4.1"
 MEDIA_EXTENSIONS = {
-    ".mkv", ".mp4", ".avi", ".mov", ".m4v", ".ts", ".m2ts", ".wmv", ".flv", ".webm", ".iso",
+    ".mkv",
+    ".mp4",
+    ".avi",
+    ".mov",
+    ".m4v",
+    ".ts",
+    ".m2ts",
+    ".wmv",
+    ".flv",
+    ".webm",
+    ".iso",
 }
 MAGNET_NAME_FIELDS = ("filename", "name", "originalName", "original_name", "displayName", "title")
 FILE_NAME_KEYS = ("filename", "name", "path", "file", "basename", "displayName", "title")
 DATE_FIELDS = (
-    "created_at", "createdAt", "creationDate", "date",
-    "uploadDate", "uploaded", "added", "added_at", "updated_at",
+    "created_at",
+    "createdAt",
+    "creationDate",
+    "date",
+    "uploadDate",
+    "uploaded",
+    "added",
+    "added_at",
+    "updated_at",
 )
 HASH_RE = re.compile(r"^[a-fA-F0-9]{32,64}$")
 
@@ -68,6 +85,7 @@ def candidate_variants(value: str) -> Set[str]:
 
 def collect_strings_from_obj(obj: Any) -> Set[str]:
     values: Set[str] = set()
+
     def walk(value: Any, key_hint: str = "") -> None:
         if isinstance(value, dict):
             for k, v in value.items():
@@ -82,6 +100,7 @@ def collect_strings_from_obj(obj: Any) -> Set[str]:
             is_media = Path(s).suffix.lower() in MEDIA_EXTENSIONS
             if key_hint in FILE_NAME_KEYS or is_media or "/" in s or "\\" in s:
                 values.update(candidate_variants(s))
+
     walk(obj)
     return values
 
@@ -160,8 +179,11 @@ class AllDebridAPI:
     BASE_URL = "https://api.alldebrid.com/v4.1"
 
     def __init__(
-        self, api_key: str, rate_limit: float = 0.2,
-        retry_attempts: int = 3, retry_backoff: float = 2.0,
+        self,
+        api_key: str,
+        rate_limit: float = 0.2,
+        retry_attempts: int = 3,
+        retry_backoff: float = 2.0,
     ):
         self.api_key = api_key
         self.rate_limit = rate_limit
@@ -187,17 +209,19 @@ class AllDebridAPI:
                 if resp.status_code == 200:
                     return resp.json()
                 if resp.status_code == 429:
-                    await asyncio.sleep(self.retry_backoff ** attempt)
+                    await asyncio.sleep(self.retry_backoff**attempt)
                     continue
                 raise RuntimeError(f"HTTP {resp.status_code}: {resp.text[:300]}")
             except (
-                httpx.HTTPError, asyncio.TimeoutError,
-                RuntimeError, json.JSONDecodeError,
+                httpx.HTTPError,
+                asyncio.TimeoutError,
+                RuntimeError,
+                json.JSONDecodeError,
             ) as exc:
                 last_error = exc
                 if attempt >= self.retry_attempts:
                     break
-                await asyncio.sleep(self.retry_backoff ** attempt)
+                await asyncio.sleep(self.retry_backoff**attempt)
         raise RuntimeError(f"API error after {self.retry_attempts} attempt(s): {last_error}")
 
     async def get_magnets(self) -> List[Dict[str, Any]]:

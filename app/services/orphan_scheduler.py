@@ -25,6 +25,7 @@ def _collect_fallback_prefixes(config) -> list[str]:
 
 async def _delete_orphans_from_instance(inst, magnet_ids):
     from app.services.alldebrid import AllDebridAPI
+
     deleted = 0
     errors = 0
     if not magnet_ids:
@@ -46,10 +47,7 @@ async def _delete_orphans_from_instance(inst, magnet_ids):
 
 async def _run_orphan_scan():
     config = load_config()
-    active = [
-        i for i in config.alldebrid.instances
-        if i.enabled and i.api_key and i.library_roots
-    ]
+    active = [i for i in config.alldebrid.instances if i.enabled and i.api_key and i.library_roots]
     if not active:
         logger.debug("Orphan scheduler: no active instances")
         return
@@ -89,56 +87,60 @@ async def _run_orphan_scan():
 
             if orphan_ids:
                 logger.info(
-                    "[%s] Auto-deleting %d orphans...", inst.name, len(orphan_ids),
+                    "[%s] Auto-deleting %d orphans...",
+                    inst.name,
+                    len(orphan_ids),
                 )
                 deleted, errs = await _delete_orphans_from_instance(inst, orphan_ids)
                 await db.execute(
                     "UPDATE orphan_magnets SET status = 'supprimé', action = 'deleted',"
                     " action_date = datetime('now')"
-                    " WHERE notes = ? AND magnet_id IN ("
-                    + ",".join("?" for _ in orphan_ids)
-                    + ")",
+                    " WHERE notes = ? AND magnet_id IN (" + ",".join("?" for _ in orphan_ids) + ")",
                     (inst.name, *orphan_ids),
                 )
                 logger.info(
                     "[%s] Auto-delete done: %d deleted, %d errors",
-                    inst.name, deleted, errs,
+                    inst.name,
+                    deleted,
+                    errs,
                 )
 
             await db.commit()
 
             if result.orphan_count > 0 and config.discord.enabled and config.discord.webhook:
                 payload = {
-                    "embeds": [{
-                        "title": f"🤖 AllDebrid auto — {inst.name}",
-                        "description": f"{result.orphan_count} magnets orphelins supprimés",
-                        "color": 0x57F287,
-                        "fields": [
-                            {
-                                "name": "Total magnets",
-                                "value": str(result.total_magnets),
-                                "inline": True,
-                            },
-                            {
-                                "name": "Utilisés",
-                                "value": str(result.used_count),
-                                "inline": True,
-                            },
-                            {
-                                "name": "Protégés",
-                                "value": str(result.protected_count),
-                                "inline": True,
-                            },
-                            {
-                                "name": "Orphelins supprimés",
-                                "value": str(result.orphan_count),
-                                "inline": True,
-                            },
-                        ],
-                        "timestamp": datetime.now(timezone.utc)
-                        .isoformat()
-                        .replace("+00:00", "Z"),
-                    }]
+                    "embeds": [
+                        {
+                            "title": f"🤖 AllDebrid auto — {inst.name}",
+                            "description": f"{result.orphan_count} magnets orphelins supprimés",
+                            "color": 0x57F287,
+                            "fields": [
+                                {
+                                    "name": "Total magnets",
+                                    "value": str(result.total_magnets),
+                                    "inline": True,
+                                },
+                                {
+                                    "name": "Utilisés",
+                                    "value": str(result.used_count),
+                                    "inline": True,
+                                },
+                                {
+                                    "name": "Protégés",
+                                    "value": str(result.protected_count),
+                                    "inline": True,
+                                },
+                                {
+                                    "name": "Orphelins supprimés",
+                                    "value": str(result.orphan_count),
+                                    "inline": True,
+                                },
+                            ],
+                            "timestamp": datetime.now(timezone.utc)
+                            .isoformat()
+                            .replace("+00:00", "Z"),
+                        }
+                    ]
                 }
                 await send_webhook(config.discord.webhook, payload)
 
@@ -177,7 +179,8 @@ async def _orphan_scheduler_loop():
             if ad.instances and ad.auto_enabled:
                 if await _should_run_today(ad.schedule_time):
                     logger.info(
-                        "Triggering orphan scan (scheduled time=%s)", ad.schedule_time,
+                        "Triggering orphan scan (scheduled time=%s)",
+                        ad.schedule_time,
                     )
                     await _run_orphan_scan()
         except Exception as e:

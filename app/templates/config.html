@@ -327,7 +327,7 @@
 
                             <div>
                                 <label class="block text-sm text-gray-500 dark:text-gray-400 mb-1">Dossiers à scanner</label>
-                                {{ path_list("inst.library_roots", "inst.library_roots.splice(ri, 1)") }}
+                                {{ path_list("inst.library_roots", "inst.library_roots.splice(i, 1)") }}
                                 <div class="flex gap-2 mt-1.5">
                                     <input type="text" x-model="adLibInputs[idx]"
                                            placeholder="Taper un chemin..."
@@ -342,7 +342,7 @@
 
                             <div>
                                 <label class="block text-sm text-gray-500 dark:text-gray-400 mb-1">Préfixes cibles (AllDebrid mount)</label>
-                                {{ path_list("inst.target_prefixes", "inst.target_prefixes.splice(pi, 1)") }}
+                                {{ path_list("inst.target_prefixes", "inst.target_prefixes.splice(i, 1)") }}
                                 <div class="flex gap-2 mt-1.5">
                                     <input type="text" x-model="adPrefInputs[idx]"
                                            placeholder="/mnt/..."

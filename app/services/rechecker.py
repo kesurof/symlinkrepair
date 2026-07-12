@@ -105,9 +105,7 @@ async def _recheck_loop():
                     await asyncio.sleep(BATCH_DELAY)
 
                 except Exception as e:
-                    logger.warning(
-                        "Rechecker error for id=%d: %s", row.get("id"), e
-                    )
+                    logger.warning("Rechecker error for id=%d: %s", row.get("id"), e)
 
             if verified:
                 logger.info("Rechecker: %d symlinks vérifiés comme remplacés", verified)

@@ -89,7 +89,9 @@ def get_version_info() -> dict:
             hostname = os.uname().nodename
             result = subprocess.run(
                 ["docker", "inspect", "--format", "{{.Image}}", hostname],
-                capture_output=True, text=True, timeout=5,
+                capture_output=True,
+                text=True,
+                timeout=5,
             )
             if result.returncode == 0:
                 docker_hash = result.stdout.strip()
