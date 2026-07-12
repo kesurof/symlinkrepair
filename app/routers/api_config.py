@@ -8,6 +8,7 @@ from app.services.config_service import (
     browse_directory,
     load_config,
     public_config,
+    resolve_key,
     save_config,
     test_radarr_connection,
     test_sonarr_connection,
@@ -59,7 +60,9 @@ async def validate_browse_path(request: Request):
 @router.post("/api/config/test-radarr")
 async def test_radarr(request: Request):
     body = await request.json()
-    result = await test_radarr_connection(body.get("url", ""), body.get("api_key", ""))
+    stored = load_config()
+    api_key = resolve_key(body.get("api_key", ""), stored.radarr.api_key)
+    result = await test_radarr_connection(body.get("url", ""), api_key)
     logger.info("Radarr test connection: ok=%s", result.get("ok"))
     return result
 
@@ -67,6 +70,8 @@ async def test_radarr(request: Request):
 @router.post("/api/config/test-sonarr")
 async def test_sonarr(request: Request):
     body = await request.json()
-    result = await test_sonarr_connection(body.get("url", ""), body.get("api_key", ""))
+    stored = load_config()
+    api_key = resolve_key(body.get("api_key", ""), stored.sonarr.api_key)
+    result = await test_sonarr_connection(body.get("url", ""), api_key)
     logger.info("Sonarr test connection: ok=%s", result.get("ok"))
     return result

@@ -541,6 +541,8 @@
                                    @keydown.enter.prevent="cfg.radarr.library_roots.push(wizardLibRadarr); wizardLibRadarr = ''"
                                    class="flex-1 border border-gray-200 dark:border-gray-700 rounded-lg px-3 py-1.5 text-sm bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-200">
                             <button @click="cfg.radarr.library_roots.push(wizardLibRadarr); wizardLibRadarr = ''" class="bg-brand-600 text-white px-3 py-1.5 rounded-lg text-sm">➕</button>
+                            <button @click="openBrowser('radarr', 'library_roots')"
+                                    class="bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg px-3 py-1.5 text-sm text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700">📂</button>
                         </div>
                     </div>
                     <div>
@@ -559,6 +561,8 @@
                                    @keydown.enter.prevent="cfg.sonarr.library_roots.push(wizardLibSonarr); wizardLibSonarr = ''"
                                    class="flex-1 border border-gray-200 dark:border-gray-700 rounded-lg px-3 py-1.5 text-sm bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-200">
                             <button @click="cfg.sonarr.library_roots.push(wizardLibSonarr); wizardLibSonarr = ''" class="bg-brand-600 text-white px-3 py-1.5 rounded-lg text-sm">➕</button>
+                            <button @click="openBrowser('sonarr', 'library_roots')"
+                                    class="bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg px-3 py-1.5 text-sm text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700">📂</button>
                         </div>
                     </div>
                 </div>
