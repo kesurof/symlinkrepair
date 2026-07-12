@@ -131,26 +131,35 @@
     </div>
 
     {# === TABS === #}
-    <div class="flex flex-wrap gap-1 mb-6 p-1 bg-gray-100 dark:bg-gray-800 rounded-lg w-fit">
-        <button @click="activeTab = 'servers'"
-                class="px-4 py-2 text-sm font-medium rounded-md transition-colors duration-150"
-                :class="activeTab === 'servers' ? 'bg-white dark:bg-gray-900 text-gray-800 dark:text-gray-100 shadow-sm' : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'">
-            Serveurs
-        </button>
-        <button @click="activeTab = 'automation'"
-                class="px-4 py-2 text-sm font-medium rounded-md transition-colors duration-150"
-                :class="activeTab === 'automation' ? 'bg-white dark:bg-gray-900 text-gray-800 dark:text-gray-100 shadow-sm' : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'">
-            Automatisation
-        </button>
-        <button @click="activeTab = 'alldebrid'"
-                class="px-4 py-2 text-sm font-medium rounded-md transition-colors duration-150"
-                :class="activeTab === 'alldebrid' ? 'bg-white dark:bg-gray-900 text-gray-800 dark:text-gray-100 shadow-sm' : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'">
-            AllDebrid
-        </button>
-        <button @click="activeTab = 'general'"
-                class="px-4 py-2 text-sm font-medium rounded-md transition-colors duration-150"
-                :class="activeTab === 'general' ? 'bg-white dark:bg-gray-900 text-gray-800 dark:text-gray-100 shadow-sm' : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'">
-            Général
+    <div class="flex flex-col md:flex-row md:items-center gap-3 mb-6">
+        <div class="flex flex-wrap gap-1 p-1 bg-gray-100 dark:bg-gray-800 rounded-lg w-fit">
+            <button @click="activeTab = 'servers'"
+                    class="px-4 py-2 text-sm font-medium rounded-md transition-colors duration-150"
+                    :class="activeTab === 'servers' ? 'bg-white dark:bg-gray-900 text-gray-800 dark:text-gray-100 shadow-sm' : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'">
+                Serveurs
+            </button>
+            <button @click="activeTab = 'automation'"
+                    class="px-4 py-2 text-sm font-medium rounded-md transition-colors duration-150"
+                    :class="activeTab === 'automation' ? 'bg-white dark:bg-gray-900 text-gray-800 dark:text-gray-100 shadow-sm' : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'">
+                Automatisation
+            </button>
+            <button @click="activeTab = 'alldebrid'"
+                    class="px-4 py-2 text-sm font-medium rounded-md transition-colors duration-150"
+                    :class="activeTab === 'alldebrid' ? 'bg-white dark:bg-gray-900 text-gray-800 dark:text-gray-100 shadow-sm' : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'">
+                AllDebrid
+            </button>
+            <button @click="activeTab = 'general'"
+                    class="px-4 py-2 text-sm font-medium rounded-md transition-colors duration-150"
+                    :class="activeTab === 'general' ? 'bg-white dark:bg-gray-900 text-gray-800 dark:text-gray-100 shadow-sm' : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'">
+                Général
+            </button>
+        </div>
+        <button @click="namingGuideOpen = true"
+                class="inline-flex items-center gap-2 md:ml-auto bg-red-600 text-white px-4 py-2 rounded-lg text-sm font-semibold hover:bg-red-700 transition-colors shadow-sm">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M12 6v6l4 2"/>
+            </svg>
+            Formats de renommage
         </button>
     </div>
 
@@ -666,7 +675,163 @@
             </div>
         </div>
     </div>
-</div>
+
+    {# === GUIDE RENAME === #}
+    <div x-show="namingGuideOpen" class="fixed inset-0 z-50 bg-black/50 dark:bg-black/70 flex items-end md:items-center justify-center" @click.self="namingGuideOpen = false" x-cloak>
+        <div class="bg-white dark:bg-gray-900 w-full md:max-w-6xl md:mx-4 max-h-[92vh] overflow-y-auto rounded-t-2xl md:rounded-2xl shadow-2xl slide-up">
+            <div class="sticky top-0 bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-800 px-6 py-4 flex items-center gap-3 z-10">
+                <div class="w-8 h-8 rounded-full bg-brand-100 dark:bg-brand-900/50 flex items-center justify-center shrink-0">
+                    <svg class="w-5 h-5 text-brand-600 dark:text-brand-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.5">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M9.75 3.75h4.5m-4.5 16.5h4.5M6 3.75h12A2.25 2.25 0 0 1 20.25 6v12A2.25 2.25 0 0 1 18 20.25H6A2.25 2.25 0 0 1 3.75 18V6A2.25 2.25 0 0 1 6 3.75Z"/>
+                    </svg>
+                </div>
+                <div>
+                    <h3 class="font-semibold text-gray-800 dark:text-gray-200 text-lg">Réglages requis pour le suivi par fichier</h3>
+                    <p class="text-sm text-gray-500 dark:text-gray-400">Configure le renommage de Radarr et Sonarr avant d’utiliser le système.</p>
+                </div>
+                <button @click="namingGuideOpen = false" class="ml-auto text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 p-1 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800">✕</button>
+            </div>
+
+            <div class="p-6 space-y-6">
+                <div class="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-xl p-4 text-sm text-amber-800 dark:text-amber-300">
+                    Pour que le script fonctionne correctement, tu dois garder des noms de fichiers stables et explicites. Si le nommage change trop, le suivi des fichiers devient incohérent.
+                </div>
+
+                <div class="grid lg:grid-cols-2 gap-6">
+                    <section class="space-y-3">
+                        <div class="flex items-center gap-2">
+                            <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300">Radarr</span>
+                            <h4 class="font-medium text-gray-800 dark:text-gray-200">Films</h4>
+                        </div>
+                        <button type="button" @click="namingPreviewSrc = '{{ radarr_naming_guide }}'; namingPreviewOpen = true" class="block w-full text-left group">
+                            <img src="{{ radarr_naming_guide }}" alt="Capture Radarr - Movie Naming" class="w-full rounded-xl border border-gray-200 dark:border-gray-800 shadow-sm group-hover:scale-[1.01] transition-transform duration-150 cursor-zoom-in">
+                        </button>
+                        <div class="space-y-3">
+                            <div class="rounded-2xl border border-gray-200 dark:border-gray-800 overflow-hidden bg-white dark:bg-gray-900 shadow-sm">
+                                <div class="px-4 py-3 border-b border-gray-100 dark:border-gray-800 bg-gradient-to-r from-blue-50 to-white dark:from-blue-900/20 dark:to-gray-900 flex items-center gap-3">
+                                    <div>
+                                        <p class="text-xs font-semibold uppercase tracking-[0.18em] text-blue-600 dark:text-blue-400">Standard Movie Format</p>
+                                        <p class="text-[11px] text-gray-500 dark:text-gray-400 mt-1">Nom du fichier principal</p>
+                                    </div>
+                                    <button type="button"
+                                            @click="copyNamingFormat('{Movie Title} ({Release Year}) {imdb-{ImdbId}}', 'radarr-standard')"
+                                            class="ml-auto inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold border transition-colors"
+                                            :class="namingCopied === 'radarr-standard' ? 'bg-green-600 border-green-600 text-white' : 'bg-white dark:bg-gray-900 border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300 hover:border-blue-400 hover:text-blue-600 dark:hover:text-blue-400'">
+                                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
+                                            <path stroke-linecap="round" stroke-linejoin="round" d="M8.25 8.25h-.75a2.25 2.25 0 00-2.25 2.25v9a2.25 2.25 0 002.25 2.25h9a2.25 2.25 0 002.25-2.25v-.75M12.75 1.5h-6a2.25 2.25 0 00-2.25 2.25v6A2.25 2.25 0 006.75 12h6A2.25 2.25 0 0015 9.75v-6a2.25 2.25 0 00-2.25-2.25Z"/>
+                                        </svg>
+                                        <span x-text="namingCopied === 'radarr-standard' ? 'Copié' : 'Copier'"></span>
+                                    </button>
+                                </div>
+                                <div class="px-4 py-4">
+                                    <div class="flex items-start gap-3">
+                                        <div class="mt-1 w-2.5 h-2.5 rounded-full bg-blue-500 shrink-0"></div>
+                                        <div class="min-w-0">
+                                            <div class="font-mono text-sm sm:text-base text-gray-800 dark:text-gray-100 break-words leading-6">{Movie Title} ({Release Year}) {imdb-{ImdbId}}</div>
+                                            <div class="mt-2 text-xs text-gray-500 dark:text-gray-400">Format du fichier principal. Garde-le stable pour que le suivi reste fiable.</div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="rounded-2xl border border-gray-200 dark:border-gray-800 overflow-hidden bg-white dark:bg-gray-900 shadow-sm">
+                                <div class="px-4 py-3 border-b border-gray-100 dark:border-gray-800 bg-gradient-to-r from-slate-50 to-white dark:from-slate-900/40 dark:to-gray-900 flex items-center gap-3">
+                                    <div>
+                                        <p class="text-xs font-semibold uppercase tracking-[0.18em] text-gray-600 dark:text-gray-300">Movie Folder Format</p>
+                                        <p class="text-[11px] text-gray-500 dark:text-gray-400 mt-1">Dossier de rangement</p>
+                                    </div>
+                                    <button type="button"
+                                            @click="copyNamingFormat('{Movie Title} ({Release Year}) {imdb-{ImdbId}}', 'radarr-folder')"
+                                            class="ml-auto inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold border transition-colors"
+                                            :class="namingCopied === 'radarr-folder' ? 'bg-green-600 border-green-600 text-white' : 'bg-white dark:bg-gray-900 border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300 hover:border-gray-400'">
+                                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
+                                            <path stroke-linecap="round" stroke-linejoin="round" d="M8.25 8.25h-.75a2.25 2.25 0 00-2.25 2.25v9a2.25 2.25 0 002.25 2.25h9a2.25 2.25 0 002.25-2.25v-.75M12.75 1.5h-6a2.25 2.25 0 00-2.25 2.25v6A2.25 2.25 0 006.75 12h6A2.25 2.25 0 0015 9.75v-6a2.25 2.25 0 00-2.25-2.25Z"/>
+                                        </svg>
+                                        <span x-text="namingCopied === 'radarr-folder' ? 'Copié' : 'Copier'"></span>
+                                    </button>
+                                </div>
+                                <div class="px-4 py-4">
+                                    <div class="font-mono text-sm sm:text-base text-gray-800 dark:text-gray-100 break-words leading-6">{Movie Title} ({Release Year}) {imdb-{ImdbId}}</div>
+                                </div>
+                            </div>
+                        </div>
+                        <p class="text-xs text-gray-400 dark:text-gray-500">L’idée est d’obtenir un nom lisible et unique par film, sans ambiguïté pour le suivi.</p>
+                    </section>
+
+                    <section class="space-y-3">
+                        <div class="flex items-center gap-2">
+                            <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300">Sonarr</span>
+                            <h4 class="font-medium text-gray-800 dark:text-gray-200">Séries</h4>
+                        </div>
+                        <button type="button" @click="namingPreviewSrc = '{{ sonarr_naming_guide }}'; namingPreviewOpen = true" class="block w-full text-left group">
+                            <img src="{{ sonarr_naming_guide }}" alt="Capture Sonarr - Episode Naming" class="w-full rounded-xl border border-gray-200 dark:border-gray-800 shadow-sm group-hover:scale-[1.01] transition-transform duration-150 cursor-zoom-in">
+                        </button>
+                        <div class="space-y-3">
+                            <div class="rounded-2xl border border-gray-200 dark:border-gray-800 overflow-hidden bg-white dark:bg-gray-900 shadow-sm">
+                                <div class="px-4 py-3 border-b border-gray-100 dark:border-gray-800 bg-gradient-to-r from-green-50 to-white dark:from-green-900/20 dark:to-gray-900 flex items-center gap-3">
+                                    <div>
+                                        <p class="text-xs font-semibold uppercase tracking-[0.18em] text-green-600 dark:text-green-400">Standard Episode Format</p>
+                                        <p class="text-[11px] text-gray-500 dark:text-gray-400 mt-1">Format recommandé pour les épisodes</p>
+                                    </div>
+                                    <button type="button"
+                                            @click="copyNamingFormat('{Series TitleYear} - S{season:00}E{episode:00} - {Episode CleanTitle}', 'sonarr-standard')"
+                                            class="ml-auto inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold border transition-colors"
+                                            :class="namingCopied === 'sonarr-standard' ? 'bg-green-600 border-green-600 text-white' : 'bg-white dark:bg-gray-900 border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300 hover:border-green-400 hover:text-green-600 dark:hover:text-green-400'">
+                                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
+                                            <path stroke-linecap="round" stroke-linejoin="round" d="M8.25 8.25h-.75a2.25 2.25 0 00-2.25 2.25v9a2.25 2.25 0 002.25 2.25h9a2.25 2.25 0 002.25-2.25v-.75M12.75 1.5h-6a2.25 2.25 0 00-2.25 2.25v6A2.25 2.25 0 006.75 12h6A2.25 2.25 0 0015 9.75v-6a2.25 2.25 0 00-2.25-2.25Z"/>
+                                        </svg>
+                                        <span x-text="namingCopied === 'sonarr-standard' ? 'Copié' : 'Copier'"></span>
+                                    </button>
+                                </div>
+                                <div class="px-4 py-4">
+                                    <div class="flex items-start gap-3">
+                                        <div class="mt-1 w-2.5 h-2.5 rounded-full bg-green-500 shrink-0"></div>
+                                        <div class="min-w-0">
+                                            <div class="font-mono text-sm sm:text-base text-gray-800 dark:text-gray-100 break-words leading-6">{Series TitleYear} - S{season:00}E{episode:00} - {Episode CleanTitle}</div>
+                                            <div class="mt-2 text-xs text-gray-500 dark:text-gray-400">Format principal pour les épisodes. Il permet un suivi exact fichier par fichier.</div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="rounded-2xl border border-gray-200 dark:border-gray-800 overflow-hidden bg-white dark:bg-gray-900 shadow-sm">
+                                <div class="px-4 py-3 border-b border-gray-100 dark:border-gray-800 bg-gradient-to-r from-slate-50 to-white dark:from-slate-900/40 dark:to-gray-900 flex items-center gap-3">
+                                    <div>
+                                        <p class="text-xs font-semibold uppercase tracking-[0.18em] text-gray-600 dark:text-gray-300">Anime Episode Format</p>
+                                        <p class="text-[11px] text-gray-500 dark:text-gray-400 mt-1">Variante pour les anime</p>
+                                    </div>
+                                    <button type="button"
+                                            @click="copyNamingFormat('{Series Title} - S{season:00}E{episode:00} - {Episode CleanTitle}', 'sonarr-anime')"
+                                            class="ml-auto inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold border transition-colors"
+                                            :class="namingCopied === 'sonarr-anime' ? 'bg-green-600 border-green-600 text-white' : 'bg-white dark:bg-gray-900 border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300 hover:border-gray-400'">
+                                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
+                                            <path stroke-linecap="round" stroke-linejoin="round" d="M8.25 8.25h-.75a2.25 2.25 0 00-2.25 2.25v9a2.25 2.25 0 002.25 2.25h9a2.25 2.25 0 002.25-2.25v-.75M12.75 1.5h-6a2.25 2.25 0 00-2.25 2.25v6A2.25 2.25 0 006.75 12h6A2.25 2.25 0 0015 9.75v-6a2.25 2.25 0 00-2.25-2.25Z"/>
+                                        </svg>
+                                        <span x-text="namingCopied === 'sonarr-anime' ? 'Copié' : 'Copier'"></span>
+                                    </button>
+                                </div>
+                                <div class="px-4 py-4">
+                                    <div class="font-mono text-sm sm:text-base text-gray-800 dark:text-gray-100 break-words leading-6">{Series Title} - S{season:00}E{episode:00} - {Episode CleanTitle}</div>
+                                </div>
+                            </div>
+                        </div>
+                        <p class="text-xs text-gray-400 dark:text-gray-500">Choisis une variante et garde-la partout. Le plus important est que le nom reste stable d’un fichier à l’autre.</p>
+                    </section>
+                </div>
+
+                <div class="bg-brand-50 dark:bg-brand-900/10 border border-brand-200 dark:border-brand-800 rounded-xl p-4 text-sm text-brand-800 dark:text-brand-300">
+                    Si tu ne renseignes pas ces formats, SymlinkRepair risque de perdre le lien entre un fichier et son emplacement réel.
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div x-show="namingPreviewOpen" class="fixed inset-0 z-[60] bg-black/80 flex items-center justify-center p-4" @click.self="namingPreviewOpen = false" x-cloak>
+        <div class="relative w-full max-w-[96vw] max-h-[96vh]">
+            <button @click="namingPreviewOpen = false" class="absolute -top-3 -right-3 md:top-0 md:right-0 translate-y-full md:translate-y-0 bg-white text-gray-700 hover:text-gray-900 rounded-full w-10 h-10 shadow-lg flex items-center justify-center">✕</button>
+            <img :src="namingPreviewSrc" alt="Aperçu agrandi" class="max-w-full max-h-[96vh] mx-auto rounded-2xl shadow-2xl border border-white/10">
+        </div>
+    </div>
+
+    </div>
 
 <script>
 function configApp() {
@@ -687,11 +852,16 @@ function configApp() {
          showSonarrKey: false,
          showADKey: false,
          showWebhook: false,
-         adLibInputs: [],
-         adPrefInputs: [],
-         adBrowserIdx: null,
-         adBrowserField: null,
-        radarrTest: '',
+          adLibInputs: [],
+          adPrefInputs: [],
+          adBrowserIdx: null,
+          adBrowserField: null,
+          namingGuideOpen: false,
+          namingPreviewOpen: false,
+          namingPreviewSrc: '',
+          namingCopied: '',
+          namingCopyTimer: null,
+          radarrTest: '',
         radarrOk: false,
         sonarrTest: '',
         sonarrOk: false,
@@ -720,6 +890,19 @@ function configApp() {
             const resp = await fetch('/api/config');
             const data = await resp.json();
             Object.assign(this.cfg, data);
+        },
+
+        async copyNamingFormat(text, key) {
+            try {
+                await navigator.clipboard.writeText(text);
+                this.namingCopied = key;
+                if (this.namingCopyTimer) clearTimeout(this.namingCopyTimer);
+                this.namingCopyTimer = setTimeout(() => {
+                    this.namingCopied = '';
+                }, 1500);
+            } catch (e) {
+                this.error = 'Copie impossible';
+            }
         },
 
         async saveConfig() {
