@@ -56,10 +56,10 @@
 </label>
 {% endmacro %}
 
-{% macro number_input(label, model, min, max) %}
+{% macro number_input(label, model, min, max=None) %}
 <div>
     <label class="block text-sm text-gray-500 dark:text-gray-400 mb-1">{{ label }}</label>
-    <input type="number" x-model="{{ model }}" min="{{ min }}" max="{{ max }}"
+    <input type="number" x-model="{{ model }}" min="{{ min }}" {% if max is not none %}max="{{ max }}"{% endif %}
            class="w-24 border border-gray-200 dark:border-gray-700 rounded-lg px-3 py-2 text-sm bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-200">
 </div>
 {% endmacro %}
@@ -437,7 +437,7 @@
                         {{ checkbox_input('Refresh après traitement', 'cfg.defaults.rescan') }}
                         {{ checkbox_input('Recherche automatique après nettoyage', 'cfg.defaults.search') }}
                         {{ checkbox_input('Conserver les symlinks locaux', 'cfg.defaults.keep_symlinks') }}
-                        {{ number_input('Limite fichiers par scan', 'cfg.defaults.limit', 0, 500) }}
+                        {{ number_input('Fichiers max par scan (0 = illimité)', 'cfg.defaults.limit', 0) }}
                     </div>
                 </section>
 
