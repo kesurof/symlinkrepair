@@ -10,7 +10,7 @@ from starlette.requests import Request
 from app.database import init_db
 from app.error_handlers import general_error_handler, not_found_handler
 from app.logging_config import setup_logging
-from app.routers import api_config, config_ui, health, orphans, reports, results, scan, web
+from app.routers import admin, api_config, config_ui, health, orphans, reports, results, scan, web
 from app.services.orphan_scheduler import start as start_orphan_scheduler
 from app.services.orphan_scheduler import stop as stop_orphan_scheduler
 from app.services.rechecker import start as start_rechecker
@@ -62,6 +62,7 @@ async def no_cache_html(request: Request, call_next):
     return response
 
 
+app.include_router(admin.router)
 app.include_router(web.router)
 app.include_router(health.router)
 app.include_router(config_ui.router)
